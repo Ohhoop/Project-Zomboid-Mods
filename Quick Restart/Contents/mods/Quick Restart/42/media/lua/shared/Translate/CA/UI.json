@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "MÓN NOU",
+    "UI_QuickRestart_ThisWorld": "MATEIX MÓN",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Món nou, mateix personatge inicial",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Mateix món, mateix personatge inicial",
+    "UI_QuickRestart_NoData_Tooltip": "Sense dades de personatge - inicia una nova partida amb aquest mod o usa \"Continuar amb un nou personatge\" una vegada per activar Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "No disponible en multijugador / pantalla dividida",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "MÓN NOU - PARÀMETRES SANDBOX",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Els paràmetres sandbox han canviat des de la creació d'aquest món. Quins paràmetres hauria d'utilitzar el teu nou món?",
+    "UI_QuickRestart_SandboxConflict_Saved": "PARÀMETRES DE CREACIÓ",
+    "UI_QuickRestart_SandboxConflict_Current": "PARÀMETRES ACTUALS",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Utilitza els paràmetres sandbox del moment de creació del món. Recomanat si no has canviat res manualment. Un mod pot haver modificat els teus paràmetres actuals com a part de les seves funcions.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Utilitza els paràmetres sandbox tal com estan ara. Tria això si has fet canvis intencionadament i vols conservar-los."
+}

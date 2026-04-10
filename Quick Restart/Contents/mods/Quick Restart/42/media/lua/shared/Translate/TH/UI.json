@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "โลกใหม่",
+    "UI_QuickRestart_ThisWorld": "โลกเดิม",
+    "UI_QuickRestart_FreshWorld_Tooltip": "โลกใหม่ ตัวละครเริ่มต้นเดิม",
+    "UI_QuickRestart_ThisWorld_Tooltip": "โลกเดิม ตัวละครเริ่มต้นเดิม",
+    "UI_QuickRestart_NoData_Tooltip": "ไม่มีข้อมูลตัวละคร - เริ่มเซฟใหม่โดยเปิดใช้งานมอดนี้ หรือใช้ \"ดำเนินการต่อด้วยตัวละครใหม่\" หนึ่งครั้งเพื่อเปิดใช้งาน Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "ไม่พร้อมใช้งานในโหมดหลายผู้เล่น / แยกหน้าจอ",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "โลกใหม่ - การตั้งค่าแซนด์บ็อกซ์",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "การตั้งค่าแซนด์บ็อกซ์มีการเปลี่ยนแปลงตั้งแต่สร้างโลกนี้ คุณต้องการใช้การตั้งค่าใดสำหรับโลกใหม่ของคุณ?",
+    "UI_QuickRestart_SandboxConflict_Saved": "การตั้งค่าตอนสร้าง",
+    "UI_QuickRestart_SandboxConflict_Current": "การตั้งค่าปัจจุบัน",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "ใช้การตั้งค่าแซนด์บ็อกซ์จากตอนที่สร้างโลก แนะนำหากคุณไม่ได้เปลี่ยนแปลงอะไรด้วยตนเอง อาจมีม็อดที่ปรับเปลี่ยนการตั้งค่าปัจจุบันของคุณในฐานะส่วนหนึ่งของฟีเจอร์",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "ใช้การตั้งค่าแซนด์บ็อกซ์ตามที่เป็นอยู่ตอนนี้ เลือกนี้หากคุณตั้งใจเปลี่ยนแปลงและต้องการนำไปใช้"
+}

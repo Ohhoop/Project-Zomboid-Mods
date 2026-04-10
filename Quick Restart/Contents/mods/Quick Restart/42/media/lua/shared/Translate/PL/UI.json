@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "NOWY ŚWIAT",
+    "UI_QuickRestart_ThisWorld": "TEN SAM ŚWIAT",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Nowy świat, ta sama postać startowa",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Ten sam świat, ta sama postać startowa",
+    "UI_QuickRestart_NoData_Tooltip": "Brak danych postaci - zacznij nowy zapis z tym modem lub użyj \"Kontynuuj z nową postacią\" raz, aby aktywować Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Niedostępne w trybie wieloosobowym / podzielonym ekranie",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "NOWY ŚWIAT - USTAWIENIA PIASKOWNICY",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Ustawienia piaskownicy zmieniły się od czasu utworzenia tego świata. Których ustawień powinien użyć twój nowy świat?",
+    "UI_QuickRestart_SandboxConflict_Saved": "USTAWIENIA Z TWORZENIA",
+    "UI_QuickRestart_SandboxConflict_Current": "AKTUALNE USTAWIENIA",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Użyj ustawień piaskownicy z momentu tworzenia świata. Zalecane jeśli nic nie zmieniałeś ręcznie. Mod mógł zmodyfikować twoje aktualne ustawienia jako część swoich funkcji.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Użyj ustawień piaskownicy takimi, jakie są teraz. Wybierz to, jeśli celowo dokonałeś zmian i chcesz je przenieść."
+}

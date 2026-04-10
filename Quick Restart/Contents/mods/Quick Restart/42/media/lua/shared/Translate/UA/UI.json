@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "НОВИЙ СВІТ",
+    "UI_QuickRestart_ThisWorld": "ТОЙ САМИЙ СВІТ",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Новий світ, той самий стартовий персонаж",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Той самий світ, той самий стартовий персонаж",
+    "UI_QuickRestart_NoData_Tooltip": "Немає даних персонажа - почніть нове збереження з цим модом або використайте \"Продовжити з новим персонажем\" один раз для активації Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Недоступно в мультиплеєрі / розділеному екрані",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "НОВИЙ СВІТ - НАЛАШТУВАННЯ ПІСОЧНИЦІ",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Налаштування пісочниці змінилися з моменту створення цього світу. Які налаштування повинен використовувати ваш новий світ?",
+    "UI_QuickRestart_SandboxConflict_Saved": "НАЛАШТУВАННЯ ПРИ СТВОРЕННІ",
+    "UI_QuickRestart_SandboxConflict_Current": "ПОТОЧНІ НАЛАШТУВАННЯ",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Використовувати налаштування пісочниці з моменту створення світу. Рекомендується, якщо ви нічого не змінювали вручну. Мод міг змінити ваші поточні налаштування в рамках своїх функцій.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Використовувати налаштування пісочниці такими, якими вони є зараз. Виберіть це, якщо ви навмисно внесли зміни і хочете їх зберегти."
+}

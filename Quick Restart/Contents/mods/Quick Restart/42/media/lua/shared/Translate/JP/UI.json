@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "新しい世界",
+    "UI_QuickRestart_ThisWorld": "同じ世界",
+    "UI_QuickRestart_FreshWorld_Tooltip": "新しい世界、同じ初期キャラクター",
+    "UI_QuickRestart_ThisWorld_Tooltip": "同じ世界、同じ初期キャラクター",
+    "UI_QuickRestart_NoData_Tooltip": "キャラクターデータなし - このModを有効にして新規セーブを開始するか、「新しいキャラクターで続ける」を一度使用してQuick Restartを有効にしてください",
+    "UI_QuickRestart_MP_Tooltip": "マルチプレイヤー / 分割画面では利用不可",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "新しい世界 - サンドボックス設定",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "このワールドが作成されてからサンドボックス設定が変更されました。新しいワールドにはどちらの設定を使用しますか？",
+    "UI_QuickRestart_SandboxConflict_Saved": "作成時の設定",
+    "UI_QuickRestart_SandboxConflict_Current": "現在の設定",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "ワールド作成時のサンドボックス設定を使用します。手動で何も変更していない場合はこちらを推奨します。Modがその機能の一環として現在の設定を変更している可能性があります。",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "現在のサンドボックス設定をそのまま使用します。意図的に変更を行い、それを引き継ぎたい場合はこちらを選択してください。"
+}

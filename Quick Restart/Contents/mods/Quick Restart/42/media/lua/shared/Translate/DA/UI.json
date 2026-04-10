@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "NY VERDEN",
+    "UI_QuickRestart_ThisWorld": "SAMME VERDEN",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Ny verden, samme startkarakter",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Samme verden, samme startkarakter",
+    "UI_QuickRestart_NoData_Tooltip": "Ingen karakterdata - start en ny gemme med denne mod eller brug \"Fortsæt med ny karakter\" én gang for at aktivere Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Utilgængelig i multiplayer / delt skærm",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "NY VERDEN - SANDBOX-INDSTILLINGER",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Sandbox-indstillingerne er ændret siden denne verden blev oprettet. Hvilke indstillinger skal din nye verden bruge?",
+    "UI_QuickRestart_SandboxConflict_Saved": "INDSTILLINGER VED OPRETTELSE",
+    "UI_QuickRestart_SandboxConflict_Current": "AKTUELLE INDSTILLINGER",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Brug sandbox-indstillingerne fra da verden blev oprettet. Anbefales hvis du ikke har ændret noget manuelt. En mod kan have ændret dine aktuelle indstillinger som en del af dens funktioner.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Brug sandbox-indstillingerne som de er nu. Vælg dette hvis du har foretaget bevidste ændringer og vil beholde dem."
+}
