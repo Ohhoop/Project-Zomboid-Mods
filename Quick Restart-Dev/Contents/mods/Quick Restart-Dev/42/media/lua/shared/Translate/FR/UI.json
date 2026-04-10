@@ -4,7 +4,7 @@
     "UI_QuickRestart_ThisWorld": "MÊME MONDE",
     "UI_QuickRestart_FreshWorld_Tooltip": "Nouveau monde, même personnage de départ",
     "UI_QuickRestart_ThisWorld_Tooltip": "Même monde, même personnage de départ",
-    "UI_QuickRestart_NoData_Tooltip": "Aucune donnée de personnage - démarrez une nouvelle sauvegarde avec ce mod activé ou utilisez \"Continuer avec un nouveau personnage\" une fois pour activer Quick Restart",
+    "UI_QuickRestart_NoData_Tooltip": "Aucune donnée de personnage disponible. Démarrez une nouvelle sauvegarde avec ce mod activé ou utilisez \"Continuer avec un nouveau personnage\" une fois pour activer Quick Restart.",
     "UI_QuickRestart_MP_Tooltip": "Indisponible en multijoueur / écran partagé",
     "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
     "UI_QuickRestart_SandboxConflictPanel_Label": "NOUVEAU MONDE - PARAMÈTRES SANDBOX",

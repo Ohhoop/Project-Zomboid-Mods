@@ -1,0 +1,294 @@
+QuickRestartValidate = QuickRestartValidate or {}
+
+local function isNonEmptyString(value)
+    return type(value) == "string" and value ~= ""
+end
+
+local function isBooleanOrNil(value)
+    return value == nil or type(value) == "boolean"
+end
+
+local function isNumberOrNil(value)
+    return value == nil or type(value) == "number"
+end
+
+local function validateColor(color)
+    if color == nil then
+        return true
+    end
+
+    if type(color) ~= "table" then
+        return false
+    end
+
+    return type(color.r) == "number" and type(color.g) == "number" and type(color.b) == "number"
+end
+
+local function resolveProfessionType(profession)
+    if profession == nil then
+        return nil
+    end
+
+    if type(profession) == "string" and profession ~= "" then
+        return profession
+    end
+
+    if type(profession) == "table" or type(profession) == "userdata" then
+        if profession.getType then
+            local ok, professionType = pcall(function()
+                return profession:getType()
+            end)
+            if ok and professionType and professionType ~= "" then
+                return tostring(professionType)
+            end
+        end
+    end
+
+    local text = tostring(profession)
+    if text ~= "" then
+        return text
+    end
+
+    return nil
+end
+
+local function professionExists(profession)
+    local professionType = resolveProfessionType(profession)
+    if not isNonEmptyString(professionType) then
+        return false
+    end
+
+    local resolved = CharacterProfession and CharacterProfession.get and CharacterProfession.get(ResourceLocation.of(professionType))
+    return resolved ~= nil
+end
+
+local function getSafeProfessionType(profession)
+    local professionType = resolveProfessionType(profession)
+    if professionExists(professionType) then
+        return professionType
+    end
+
+    return "unemployed"
+end
+
+local function traitExists(trait)
+    if not isNonEmptyString(trait) then
+        return false
+    end
+
+    local resolved = CharacterTrait and CharacterTrait.get and CharacterTrait.get(ResourceLocation.of(tostring(trait)))
+    return resolved ~= nil
+end
+
+local function perkIndexExists(index)
+    if type(index) ~= "number" then
+        return false
+    end
+
+    if not Perks or not Perks.getMaxIndex or index < 0 or index >= (Perks.getMaxIndex() - 1) + 1 then
+        return false
+    end
+
+    return Perks.fromIndex(index) ~= nil
+end
+
+function QuickRestartValidate.validateLegacyCharacterData(data)
+    if type(data) ~= "table" then
+        return false, "snapshot_not_table"
+    end
+
+    if not isNonEmptyString(data.name) then
+        return false, "missing_name"
+    end
+
+    if not isNonEmptyString(data.forename) then
+        return false, "missing_forename"
+    end
+
+    if not isNonEmptyString(data.surname) then
+        return false, "missing_surname"
+    end
+
+    if data.gender ~= "male" and data.gender ~= "female" then
+        return false, "invalid_gender"
+    end
+
+    if not isNonEmptyString(resolveProfessionType(data.profession) or "") then
+        return false, "missing_profession"
+    end
+
+    if type(data.traits) ~= "table" then
+        return false, "traits_not_table"
+    end
+
+    if type(data.skills) ~= "table" then
+        return false, "skills_not_table"
+    end
+
+    if type(data.visual) ~= "table" then
+        return false, "visual_not_table"
+    end
+
+    if type(data.voice) ~= "table" then
+        return false, "voice_not_table"
+    end
+
+    if type(data.clothing) ~= "table" then
+        return false, "clothing_not_table"
+    end
+
+    local index
+    local level
+
+    for perkIndex, perkXP in pairs(data.skills) do
+        index = tonumber(perkIndex)
+        level = tonumber(perkXP)
+        if index == nil or level == nil or level < 0 then
+            return false, "invalid_skill_entry"
+        end
+    end
+
+    for _, trait in ipairs(data.traits) do
+        if not isNonEmptyString(trait) then
+            return false, "invalid_trait_entry"
+        end
+    end
+
+    for _, item in ipairs(data.clothing) do
+        if type(item) ~= "table" or not isNonEmptyString(item.type) then
+            return false, "invalid_clothing_entry"
+        end
+        if not validateColor(item.color) then
+            return false, "invalid_clothing_color"
+        end
+        if not isNumberOrNil(item.baseTexture) then
+            return false, "invalid_clothing_base_texture"
+        end
+        if not isNumberOrNil(item.textureChoice) then
+            return false, "invalid_clothing_texture_choice"
+        end
+    end
+
+    if not isBooleanOrNil(data.isChallenge) then
+        return false, "invalid_challenge_flag"
+    end
+
+    if data.visual then
+        if data.visual.hairColor and not validateColor(data.visual.hairColor) then
+            return false, "invalid_hair_color"
+        end
+        if not isNumberOrNil(data.visual.skinTextureIndex) then
+            return false, "invalid_skin_texture"
+        end
+        if not isNumberOrNil(data.visual.bodyHairIndex) then
+            return false, "invalid_body_hair_index"
+        end
+        if not isBooleanOrNil(data.visual.hairStubble) then
+            return false, "invalid_hair_stubble"
+        end
+        if not isBooleanOrNil(data.visual.beardStubble) then
+            return false, "invalid_beard_stubble"
+        end
+    end
+
+    if data.voice then
+        if data.voice.prefix ~= nil and type(data.voice.prefix) ~= "string" then
+            return false, "invalid_voice_prefix"
+        end
+        if not isNumberOrNil(data.voice.type) then
+            return false, "invalid_voice_type"
+        end
+        if not isNumberOrNil(data.voice.pitch) then
+            return false, "invalid_voice_pitch"
+        end
+    end
+
+    return true, nil
+end
+
+function QuickRestartValidate.normalizeLegacyCharacterData(data)
+    if type(data) ~= "table" then
+        return nil
+    end
+
+    local normalized = {
+        name = tostring(data.name or ""),
+        forename = tostring(data.forename or ""),
+        surname = tostring(data.surname or ""),
+        gender = tostring(data.gender or ""),
+        profession = getSafeProfessionType(data.profession),
+        region = data.region ~= nil and tostring(data.region) or nil,
+        isChallenge = data.isChallenge == true,
+        challengeID = data.challengeID ~= nil and tostring(data.challengeID) or nil,
+        traits = {},
+        skills = {},
+        visual = {},
+        voice = {},
+        clothing = {},
+        sandbox = type(data.sandbox) == "table" and QuickRestartUtil.copyScalarTable(data.sandbox) or {},
+    }
+
+    local seenTraits = {}
+    for _, trait in ipairs(data.traits or {}) do
+        local traitName = tostring(trait)
+        if traitExists(traitName) and not seenTraits[traitName] then
+            seenTraits[traitName] = true
+            normalized.traits[#normalized.traits + 1] = traitName
+        end
+    end
+
+    for perkIndex, perkXP in pairs(data.skills or {}) do
+        local normalizedIndex = tonumber(perkIndex)
+        local normalizedXP = tonumber(perkXP)
+        if normalizedIndex ~= nil and normalizedXP ~= nil and normalizedXP >= 0 and perkIndexExists(normalizedIndex) then
+            normalized.skills[tostring(normalizedIndex)] = normalizedXP
+        end
+    end
+
+    if type(data.visual) == "table" then
+        normalized.visual.hairModel = data.visual.hairModel ~= nil and tostring(data.visual.hairModel) or nil
+        normalized.visual.beardModel = data.visual.beardModel ~= nil and tostring(data.visual.beardModel) or nil
+        normalized.visual.skinTextureIndex = tonumber(data.visual.skinTextureIndex)
+        normalized.visual.bodyHairIndex = tonumber(data.visual.bodyHairIndex)
+        normalized.visual.hairStubble = data.visual.hairStubble == true
+        normalized.visual.beardStubble = data.visual.beardStubble == true
+        if type(data.visual.hairColor) == "table" then
+            normalized.visual.hairColor = {
+                r = tonumber(data.visual.hairColor.r),
+                g = tonumber(data.visual.hairColor.g),
+                b = tonumber(data.visual.hairColor.b),
+            }
+        end
+    end
+
+    if type(data.voice) == "table" then
+        normalized.voice.prefix = data.voice.prefix ~= nil and tostring(data.voice.prefix) or nil
+        normalized.voice.type = tonumber(data.voice.type)
+        normalized.voice.pitch = tonumber(data.voice.pitch)
+    end
+
+    for _, item in ipairs(data.clothing or {}) do
+        if type(item) == "table" and isNonEmptyString(item.type) then
+            local normalizedItem = {
+                type = tostring(item.type),
+                color = type(item.color) == "table" and {
+                    r = tonumber(item.color.r),
+                    g = tonumber(item.color.g),
+                    b = tonumber(item.color.b),
+                } or nil,
+                baseTexture = tonumber(item.baseTexture),
+                textureChoice = tonumber(item.textureChoice),
+            }
+
+            if validateColor(normalizedItem.color)
+                and isNumberOrNil(normalizedItem.baseTexture)
+                and isNumberOrNil(normalizedItem.textureChoice) then
+                normalized.clothing[#normalized.clothing + 1] = normalizedItem
+            end
+        end
+    end
+
+    return normalized
+end
+
+return QuickRestartValidate
