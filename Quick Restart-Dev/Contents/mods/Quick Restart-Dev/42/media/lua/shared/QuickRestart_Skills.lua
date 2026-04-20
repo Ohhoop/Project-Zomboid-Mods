@@ -28,7 +28,11 @@ function QuickRestartSkills.applyToPlayer(player, skills, options)
                     player:setPerkLevelDebug(perkEnum, 0)
                     xp:setXPToLevel(perkEnum, 0)
                     if options.logProgress then
-                        print("[QuickRestart] skill perkIndex=" .. tostring(perkIndexStr) .. " set to 0")
+                        if QuickRestartLog and QuickRestartLog.info then
+                            QuickRestartLog.info("skill perkIndex=" .. tostring(perkIndexStr) .. " set to 0")
+                        elseif QRDebugLogging == true then
+                            print("[QuickRestart] INFO skill perkIndex=" .. tostring(perkIndexStr) .. " set to 0")
+                        end
                     end
                 else
                     local level = 0
@@ -47,7 +51,11 @@ function QuickRestartSkills.applyToPlayer(player, skills, options)
                     end
 
                     if options.logProgress then
-                        print("[QuickRestart] skill perkIndex=" .. tostring(perkIndexStr) .. " level=" .. tostring(level) .. " xp=" .. tostring(targetXP))
+                        if QuickRestartLog and QuickRestartLog.info then
+                            QuickRestartLog.info("skill perkIndex=" .. tostring(perkIndexStr) .. " level=" .. tostring(level) .. " xp=" .. tostring(targetXP))
+                        elseif QRDebugLogging == true then
+                            print("[QuickRestart] INFO skill perkIndex=" .. tostring(perkIndexStr) .. " level=" .. tostring(level) .. " xp=" .. tostring(targetXP))
+                        end
                     end
                 end
             end

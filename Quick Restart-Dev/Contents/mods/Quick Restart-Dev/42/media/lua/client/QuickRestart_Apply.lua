@@ -80,37 +80,6 @@ local function unequipWornItem(player, item)
     end)
 end
 
-local function clearBaseWornItems(player, inventory)
-    if not player or not inventory then
-        return
-    end
-
-    local ok, wornItems = pcall(function()
-        return player:getWornItems()
-    end)
-    if not ok or not wornItems then
-        return
-    end
-
-    local itemsToRemove = {}
-    for i = 0, wornItems:size() - 1 do
-        local item = wornItems:getItemByIndex(i)
-        if item then
-            local bodyLoc = nil
-            pcall(function()
-                bodyLoc = item:getBodyLocation()
-            end)
-            if isBaseBodyLocation(bodyLoc) then
-                itemsToRemove[#itemsToRemove + 1] = item
-            end
-        end
-    end
-
-    for _, item in ipairs(itemsToRemove) do
-        unequipWornItem(player, item)
-    end
-end
-
 local function isSPNCCBodyLocationRaw(bodyLoc)
     return type(bodyLoc) == "string" and bodyLoc ~= "" and string.find(string.lower(bodyLoc), "spncc", 1, true) ~= nil
 end
@@ -799,20 +768,13 @@ function QuickRestartApply.applyLoadedCharacter(player, data, options)
 
     local restoreDomains = resolveRestoreDomains(data)
     local appliedModData = applyModDataPhase(player, data)
-    local compatVisualOptions = QuickRestartSpongiesCompat
+    local compatVisualOptions = (QuickRestartSpongiesCompat
         and QuickRestartSpongiesCompat.resolveBaseVisualOptions
-        and QuickRestartSpongiesCompat.resolveBaseVisualOptions(data)
-        or nil
-    local hasSPNCharCustom = compatVisualOptions and compatVisualOptions.hasSPNCharCustom == true
+        and QuickRestartSpongiesCompat.resolveBaseVisualOptions(data)) or {}
 
     if restoreDomains.visualOwnedByMod then
-        local skipSkinTextureIndex = compatVisualOptions and compatVisualOptions.skipSkinTextureIndex == true
-        local skipBodyHairIndex = compatVisualOptions and compatVisualOptions.skipBodyHairIndex == true
-        logRestore("applyLoadedCharacter applying base visual only due to mod-owned domain"
-            .. " hasSPNCharCustom=" .. tostring(hasSPNCharCustom)
-            .. " skipSkinTextureIndex=" .. tostring(skipSkinTextureIndex)
-            .. " skipBodyHairIndex=" .. tostring(skipBodyHairIndex))
-        applyBaseVisualToPlayer(player, data, compatVisualOptions or {})
+        logRestore("applyLoadedCharacter applying base visual only due to mod-owned domain")
+        applyBaseVisualToPlayer(player, data, compatVisualOptions)
     else
         applyVisualToPlayer(player, data, options.visualItemTypes or {}, options)
     end

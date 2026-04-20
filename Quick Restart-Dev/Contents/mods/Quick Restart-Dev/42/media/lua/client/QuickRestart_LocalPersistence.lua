@@ -150,6 +150,30 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
         end
     end
 
+    if type(data.modData) == "table" and type(data.modData.descriptor) == "table" and desc.getModData then
+        local hasSPNCharCustom = type(data.modData.descriptor.SPNCharCustom) == "table"
+        QuickRestartLog.info("checkPendingRestart descriptor injection begin"
+            .. " hasDescriptorModData=true"
+            .. " hasSPNCharCustom=" .. tostring(hasSPNCharCustom))
+        local okModData, descriptorModData = pcall(function()
+            return desc:getModData()
+        end)
+        if okModData and type(descriptorModData) == "table" then
+            for key, value in pairs(data.modData.descriptor) do
+                descriptorModData[key] = value
+            end
+            QuickRestartLog.info("checkPendingRestart descriptor injection applied"
+                .. " hasSPNCharCustomAfter=" .. tostring(type(descriptorModData.SPNCharCustom) == "table"))
+        else
+            QuickRestartLog.warn("checkPendingRestart descriptor injection failed to read descriptor modData")
+        end
+    else
+        QuickRestartLog.info("checkPendingRestart descriptor injection skipped"
+            .. " hasModData=" .. tostring(type(data.modData) == "table")
+            .. " hasDescriptor=" .. tostring(type(data.modData) == "table" and type(data.modData.descriptor) == "table")
+            .. " descHasGetModData=" .. tostring(desc.getModData ~= nil))
+    end
+
     local worldName = "QuickRestart_" .. os.time()
 
     if data.isChallenge and data.challengeID then

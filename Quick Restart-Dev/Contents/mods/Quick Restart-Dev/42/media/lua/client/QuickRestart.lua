@@ -459,9 +459,7 @@ local function buildOnNewGameOptions()
                     .. " clothingCount=" .. tostring(type(data and data.clothing) == "table" and #data.clothing or 0)
                     .. " traitsCount=" .. tostring(type(data and data.traits) == "table" and #data.traits or 0))
             end
-            if sameWorldRestart and QuickRestartSpongiesCompat and QuickRestartSpongiesCompat.beginSameWorldProtection then
-                QuickRestartSpongiesCompat.beginSameWorldProtection(data)
-            end
+            triggerEvent("OnQuickRestartBeforeApply", data, sameWorldRestart, playerObj)
             QuickRestartApply.applyLoadedCharacter(playerObj, data, {
                 onPendingMPFinalize = function(skills)
                     if isMultiplayer() then
@@ -480,6 +478,7 @@ local function buildOnNewGameOptions()
                 },
                 inventoryContainerType = INVENTORY_CONTAINER,
             })
+            triggerEvent("OnQuickRestartAfterApply", data, sameWorldRestart, playerObj)
         end,
         onSameWorldRestartApplied = function(playerObj)
             QuickRestartApply.refreshPlayerLighting(playerObj, {

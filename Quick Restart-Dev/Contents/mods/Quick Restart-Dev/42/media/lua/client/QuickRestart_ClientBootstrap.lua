@@ -1,3 +1,6 @@
+LuaEventManager.AddEvent("OnQuickRestartBeforeApply")
+LuaEventManager.AddEvent("OnQuickRestartAfterApply")
+
 require("QuickRestart_Constants")
 require("QuickRestart_Log")
 require("QuickRestart_Util")

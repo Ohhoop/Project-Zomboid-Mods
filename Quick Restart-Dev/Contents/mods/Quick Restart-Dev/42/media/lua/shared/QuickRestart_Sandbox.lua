@@ -10,7 +10,7 @@ end
 local function logInfo(message)
     if QuickRestartLog and QuickRestartLog.info then
         QuickRestartLog.info(message)
-    else
+    elseif QRDebugLogging == true then
         print("[QuickRestart] INFO " .. tostring(message))
     end
 end

@@ -111,10 +111,43 @@ local function clearProtection()
     QuickRestartSpongiesCompat.protection = nil
 end
 
+local spongiesHookInstalled = false
+
+local function ensureSCCHookInstalled()
+    if spongiesHookInstalled then
+        return true
+    end
+
+    local ok, FaceManager_Local = pcall(require, "CharacterCustomisation/FaceManager_Local")
+    if not ok or type(FaceManager_Local) ~= "table" or type(FaceManager_Local.SetCustomisationNewCharacter) ~= "function" then
+        return false
+    end
+
+    local original = FaceManager_Local.SetCustomisationNewCharacter
+    FaceManager_Local.SetCustomisationNewCharacter = function(player, clientData)
+        if QuickRestartSpongiesCompat.isProtectionActive and QuickRestartSpongiesCompat.isProtectionActive() then
+            local protected = getProtectedSPNCharCustom("player")
+            if type(protected) == "table" then
+                local substitute = deepCopySupportedValue(protected, {})
+                if type(substitute) == "table" then
+                    logCompat("SetCustomisationNewCharacter intercepted: substituting clientData with protected snapshot faceId="
+                        .. tostring(type(substitute.face) == "table" and substitute.face.id or nil))
+                    clientData = substitute
+                end
+            end
+        end
+        return original(player, clientData)
+    end
+
+    spongiesHookInstalled = true
+    logCompat("installed hook on FaceManager_Local.SetCustomisationNewCharacter")
+    return true
+end
+
 local function refreshProtectionTimeout()
     local scheduler = QuickRestartScheduler
     if scheduler and scheduler.scheduleAfterTicks then
-        scheduler.scheduleAfterTicks("spongies_same_world_protection_timeout", 420, function()
+        scheduler.scheduleAfterTicks("spongies_snapshot_protection_timeout", 420, function()
             clearProtection()
         end)
     end
@@ -182,7 +215,9 @@ local function applyProtectedModData()
     return true
 end
 
-function QuickRestartSpongiesCompat.beginSameWorldProtection(snapshot)
+function QuickRestartSpongiesCompat.beginSnapshotProtection(snapshot)
+    ensureSCCHookInstalled()
+
     local playerSPNCharCustom = type(snapshot) == "table"
         and type(snapshot.modData) == "table"
         and type(snapshot.modData.player) == "table"
@@ -299,6 +334,60 @@ end
 
 QuickRestartSpongiesCompat.pushCustomisationToServer = pushCustomisationToServer
 
+local function refreshLocalCustomisation()
+    local player = getPlayer()
+    if not player then
+        return false
+    end
+
+    local ok, FaceManager_Local = pcall(require, "CharacterCustomisation/FaceManager_Local")
+    if not ok or type(FaceManager_Local) ~= "table" or type(FaceManager_Local.RefreshCustomisation) ~= "function" then
+        logCompat("refreshLocalCustomisation skipped: FaceManager_Local unavailable")
+        return false
+    end
+
+    local okRefresh, err = pcall(function()
+        FaceManager_Local.RefreshCustomisation(player)
+    end)
+    if not okRefresh then
+        logCompat("refreshLocalCustomisation error: " .. tostring(err))
+        return false
+    end
+
+    logCompat("refreshLocalCustomisation done")
+    return true
+end
+
+QuickRestartSpongiesCompat.refreshLocalCustomisation = refreshLocalCustomisation
+
+function QuickRestartSpongiesCompat.forceReapplyAndPush()
+    local protection = QuickRestartSpongiesCompat.protection
+    if type(protection) ~= "table" then
+        logCompat("forceReapplyAndPush skipped: no protection active")
+        return false
+    end
+
+    local scheduler = QuickRestartScheduler
+    local function run()
+        applyProtectedModData()
+        if protection and not protection.authoritativePushDone then
+            protection.authoritativePushDone = true
+            if isMultiplayer() then
+                pushCustomisationToServer()
+            else
+                refreshLocalCustomisation()
+            end
+        end
+    end
+
+    if scheduler and scheduler.scheduleAfterTicks then
+        scheduler.scheduleAfterTicks("spongies_snapshot_force_reapply", 1, run)
+    else
+        run()
+    end
+    return true
+end
+
 local function onServerCommand(module, command, args)
     if module ~= "SPNCC" then
         return
@@ -320,18 +409,46 @@ local function onServerCommand(module, command, args)
         applyProtectedModData()
         if protection and not protection.authoritativePushDone then
             protection.authoritativePushDone = true
-            pushCustomisationToServer()
+            if isMultiplayer() then
+                pushCustomisationToServer()
+            else
+                refreshLocalCustomisation()
+            end
         end
     end
 
     local scheduler = QuickRestartScheduler
     if scheduler and scheduler.scheduleAfterTicks then
-        scheduler.scheduleAfterTicks("spongies_same_world_reapply", 1, reapplyAndPush)
+        scheduler.scheduleAfterTicks("spongies_snapshot_reapply", 1, reapplyAndPush)
     else
         reapplyAndPush()
     end
 end
 
 Events.OnServerCommand.Add(onServerCommand)
+
+local function onQuickRestartBeforeApply(data, sameWorldRestart, player)
+    logCompat("onQuickRestartBeforeApply sameWorldRestart=" .. tostring(sameWorldRestart))
+    QuickRestartSpongiesCompat.beginSnapshotProtection(data)
+end
+
+local function onQuickRestartAfterApply(data, sameWorldRestart, player)
+    logCompat("onQuickRestartAfterApply sameWorldRestart=" .. tostring(sameWorldRestart) .. " isMP=" .. tostring(isMultiplayer()))
+    if isMultiplayer() then
+        return
+    end
+
+    local scheduler = QuickRestartScheduler
+    if not scheduler or not scheduler.scheduleAfterTicks then
+        return
+    end
+
+    scheduler.scheduleAfterTicks("spongies_solo_force_push", 20, function()
+        QuickRestartSpongiesCompat.forceReapplyAndPush()
+    end)
+end
+
+Events.OnQuickRestartBeforeApply.Add(onQuickRestartBeforeApply)
+Events.OnQuickRestartAfterApply.Add(onQuickRestartAfterApply)
 
 return QuickRestartSpongiesCompat
