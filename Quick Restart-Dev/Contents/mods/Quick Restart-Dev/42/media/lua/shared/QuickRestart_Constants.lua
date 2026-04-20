@@ -5,10 +5,10 @@ QuickRestartConstants.MOD_ID = "QuickRestart-DEV"
 QuickRestartConstants.MODULE = "QuickRestart"
 
 QuickRestartConstants.COMMANDS = {
-    APPLY_SKILLS = "applySkills",
-    APPLY_SKILLS_ACK = "applySkillsAck",
-    APPLY_SKILLS_RETRY = "applySkillsRetry",
-    APPLY_SKILLS_DENIED = "applySkillsDenied",
+    APPLY_AUTHORITATIVE_SNAPSHOT = "applyAuthoritativeSnapshot",
+    APPLY_AUTHORITATIVE_SNAPSHOT_ACK = "applyAuthoritativeSnapshotAck",
+    APPLY_AUTHORITATIVE_SNAPSHOT_RETRY = "applyAuthoritativeSnapshotRetry",
+    APPLY_AUTHORITATIVE_SNAPSHOT_DENIED = "applyAuthoritativeSnapshotDenied",
     SUBMIT_SNAPSHOT = "submitSnapshot",
     SNAPSHOT_ACK = "snapshotAck",
     SNAPSHOT_RETRY = "snapshotRetry",
@@ -19,6 +19,11 @@ QuickRestartConstants.COMMANDS = {
     RESTART_ACCEPTED = "restartAccepted",
     RESTART_DENIED = "restartDenied",
 }
+
+QuickRestartConstants.COMMANDS.APPLY_SKILLS = QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT
+QuickRestartConstants.COMMANDS.APPLY_SKILLS_ACK = QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_ACK
+QuickRestartConstants.COMMANDS.APPLY_SKILLS_RETRY = QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY
+QuickRestartConstants.COMMANDS.APPLY_SKILLS_DENIED = QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED
 
 QuickRestartConstants.MODE = {
     SOLO = "solo",

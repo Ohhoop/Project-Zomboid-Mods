@@ -11,19 +11,31 @@ local function resolveCharacterProfession(profession)
 end
 
 function QuickRestartLocalPersistence.getSaveFileName()
-    return QuickRestartLegacyCodec.getGlobalSaveFileName()
+    return QuickRestartSnapshotCodec.getGlobalSaveFileName()
 end
 
 function QuickRestartLocalPersistence.getSaveFileNameForPlayer(playerIdentifier)
-    return QuickRestartLegacyCodec.getPerPlayerSaveFileName(playerIdentifier)
+    return QuickRestartSnapshotCodec.getPerPlayerSaveFileName(playerIdentifier)
 end
 
 function QuickRestartLocalPersistence.writeDataToFile(data, customFileName, sandboxVars)
-    return QuickRestartLegacyCodec.writeDataToFile(data, customFileName, sandboxVars)
+    QuickRestartSandbox.logSnapshot("writeDataToFile file=" .. tostring(customFileName or QuickRestartLocalPersistence.getSaveFileName()), sandboxVars)
+    return QuickRestartSnapshotCodec.writeDataToFile(data, customFileName, sandboxVars)
 end
 
 function QuickRestartLocalPersistence.readDataFromFile(customFileName)
-    return QuickRestartLegacyCodec.readDataFromFile(customFileName)
+    local data = QuickRestartSnapshotCodec.readDataFromFile(customFileName)
+    if data then
+        return data
+    end
+
+    data = QuickRestartLegacyCodec.readDataFromFile(customFileName)
+    if data then
+        QuickRestartLog.info("readDataFromFile migrated legacy snapshot file=" .. tostring(customFileName or QuickRestartLocalPersistence.getSaveFileName()))
+        QuickRestartLocalPersistence.writeDataToFile(data, customFileName, data.sandbox)
+    end
+
+    return data
 end
 
 function QuickRestartLocalPersistence.deletePendingDataFile()
@@ -38,27 +50,36 @@ end
 function QuickRestartLocalPersistence.saveSandboxData(saveFilePath)
     local data = QuickRestartLocalPersistence.readDataFromFile(saveFilePath)
     if not data then
+        QuickRestartLog.warn("saveSandboxData skipped file=" .. tostring(saveFilePath) .. " data=<nil>")
         return
     end
 
     if data.sandbox then
         for _ in pairs(data.sandbox) do
+            QuickRestartSandbox.logSnapshot("saveSandboxData existing file=" .. tostring(saveFilePath), data.sandbox)
             return
         end
     end
 
+    QuickRestartSandbox.logSnapshot("saveSandboxData current SandboxVars file=" .. tostring(saveFilePath), SandboxVars)
     QuickRestartLocalPersistence.writeDataToFile(data, saveFilePath, SandboxVars)
 end
 
 function QuickRestartLocalPersistence.fetchSandboxVarsAtCreation(data)
-    return QuickRestartSandbox.extractFromSnapshot(data)
+    local snapshot = QuickRestartSandbox.extractFromSnapshot(data)
+    QuickRestartSandbox.logSnapshot("fetchSandboxVarsAtCreation", snapshot)
+    return snapshot
 end
 
 function QuickRestartLocalPersistence.fetchSandboxVarsAtDeath()
-    return QuickRestartSandbox.captureCurrent()
+    local snapshot = QuickRestartSandbox.captureCurrent()
+    QuickRestartSandbox.logSnapshot("fetchSandboxVarsAtDeath", snapshot)
+    return snapshot
 end
 
 function QuickRestartLocalPersistence.sandboxDiffers(sandboxVarsCreation, sandboxVarsCurrent)
+    QuickRestartSandbox.logSnapshot("sandboxDiffers creation", sandboxVarsCreation)
+    QuickRestartSandbox.logSnapshot("sandboxDiffers current", sandboxVarsCurrent)
     return QuickRestartSandbox.differs(sandboxVarsCreation, sandboxVarsCurrent)
 end
 
@@ -68,6 +89,7 @@ function QuickRestartLocalPersistence.loadDataFromSaveFolder(playerIdentifier)
 end
 
 function QuickRestartLocalPersistence.doRestartNewWorld(data, playerIdentifier, sandboxVars)
+    QuickRestartSandbox.logSnapshot("doRestartNewWorld player=" .. tostring(playerIdentifier), sandboxVars)
     QuickRestartLocalPersistence.writeDataToFile(data, nil, sandboxVars)
 
     local oldFileName = QuickRestartLocalPersistence.getSaveFileNameForPlayer(playerIdentifier)
@@ -83,13 +105,17 @@ end
 function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
     local data = QuickRestartLocalPersistence.readDataFromFile()
     if not data or not data.name then
+        QuickRestartLog.info("checkPendingRestart no pending data")
         return nil
     end
+
+    QuickRestartSandbox.logSnapshot("checkPendingRestart loaded", data.sandbox)
 
     if data.sandbox then
         for key, value in pairs(data.sandbox) do
             SandboxVars[key] = value
         end
+        QuickRestartSandbox.logSnapshot("checkPendingRestart applied SandboxVars", SandboxVars)
     end
 
     if saveDataTable then
@@ -151,9 +177,16 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
         end
     end
 
-    if data.region then
+    local targetMap = nil
+    if type(data.worldMap) == "string" and data.worldMap ~= "" then
+        targetMap = data.worldMap
+    elseif type(data.region) == "string" and data.region ~= "" then
+        targetMap = data.region
+    end
+
+    if targetMap then
         getWorld():setGameMode("Sandbox")
-        getWorld():setMap(data.region)
+        getWorld():setMap(targetMap)
         createWorld(worldName)
         GameWindow.doRenderEvent(false)
         forceChangeState(LoadingQueueState.new())

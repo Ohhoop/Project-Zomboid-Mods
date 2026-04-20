@@ -1,5 +1,227 @@
 QuickRestartCapture = QuickRestartCapture or {}
 
+local VISUAL_MODDATA_KEYWORDS = {
+    face = true,
+    body = true,
+    hair = true,
+    beard = true,
+    stubble = true,
+    appearance = true,
+    visual = true,
+    clothing = true,
+    outfit = true,
+    custom = true,
+    detail = true,
+    skin = true,
+    makeup = true,
+    tattoo = true,
+    scar = true,
+    mole = true,
+    freckle = true,
+    muscle = true,
+}
+
+local function deepCopySupportedValue(value, visited)
+    local valueType = type(value)
+    if valueType == "string" or valueType == "number" or valueType == "boolean" then
+        return value
+    end
+
+    if valueType ~= "table" then
+        return nil
+    end
+
+    visited = visited or {}
+    if visited[value] then
+        return visited[value]
+    end
+
+    local copy = {}
+    visited[value] = copy
+
+    for key, childValue in pairs(value) do
+        local keyType = type(key)
+        if keyType == "string" or keyType == "number" or keyType == "boolean" then
+            local copiedValue = deepCopySupportedValue(childValue, visited)
+            if copiedValue ~= nil then
+                copy[key] = copiedValue
+            end
+        end
+    end
+
+    return copy
+end
+
+local function tableHasEntries(tbl)
+    if type(tbl) ~= "table" then
+        return false
+    end
+
+    for _ in pairs(tbl) do
+        return true
+    end
+
+    return false
+end
+
+local function hasVisualKeyword(key)
+    if type(key) ~= "string" then
+        return false
+    end
+
+    local lowered = string.lower(key)
+    for keyword in pairs(VISUAL_MODDATA_KEYWORDS) do
+        if string.find(lowered, keyword, 1, true) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function detectVisualOwnership(value, depth, visited)
+    if type(value) ~= "table" then
+        return false
+    end
+
+    depth = depth or 0
+    if depth > 5 then
+        return false
+    end
+
+    visited = visited or {}
+    if visited[value] then
+        return false
+    end
+    visited[value] = true
+
+    for key, childValue in pairs(value) do
+        if hasVisualKeyword(key) then
+            return true
+        end
+
+        if type(childValue) == "table" and detectVisualOwnership(childValue, depth + 1, visited) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function captureModDataSnapshot(target)
+    if not target or not target.getModData then
+        return nil
+    end
+
+    local ok, modData = pcall(function()
+        return target:getModData()
+    end)
+    if not ok or type(modData) ~= "table" then
+        return nil
+    end
+
+    local copy = deepCopySupportedValue(modData, {})
+    if not tableHasEntries(copy) then
+        return nil
+    end
+
+    return copy
+end
+
+local function logCapturedModData(playerModData, descriptorModData, restoreDomains)
+    if not QuickRestartLog or not QuickRestartLog.info then
+        return
+    end
+
+    local playerEntries = 0
+    if type(playerModData) == "table" then
+        for _ in pairs(playerModData) do
+            playerEntries = playerEntries + 1
+        end
+    end
+
+    local descriptorEntries = 0
+    if type(descriptorModData) == "table" then
+        for _ in pairs(descriptorModData) do
+            descriptorEntries = descriptorEntries + 1
+        end
+    end
+
+    local hasSPNPlayer = type(playerModData) == "table" and type(playerModData.SPNCharCustom) == "table"
+    local hasSPNDescriptor = type(descriptorModData) == "table" and type(descriptorModData.SPNCharCustom) == "table"
+    local playerSPNCount = 0
+    local descriptorSPNCount = 0
+
+    if hasSPNPlayer then
+        for _ in pairs(playerModData.SPNCharCustom) do
+            playerSPNCount = playerSPNCount + 1
+        end
+    end
+    if hasSPNDescriptor then
+        for _ in pairs(descriptorModData.SPNCharCustom) do
+            descriptorSPNCount = descriptorSPNCount + 1
+        end
+    end
+
+    QuickRestartLog.info("capture modData playerEntries=" .. tostring(playerEntries)
+        .. " descriptorEntries=" .. tostring(descriptorEntries)
+        .. " hasPlayerSPNCharCustom=" .. tostring(hasSPNPlayer)
+        .. " playerSPNCharCustomEntries=" .. tostring(playerSPNCount)
+        .. " hasDescriptorSPNCharCustom=" .. tostring(hasSPNDescriptor)
+        .. " descriptorSPNCharCustomEntries=" .. tostring(descriptorSPNCount)
+        .. " visualOwnedByMod=" .. tostring(restoreDomains and restoreDomains.visualOwnedByMod == true)
+        .. " clothingOwnedByMod=" .. tostring(restoreDomains and restoreDomains.clothingOwnedByMod == true))
+end
+
+local function logCapturedWornItems(player)
+    if not QuickRestartLog or not QuickRestartLog.info or not player then
+        return
+    end
+
+    local ok, wornItems = pcall(function()
+        return player:getWornItems()
+    end)
+    if not ok or not wornItems then
+        QuickRestartLog.info("capture wornItems unavailable")
+        return
+    end
+
+    local parts = {}
+    for i = 0, wornItems:size() - 1 do
+        local item = wornItems:getItemByIndex(i)
+        if item then
+            local itemType = "<unknown>"
+            local bodyLocation = "<unknown>"
+
+            pcall(function()
+                itemType = tostring(item:getFullType())
+            end)
+            pcall(function()
+                bodyLocation = tostring(item:getBodyLocation())
+            end)
+
+            parts[#parts + 1] = "[" .. tostring(i) .. "] type=" .. itemType .. " bodyLoc=" .. bodyLocation
+        end
+    end
+
+    QuickRestartLog.info("capture wornItems count=" .. tostring(wornItems:size()) .. " " .. table.concat(parts, " | "))
+end
+
+local function logCapturedClothingEntry(clothingData)
+    if not QuickRestartLog or not QuickRestartLog.info then
+        return
+    end
+
+    if type(clothingData) ~= "table" then
+        QuickRestartLog.info("capture clothing entry=<invalid>")
+        return
+    end
+
+    QuickRestartLog.info("capture clothing entry"
+        .. " type=" .. tostring(clothingData.type)
+        .. " bodyLoc=" .. tostring(clothingData.bodyLocation))
+end
+
 local function resolveProfessionType(desc)
     if not desc or not desc.getCharacterProfession then
         return "unemployed"
@@ -38,6 +260,8 @@ function QuickRestartCapture.captureCharacterData(player, options)
 
     options = options or {}
     local visualItemTypes = options.visualItemTypes or {}
+
+    logCapturedWornItems(player)
 
     local call = pcall
     local insert = table.insert
@@ -80,6 +304,29 @@ function QuickRestartCapture.captureCharacterData(player, options)
                                     insert(data.traits, toStr(traitName))
                                 end
                             end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    data.recipes = {}
+    if player.getKnownRecipes then
+        local success, knownRecipes = call(function() return player:getKnownRecipes() end)
+        if success and knownRecipes then
+            local recipeCount
+            success, recipeCount = call(function() return knownRecipes:size() end)
+            if success and recipeCount and recipeCount > 0 then
+                local seenRecipes = {}
+                for i = 0, recipeCount - 1 do
+                    local recipeName
+                    success, recipeName = call(function() return knownRecipes:get(i) end)
+                    if success and recipeName ~= nil then
+                        recipeName = toStr(recipeName)
+                        if recipeName ~= "" and not seenRecipes[recipeName] then
+                            seenRecipes[recipeName] = true
+                            insert(data.recipes, recipeName)
                         end
                     end
                 end
@@ -178,6 +425,16 @@ function QuickRestartCapture.captureCharacterData(player, options)
                 local clothingData = {
                     type = item:getFullType()
                 }
+                do
+                    local bodyLocation
+                    success, bodyLocation = call(function() return item:getBodyLocation() end)
+                    if success and bodyLocation ~= nil then
+                        bodyLocation = tostring(bodyLocation)
+                        if bodyLocation ~= "" then
+                            clothingData.bodyLocation = bodyLocation
+                        end
+                    end
+                end
 
                 if item.getColorInfo then
                     local result
@@ -215,6 +472,7 @@ function QuickRestartCapture.captureCharacterData(player, options)
                 end
 
                 insert(data.clothing, clothingData)
+                logCapturedClothingEntry(clothingData)
             end
         end
     end
@@ -232,6 +490,32 @@ function QuickRestartCapture.captureCharacterData(player, options)
             data.region = MapSpawnSelect.instance.selectedRegion.name
         end
     end
+
+    local world = getWorld()
+    if world and world.getMap then
+        local success, mapName = call(function()
+            return world:getMap()
+        end)
+        if success and type(mapName) == "string" and mapName ~= "" then
+            data.worldMap = mapName
+        end
+    end
+
+    local playerModData = captureModDataSnapshot(player)
+    local descriptorModData = captureModDataSnapshot(desc)
+    if playerModData or descriptorModData then
+        data.modData = {
+            player = playerModData,
+            descriptor = descriptorModData,
+        }
+    end
+
+    data.restoreDomains = {
+        visualOwnedByMod = detectVisualOwnership(playerModData) or detectVisualOwnership(descriptorModData),
+        clothingOwnedByMod = detectVisualOwnership(playerModData),
+    }
+
+    logCapturedModData(playerModData, descriptorModData, data.restoreDomains)
 
     return data
 end

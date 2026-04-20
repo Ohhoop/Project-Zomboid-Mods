@@ -12,6 +12,10 @@ local function isNumberOrNil(value)
     return value == nil or type(value) == "number"
 end
 
+local function isStringOrNil(value)
+    return value == nil or type(value) == "string"
+end
+
 local function validateColor(color)
     if color == nil then
         return true
@@ -92,7 +96,37 @@ local function perkIndexExists(index)
     return Perks.fromIndex(index) ~= nil
 end
 
-function QuickRestartValidate.validateLegacyCharacterData(data)
+local function copySerializableTable(value, visited)
+    if type(value) ~= "table" then
+        local valueType = type(value)
+        if valueType == "string" or valueType == "number" or valueType == "boolean" then
+            return value
+        end
+        return nil
+    end
+
+    visited = visited or {}
+    if visited[value] then
+        return nil
+    end
+    visited[value] = true
+
+    local copied = {}
+    for key, child in pairs(value) do
+        local keyType = type(key)
+        if keyType == "string" or keyType == "number" or keyType == "boolean" then
+            local copiedChild = copySerializableTable(child, visited)
+            if copiedChild ~= nil then
+                copied[key] = copiedChild
+            end
+        end
+    end
+
+    visited[value] = nil
+    return copied
+end
+
+function QuickRestartValidate.validateSnapshotData(data)
     if type(data) ~= "table" then
         return false, "snapshot_not_table"
     end
@@ -125,6 +159,10 @@ function QuickRestartValidate.validateLegacyCharacterData(data)
         return false, "skills_not_table"
     end
 
+    if data.recipes ~= nil and type(data.recipes) ~= "table" then
+        return false, "recipes_not_table"
+    end
+
     if type(data.visual) ~= "table" then
         return false, "visual_not_table"
     end
@@ -154,9 +192,18 @@ function QuickRestartValidate.validateLegacyCharacterData(data)
         end
     end
 
+    for _, recipe in ipairs(data.recipes or {}) do
+        if not isNonEmptyString(recipe) then
+            return false, "invalid_recipe_entry"
+        end
+    end
+
     for _, item in ipairs(data.clothing) do
         if type(item) ~= "table" or not isNonEmptyString(item.type) then
             return false, "invalid_clothing_entry"
+        end
+        if not isStringOrNil(item.bodyLocation) then
+            return false, "invalid_clothing_body_location"
         end
         if not validateColor(item.color) then
             return false, "invalid_clothing_color"
@@ -206,7 +253,7 @@ function QuickRestartValidate.validateLegacyCharacterData(data)
     return true, nil
 end
 
-function QuickRestartValidate.normalizeLegacyCharacterData(data)
+function QuickRestartValidate.normalizeSnapshotData(data)
     if type(data) ~= "table" then
         return nil
     end
@@ -218,14 +265,21 @@ function QuickRestartValidate.normalizeLegacyCharacterData(data)
         gender = tostring(data.gender or ""),
         profession = getSafeProfessionType(data.profession),
         region = data.region ~= nil and tostring(data.region) or nil,
+        worldMap = data.worldMap ~= nil and tostring(data.worldMap) or nil,
         isChallenge = data.isChallenge == true,
         challengeID = data.challengeID ~= nil and tostring(data.challengeID) or nil,
         traits = {},
         skills = {},
+        recipes = {},
         visual = {},
         voice = {},
         clothing = {},
         sandbox = type(data.sandbox) == "table" and QuickRestartUtil.copyScalarTable(data.sandbox) or {},
+        modData = {
+            player = nil,
+            descriptor = nil,
+        },
+        restoreDomains = {},
     }
 
     local seenTraits = {}
@@ -242,6 +296,15 @@ function QuickRestartValidate.normalizeLegacyCharacterData(data)
         local normalizedXP = tonumber(perkXP)
         if normalizedIndex ~= nil and normalizedXP ~= nil and normalizedXP >= 0 and perkIndexExists(normalizedIndex) then
             normalized.skills[tostring(normalizedIndex)] = normalizedXP
+        end
+    end
+
+    local seenRecipes = {}
+    for _, recipe in ipairs(data.recipes or {}) do
+        local recipeName = tostring(recipe)
+        if recipeName ~= "" and not seenRecipes[recipeName] then
+            seenRecipes[recipeName] = true
+            normalized.recipes[#normalized.recipes + 1] = recipeName
         end
     end
 
@@ -271,6 +334,7 @@ function QuickRestartValidate.normalizeLegacyCharacterData(data)
         if type(item) == "table" and isNonEmptyString(item.type) then
             local normalizedItem = {
                 type = tostring(item.type),
+                bodyLocation = isNonEmptyString(item.bodyLocation) and tostring(item.bodyLocation) or nil,
                 color = type(item.color) == "table" and {
                     r = tonumber(item.color.r),
                     g = tonumber(item.color.g),
@@ -288,7 +352,28 @@ function QuickRestartValidate.normalizeLegacyCharacterData(data)
         end
     end
 
+    if type(data.modData) == "table" then
+        if type(data.modData.player) == "table" then
+            normalized.modData.player = copySerializableTable(data.modData.player, {})
+        end
+        if type(data.modData.descriptor) == "table" then
+            normalized.modData.descriptor = copySerializableTable(data.modData.descriptor, {})
+        end
+    end
+
+    if type(data.restoreDomains) == "table" then
+        if data.restoreDomains.visualOwnedByMod ~= nil then
+            normalized.restoreDomains.visualOwnedByMod = data.restoreDomains.visualOwnedByMod == true
+        end
+        if data.restoreDomains.clothingOwnedByMod ~= nil then
+            normalized.restoreDomains.clothingOwnedByMod = data.restoreDomains.clothingOwnedByMod == true
+        end
+    end
+
     return normalized
 end
+
+QuickRestartValidate.validateLegacyCharacterData = QuickRestartValidate.validateSnapshotData
+QuickRestartValidate.normalizeLegacyCharacterData = QuickRestartValidate.normalizeSnapshotData
 
 return QuickRestartValidate

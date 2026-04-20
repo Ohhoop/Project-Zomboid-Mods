@@ -1,6 +1,7 @@
 QuickRestartUI = QuickRestartUI or {}
 
 QuickRestartPanel = ISPanel:derive("QuickRestartPanel")
+QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 
 function QuickRestartPanel:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
@@ -9,6 +10,71 @@ function QuickRestartPanel:new(x, y, width, height)
     o.backgroundColor = {r=0, g=0, b=0, a=0.3}
     o.borderColor = {r=0, g=0, b=0, a=0}
     return o
+end
+
+function QuickRestartTransitionOverlay:new(x, y, width, height)
+    local o = ISPanel:new(x, y, width, height)
+    setmetatable(o, self)
+    self.__index = self
+    o.backgroundColor = {r=0, g=0, b=0, a=0}
+    o.borderColor = {r=0, g=0, b=0, a=0}
+    o.message = getText("UI_QuickRestart_Title") .. "..."
+    o.currentAlpha = 1
+    o.targetAlpha = 1
+    o.fadeInStep = 1
+    o.fadeOutStep = 0.3
+    o.textAlphaScale = 0.92
+    o.isClosing = false
+    return o
+end
+
+function QuickRestartTransitionOverlay:prerender()
+    self:setX(0)
+    self:setY(0)
+
+    local core = getCore()
+    if core then
+        self:setWidth(core:getScreenWidth())
+        self:setHeight(core:getScreenHeight())
+    end
+
+    local current = tonumber(self.currentAlpha) or 0
+    local target = tonumber(self.targetAlpha) or 0
+    if current < target then
+        current = math.min(target, current + self.fadeInStep)
+    elseif current > target then
+        current = math.max(target, current - self.fadeOutStep)
+    end
+
+    self.currentAlpha = current
+    self.backgroundColor.a = current
+
+    if self.isClosing and current <= 0.001 then
+        self:setVisible(false)
+        self:removeFromUIManager()
+        QuickRestartUI.transitionOverlay = nil
+        return
+    end
+
+    ISPanel.prerender(self)
+end
+
+function QuickRestartTransitionOverlay:render()
+    ISPanel.render(self)
+
+    local message = self.message
+    if not message or message == "" then
+        return
+    end
+
+    local font = UIFont.Medium
+    local textManager = getTextManager()
+    local textWidth = textManager:MeasureStringX(font, message)
+    local textHeight = textManager:getFontHeight(font)
+    local x = (self.width - textWidth) / 2
+    local y = (self.height - textHeight) / 2
+
+    self:drawText(message, x, y, 1, 1, 1, self.currentAlpha * self.textAlphaScale, font)
 end
 
 function QuickRestartPanel:createChildren()
@@ -296,6 +362,48 @@ function QuickRestartUI.createRestartPanel(options)
     panel:addToUIManager()
     panel:setVisible(true)
     return panel
+end
+
+function QuickRestartUI.showTransitionOverlay(message)
+    local core = getCore()
+    if not core then
+        return nil
+    end
+
+    local overlay = QuickRestartUI.transitionOverlay
+    if not overlay then
+        overlay = QuickRestartTransitionOverlay:new(0, 0, core:getScreenWidth(), core:getScreenHeight())
+        overlay:initialise()
+        overlay:instantiate()
+        overlay:setCapture(true)
+        if overlay.javaObject and overlay.javaObject.setConsumeMouseEvents then
+            overlay.javaObject:setConsumeMouseEvents(true)
+        end
+        overlay:addToUIManager()
+        overlay:setAlwaysOnTop(true)
+        QuickRestartUI.transitionOverlay = overlay
+    end
+
+    overlay.message = message or (getText("UI_QuickRestart_Title") .. "...")
+    overlay.currentAlpha = 1
+    overlay.targetAlpha = 1
+    overlay.isClosing = false
+    overlay.backgroundColor.a = 1
+    overlay:setVisible(true)
+    overlay:bringToTop()
+    return overlay
+end
+
+function QuickRestartUI.hideTransitionOverlay()
+    local overlay = QuickRestartUI.transitionOverlay
+    if not overlay then
+        return false
+    end
+
+    overlay.targetAlpha = 0
+    overlay.isClosing = true
+    overlay:bringToTop()
+    return true
 end
 
 return QuickRestartUI

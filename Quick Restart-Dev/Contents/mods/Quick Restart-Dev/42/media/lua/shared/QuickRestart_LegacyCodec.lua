@@ -58,6 +58,7 @@ function QuickRestartLegacyCodec.serializeData(data, sandboxVars)
     insert(content, "gender=" .. (data.gender or "") .. "\n")
     insert(content, "profession=" .. toStr(data.profession or "") .. "\n")
     insert(content, "region=" .. (data.region or "") .. "\n")
+    insert(content, "worldMap=" .. (data.worldMap or "") .. "\n")
 
     insert(content, "isChallenge=" .. toStr(data.isChallenge or false) .. "\n")
     if data.isChallenge and data.challengeID then
@@ -78,6 +79,12 @@ function QuickRestartLegacyCodec.serializeData(data, sandboxVars)
         insert(content, "skills=" .. table.concat(skillsList, ",") .. "\n")
     else
         insert(content, "skills=\n")
+    end
+
+    if data.recipes and #data.recipes > 0 then
+        insert(content, "recipes=" .. table.concat(data.recipes, ",") .. "\n")
+    else
+        insert(content, "recipes=\n")
     end
 
     if data.visual then
@@ -204,7 +211,7 @@ function QuickRestartLegacyCodec.readDataFromFile(customFileName)
         return nil
     end
 
-    local data = {visual = {}, voice = {}, skills = {}, traits = {}, clothing = {}, sandbox = {}}
+    local data = {visual = {}, voice = {}, skills = {}, traits = {}, recipes = {}, clothing = {}, sandbox = {}}
     local toNum = tonumber
     local gmatch = string.gmatch
 
@@ -272,6 +279,10 @@ function QuickRestartLegacyCodec.readDataFromFile(customFileName)
                     if perkId and level then
                         data.skills[perkId] = toNum(level)
                     end
+                end
+            elseif key == "recipes" then
+                for recipe in gmatch(value, "[^,]+") do
+                    data.recipes[#data.recipes + 1] = recipe
                 end
             elseif key == "clothing" then
                 for clothingItem in gmatch(value, "[^;]+") do

@@ -56,7 +56,7 @@ function QuickRestartProtocol.buildRestartResponse(options)
     }
 end
 
-function QuickRestartProtocol.buildApplySkillsResponse(options)
+function QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse(options)
     options = options or {}
 
     return {
@@ -65,5 +65,7 @@ function QuickRestartProtocol.buildApplySkillsResponse(options)
         reason = options.reason,
     }
 end
+
+QuickRestartProtocol.buildApplySkillsResponse = QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse
 
 return QuickRestartProtocol

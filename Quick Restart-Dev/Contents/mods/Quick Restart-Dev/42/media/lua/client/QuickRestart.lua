@@ -55,9 +55,110 @@ captureCharacterData = function(player)
     })
 end
 
+local function isFaceBodyLocation(bodyLocation)
+    if type(bodyLocation) ~= "string" or bodyLocation == "" then
+        return false
+    end
+
+    return string.find(string.lower(bodyLocation), "face", 1, true) ~= nil
+end
+
+local function findFaceClothingEntry(data)
+    if type(data) ~= "table" or type(data.clothing) ~= "table" then
+        return nil
+    end
+
+    for _, clothingData in ipairs(data.clothing) do
+        if type(clothingData) == "table" and isFaceBodyLocation(clothingData.bodyLocation) then
+            return clothingData
+        end
+    end
+
+    return nil
+end
+
+local function summarizeFaceEntry(faceEntry)
+    if type(faceEntry) ~= "table" then
+        return "face=nil"
+    end
+
+    return "faceType=" .. tostring(faceEntry.type)
+        .. " faceBodyLocation=" .. tostring(faceEntry.bodyLocation)
+end
+
+local function countTableEntries(tbl)
+    if type(tbl) ~= "table" then
+        return 0
+    end
+
+    local count = 0
+    for _ in pairs(tbl) do
+        count = count + 1
+    end
+    return count
+end
+
+local function getPlayerSPNCharCustom(data)
+    if type(data) ~= "table"
+        or type(data.modData) ~= "table"
+        or type(data.modData.player) ~= "table"
+        or type(data.modData.player.SPNCharCustom) ~= "table" then
+        return nil
+    end
+
+    return data.modData.player.SPNCharCustom
+end
+
+local function shouldRejectRegressiveSnapshot(capturedData, existingSnapshot)
+    if type(capturedData) ~= "table" or type(existingSnapshot) ~= "table" then
+        return false, nil
+    end
+
+    local existingFace = findFaceClothingEntry(existingSnapshot)
+    local capturedFace = findFaceClothingEntry(capturedData)
+    if existingFace and not capturedFace then
+        return true, "missing_face_layer"
+    end
+
+    local existingSPN = getPlayerSPNCharCustom(existingSnapshot)
+    local capturedSPN = getPlayerSPNCharCustom(capturedData)
+    if existingSPN and not capturedSPN then
+        return true, "missing_player_SPNCharCustom"
+    end
+
+    local existingSPNCount = countTableEntries(existingSPN)
+    local capturedSPNCount = countTableEntries(capturedSPN)
+    if existingSPNCount > 0 and capturedSPNCount == 0 then
+        return true, "empty_player_SPNCharCustom"
+    end
+
+    return false, nil
+end
+
+local function shouldReplaceSnapshotForFace(capturedData, existingSnapshot)
+    local capturedFace = findFaceClothingEntry(capturedData)
+    if not capturedFace then
+        return false
+    end
+
+    local existingFace = findFaceClothingEntry(existingSnapshot)
+    if not existingFace then
+        return true
+    end
+
+    if tostring(existingFace.type) ~= tostring(capturedFace.type) then
+        return true
+    end
+
+    return tostring(existingFace.bodyLocation) ~= tostring(capturedFace.bodyLocation)
+end
+
 local function saveCharacterData(player, saveFilePath)
     local data = captureCharacterData(player)
     if not data then
+        if isMultiplayer() then
+            QuickRestartLog.warn("mp client saveCharacterData aborted: capture returned nil")
+        end
         return
     end
 
@@ -66,7 +167,27 @@ local function saveCharacterData(player, saveFilePath)
     end
 
     if isMultiplayer() then
-        sendSnapshotPayload(player, data, QuickRestartClientState.replaceSnapshotOnNextCapture == true)
+        local allowReplace = QuickRestartClientState.replaceSnapshotOnNextCapture == true
+        local capturedFace = findFaceClothingEntry(data)
+        local existingFace = findFaceClothingEntry(QuickRestartClientState.serverSnapshot)
+        local rejectReplace, rejectReason = shouldRejectRegressiveSnapshot(data, QuickRestartClientState.serverSnapshot)
+        if rejectReplace then
+            allowReplace = false
+            QuickRestartLog.warn("mp client saveCharacterData keeping existing snapshot due to regressive capture reason="
+                .. tostring(rejectReason))
+        end
+        if not allowReplace and shouldReplaceSnapshotForFace(data, QuickRestartClientState.serverSnapshot) then
+            allowReplace = true
+            QuickRestartLog.info("mp client saveCharacterData enabling snapshot replace to persist face layer")
+        end
+
+        QuickRestartLog.info("mp client saveCharacterData captured snapshot for submit"
+            .. " allowReplace=" .. tostring(allowReplace)
+            .. " name=" .. tostring(data.name)
+            .. " region=" .. tostring(data.region)
+            .. " captured" .. " " .. summarizeFaceEntry(capturedFace)
+            .. " existing" .. " " .. summarizeFaceEntry(existingFace))
+        sendSnapshotPayload(player, data, allowReplace)
         QuickRestartClientState.replaceSnapshotOnNextCapture = false
     end
 
@@ -114,6 +235,9 @@ local function doRestartNewWorld(data, playerIdentifier, sandboxVars)
 end
 
 function QuickRestart.RestartNewWorld()
+    if isMultiplayer() then
+        QuickRestartLog.info("mp client QuickRestart.RestartNewWorld invoked")
+    end
     return QuickRestartClientFlow.restartNewWorld({
         canUseFreshWorld = canUseFreshWorld,
         getPlayerIdentifier = getPlayerIdentifier,
@@ -130,6 +254,12 @@ function QuickRestart.RestartNewWorld()
 end
 
 function QuickRestart.RestartSameWorld()
+    if isMultiplayer() then
+        QuickRestartLog.info("mp client QuickRestart.RestartSameWorld invoked"
+            .. " hasServerSnapshot=" .. tostring(QuickRestartClientState.serverSnapshot ~= nil)
+            .. " serverSnapshotLoaded=" .. tostring(QuickRestartClientState.serverSnapshotLoaded)
+            .. " pendingRestartMode=" .. tostring(QuickRestartClientState.pendingRestartMode))
+    end
     return QuickRestartClientFlow.restartSameWorld({
         getPlayerIdentifier = getPlayerIdentifier,
         loadDataFromSaveFolder = loadDataFromSaveFolder,
@@ -139,6 +269,11 @@ function QuickRestart.RestartSameWorld()
 end
 
 startSameWorldRestartFromSnapshot = function(data)
+    if isMultiplayer() then
+        QuickRestartLog.info("mp client QuickRestart.startSameWorldRestartFromSnapshot wrapper"
+            .. " name=" .. tostring(data and data.name)
+            .. " region=" .. tostring(data and data.region))
+    end
     return QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, {
         closePanel = function()
             if restartPanel then
@@ -153,6 +288,12 @@ startSameWorldRestartFromSnapshot = function(data)
         setPendingSameWorld = function(snapshot)
             QuickRestart.pendingSameWorld = true
             QuickRestart.sameWorldData = snapshot
+        end,
+        showTransitionOverlay = function()
+            QuickRestartUI.showTransitionOverlay()
+        end,
+        hideTransitionOverlay = function()
+            QuickRestartUI.hideTransitionOverlay()
         end,
         scheduler = QuickRestartScheduler,
         visualItemTypes = {
@@ -198,9 +339,18 @@ end
 local function consumePendingSameWorldData()
     if QuickRestart.pendingSameWorld and QuickRestart.sameWorldData then
         local data = QuickRestart.sameWorldData
+        if isMultiplayer() then
+            QuickRestartLog.info("mp client consumePendingSameWorldData returning snapshot"
+                .. " name=" .. tostring(data and data.name)
+                .. " region=" .. tostring(data and data.region))
+        end
         QuickRestart.pendingSameWorld = nil
         QuickRestart.sameWorldData = nil
         return data
+    end
+
+    if isMultiplayer() then
+        QuickRestartLog.info("mp client consumePendingSameWorldData found no pending snapshot")
     end
 
     return nil
@@ -221,7 +371,7 @@ local function flushPendingMPRestore()
         return
     end
 
-    sendClientCommand(QuickRestartConstants.MODULE, QuickRestartConstants.COMMANDS.APPLY_SKILLS, {
+    sendClientCommand(QuickRestartConstants.MODULE, QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT, {
         grantId = QuickRestartClientState.pendingRestartGrantId,
         profileKey = QuickRestartClientState.pendingProfileKey,
         username = QuickRestartClientState.pendingUsername,
@@ -281,19 +431,43 @@ local function buildOnNewGameOptions()
         loadDataFromFile = loadDataFromFile,
         scheduleDelayedSave = function(playerObj, saveFilePath)
             if characterDataSaved then
+                if isMultiplayer() then
+                    QuickRestartLog.info("mp client scheduleDelayedSave skipped: character data already saved")
+                end
                 return
             end
 
+            if isMultiplayer() then
+                QuickRestartLog.info("mp client scheduleDelayedSave queued delayTicks=60 saveFilePath=" .. tostring(saveFilePath))
+            end
             QuickRestartScheduler.scheduleAfterTicks("delayed_save_" .. tostring(getPlayerIdentifier(playerObj) or "player"), 60, function()
                 if not characterDataSaved then
                     characterDataSaved = true
+                    if isMultiplayer() then
+                        QuickRestartLog.info("mp client delayed save firing now")
+                    end
                     saveCharacterData(playerObj, saveFilePath)
+                elseif isMultiplayer() then
+                    QuickRestartLog.info("mp client delayed save skipped at fire time: already saved")
                 end
             end)
         end,
-        applyLoadedCharacter = function(playerObj, data)
+        applyLoadedCharacter = function(playerObj, data, sameWorldRestart)
+            if isMultiplayer() then
+                QuickRestartLog.info("mp client QuickRestart.lua applyLoadedCharacter callback"
+                    .. " name=" .. tostring(data and data.name)
+                    .. " clothingCount=" .. tostring(type(data and data.clothing) == "table" and #data.clothing or 0)
+                    .. " traitsCount=" .. tostring(type(data and data.traits) == "table" and #data.traits or 0))
+            end
+            if sameWorldRestart and QuickRestartSpongiesCompat and QuickRestartSpongiesCompat.beginSameWorldProtection then
+                QuickRestartSpongiesCompat.beginSameWorldProtection(data)
+            end
             QuickRestartApply.applyLoadedCharacter(playerObj, data, {
                 onPendingMPFinalize = function(skills)
+                    if isMultiplayer() then
+                        QuickRestartLog.info("mp client pendingMPRestore finalized hasSkills="
+                            .. tostring(type(skills) == "table"))
+                    end
                     QuickRestart.pendingMPRestore = {
                         hasSkills = type(skills) == "table",
                     }
@@ -306,6 +480,15 @@ local function buildOnNewGameOptions()
                 },
                 inventoryContainerType = INVENTORY_CONTAINER,
             })
+        end,
+        onSameWorldRestartApplied = function(playerObj)
+            QuickRestartApply.refreshPlayerLighting(playerObj, {
+                scheduler = QuickRestartScheduler,
+                delayTicks = isMultiplayer() and 4 or 20,
+            })
+            QuickRestartScheduler.scheduleAfterTicks("hide_same_world_transition_overlay", 30, function()
+                QuickRestartUI.hideTransitionOverlay()
+            end)
         end,
         persistAppliedData = function(data, saveFilePath)
             writeDataToFile(data, saveFilePath, data.sandbox)

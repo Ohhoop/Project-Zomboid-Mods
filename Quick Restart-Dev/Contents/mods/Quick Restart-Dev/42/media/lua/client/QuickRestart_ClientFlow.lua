@@ -1,11 +1,50 @@
 QuickRestartClientFlow = QuickRestartClientFlow or {}
 
+local function summarizeSnapshot(snapshot)
+    if type(snapshot) ~= "table" then
+        return "snapshot=nil"
+    end
+
+    local traitsCount = type(snapshot.traits) == "table" and #snapshot.traits or 0
+    local recipesCount = type(snapshot.recipes) == "table" and #snapshot.recipes or 0
+    local skillsCount = 0
+    if type(snapshot.skills) == "table" then
+        for _ in pairs(snapshot.skills) do
+            skillsCount = skillsCount + 1
+        end
+    end
+
+    return "name=" .. tostring(snapshot.name)
+        .. " region=" .. tostring(snapshot.region)
+        .. " profession=" .. tostring(snapshot.profession)
+        .. " traits=" .. tostring(traitsCount)
+        .. " skills=" .. tostring(skillsCount)
+        .. " recipes=" .. tostring(recipesCount)
+end
+
+local function summarizeFaceSnapshot(snapshot)
+    if type(snapshot) ~= "table" or type(snapshot.clothing) ~= "table" then
+        return "face=nil"
+    end
+
+    for _, clothingData in ipairs(snapshot.clothing) do
+        if type(clothingData) == "table"
+            and type(clothingData.bodyLocation) == "string"
+            and string.find(string.lower(clothingData.bodyLocation), "face", 1, true) ~= nil then
+            return "faceType=" .. tostring(clothingData.type)
+                .. " faceBodyLocation=" .. tostring(clothingData.bodyLocation)
+        end
+    end
+
+    return "face=nil"
+end
+
 function QuickRestartClientFlow.isRestartSnapshotAvailable(data)
     if type(data) ~= "table" then
         return false
     end
 
-    local valid = QuickRestartValidate.validateLegacyCharacterData(data)
+    local valid = QuickRestartValidate.validateSnapshotData(data)
     return valid == true
 end
 
@@ -94,6 +133,7 @@ end
 
 function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
     if not data or not data.name then
+        QuickRestartLog.warn("mp client startSameWorldRestartFromSnapshot aborted: missing snapshot data")
         return false
     end
 
@@ -103,14 +143,22 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
     local clearPending = options.clearPending
     local setPendingSameWorld = options.setPendingSameWorld
     local visualItemTypes = options.visualItemTypes or {}
+    local showTransitionOverlay = options.showTransitionOverlay
+    local hideTransitionOverlay = options.hideTransitionOverlay
 
     if closePanel then
         closePanel()
     end
 
+    if showTransitionOverlay then
+        showTransitionOverlay()
+    end
+
     if setPendingSameWorld then
         setPendingSameWorld(data)
     end
+
+    QuickRestartLog.info("mp client startSameWorldRestartFromSnapshot " .. summarizeSnapshot(data))
 
     BaseGameCharacterDetails.DoProfessions()
     CoopCharacterCreation:newPlayerMouse()
@@ -119,8 +167,12 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
     scheduler.scheduleAfterTicks("same_world_auto_complete", 2, function()
         local coop = CoopCharacterCreation.instance
         if not coop then
+            QuickRestartLog.warn("mp client sameWorld auto-complete aborted: CoopCharacterCreation.instance missing")
             if clearPending then
                 clearPending()
+            end
+            if hideTransitionOverlay then
+                hideTransitionOverlay()
             end
             return
         end
@@ -173,6 +225,7 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
         end
 
         if coop:accept1() then
+            QuickRestartLog.info("mp client sameWorld auto-complete accept1 succeeded")
             coop:removeFromUIManager()
             CoopCharacterCreation.setVisibleAllUI(true)
             CoopCharacterCreation.instance = nil
@@ -181,6 +234,9 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
                 ISPostDeathUI.instance[0] = nil
             end
             setPlayerMouse(nil)
+        elseif hideTransitionOverlay then
+            QuickRestartLog.warn("mp client sameWorld auto-complete accept1 failed")
+            hideTransitionOverlay()
         end
     end)
     return true
@@ -243,13 +299,20 @@ function QuickRestartClientFlow.restartSameWorld(options)
 
     local player = getPlayer()
     if not player then
+        if isMultiplayer() then
+            QuickRestartLog.warn("mp client restartSameWorld aborted: player missing")
+        end
         return false
     end
 
     if isMultiplayer() then
         if options.sendRestartIntent then
+            QuickRestartLog.info("mp client restartSameWorld requested"
+                .. " username=" .. tostring(player.getUsername and player:getUsername() or nil)
+                .. " hasServerSnapshot=" .. tostring(options.loadDataFromSaveFolder and options.loadDataFromSaveFolder("player") ~= nil))
             return options.sendRestartIntent(player, QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD)
         end
+        QuickRestartLog.warn("mp client restartSameWorld aborted: sendRestartIntent missing")
         return false
     end
 
@@ -345,6 +408,7 @@ function QuickRestartClientFlow.onPlayerDeath(player, options)
 
     if isMultiplayer() then
         if options.requestActiveServerSnapshot then
+            QuickRestartLog.info("mp client onPlayerDeath request active snapshot")
             options.requestActiveServerSnapshot(player)
         end
     else
@@ -354,6 +418,11 @@ end
 
 function QuickRestartClientFlow.onNewGame(player, options)
     options = options or {}
+
+    if isMultiplayer() then
+        QuickRestartLog.info("mp client onNewGame begin"
+            .. " player=" .. tostring(player and player.getUsername and player:getUsername() or nil))
+    end
 
     if options.closeRestartPanel then
         options.closeRestartPanel()
@@ -366,7 +435,6 @@ function QuickRestartClientFlow.onNewGame(player, options)
         state.pendingRestartApproved = false
         state.pendingRestartRequestId = nil
         state.pendingRestartMode = nil
-        state.pendingRestartGrantId = nil
     end
 
     if options.resetCharacterDataSaved then
@@ -380,11 +448,23 @@ function QuickRestartClientFlow.onNewGame(player, options)
     local playerIdentifier = options.getPlayerIdentifier and options.getPlayerIdentifier(player) or nil
     local saveFilePath = options.getSaveFileNameForPlayer and options.getSaveFileNameForPlayer(playerIdentifier) or nil
     local data = nil
+    local sameWorldRestart = false
+
+    if isMultiplayer() and state then
+        QuickRestartLog.info("mp client onNewGame state"
+            .. " pendingRestartMode=" .. tostring(state.pendingRestartMode)
+            .. " pendingRestartApproved=" .. tostring(state.pendingRestartApproved)
+            .. " pendingRestartGrantId=" .. tostring(state.pendingRestartGrantId)
+            .. " serverSnapshotLoaded=" .. tostring(state.serverSnapshotLoaded)
+            .. " hasServerSnapshot=" .. tostring(state.serverSnapshot ~= nil))
+    end
 
     if options.consumePendingSameWorldData then
         data = options.consumePendingSameWorldData()
         if data and state then
             state.replaceSnapshotOnNextCapture = false
+            sameWorldRestart = true
+            QuickRestartLog.info("mp client onNewGame consumed pending same-world snapshot " .. summarizeSnapshot(data))
         end
     end
 
@@ -400,10 +480,23 @@ function QuickRestartClientFlow.onNewGame(player, options)
 
     if not data or not data.name then
         if isMultiplayer() and state then
-            state.replaceSnapshotOnNextCapture = QuickRestartClientFlow.isRestartSnapshotAvailable(state.serverSnapshot)
-        end
+            local hasExistingSnapshot = QuickRestartClientFlow.isRestartSnapshotAvailable(state.serverSnapshot)
+            state.replaceSnapshotOnNextCapture = false
 
-        if options.scheduleDelayedSave then
+            if hasExistingSnapshot then
+                QuickRestartLog.info("mp client onNewGame no loaded snapshot; keeping existing server snapshot and skipping delayed capture"
+                    .. " currentServerSnapshotLoaded=" .. tostring(state.serverSnapshotLoaded)
+                    .. " currentServerSnapshot=" .. summarizeSnapshot(state.serverSnapshot))
+            else
+                QuickRestartLog.info("mp client onNewGame no loaded snapshot; scheduling initial delayed capture replaceNext=false"
+                    .. " currentServerSnapshotLoaded=" .. tostring(state.serverSnapshotLoaded)
+                    .. " currentServerSnapshot=" .. summarizeSnapshot(state.serverSnapshot))
+            end
+
+            if not hasExistingSnapshot and options.scheduleDelayedSave then
+                options.scheduleDelayedSave(player, saveFilePath)
+            end
+        elseif options.scheduleDelayedSave then
             options.scheduleDelayedSave(player, saveFilePath)
         end
     else
@@ -411,8 +504,18 @@ function QuickRestartClientFlow.onNewGame(player, options)
             state.replaceSnapshotOnNextCapture = false
         end
 
+        if isMultiplayer() then
+            QuickRestartLog.info("mp client onNewGame applying loaded snapshot sameWorld="
+                .. tostring(sameWorldRestart)
+                .. " " .. summarizeSnapshot(data))
+        end
+
         if options.applyLoadedCharacter then
-            options.applyLoadedCharacter(player, data)
+            options.applyLoadedCharacter(player, data, sameWorldRestart)
+        end
+
+        if sameWorldRestart and options.onSameWorldRestartApplied then
+            options.onSameWorldRestartApplied(player, data)
         end
 
         if not isMultiplayer() and options.persistAppliedData then
@@ -433,6 +536,7 @@ function QuickRestartClientFlow.onGameTimeLoaded(options)
 
     local player = getPlayer()
     if player and isMultiplayer() and options.requestActiveServerSnapshot then
+        QuickRestartLog.info("mp client onGameTimeLoaded request active snapshot")
         options.requestActiveServerSnapshot(player)
     end
 
@@ -452,11 +556,19 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
         return
     end
 
-    if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
-        return
-    end
-
     if command == QuickRestartConstants.COMMANDS.SNAPSHOT_ACK then
+        if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
+            QuickRestartLog.warn("mp client ignored SNAPSHOT_ACK due to pendingRequestId mismatch pending="
+                .. tostring(state.pendingRequestId)
+                .. " received=" .. tostring(args.requestId))
+            return
+        end
+
+        QuickRestartLog.info("mp client SNAPSHOT_ACK requestId=" .. tostring(args.requestId)
+            .. " accepted=" .. tostring(args.accepted)
+            .. " stored=" .. tostring(args.stored)
+            .. " profileKey=" .. tostring(args.profileKey)
+            .. " " .. summarizeFaceSnapshot(state.pendingSnapshot))
         state.waitingForSnapshotAck = false
         state.snapshotAcked = args.accepted == true
         if args.profileKey and args.profileKey ~= "" then
@@ -466,6 +578,9 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
             if args.stored == true then
                 state.serverSnapshot = state.pendingSnapshot
                 state.serverSnapshotLoaded = true
+                QuickRestartLog.info("mp client active server snapshot updated from ACK "
+                    .. summarizeSnapshot(state.serverSnapshot)
+                    .. " " .. summarizeFaceSnapshot(state.serverSnapshot))
             end
             state.pendingSnapshot = nil
         end
@@ -473,6 +588,15 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
     end
 
     if command == QuickRestartConstants.COMMANDS.SNAPSHOT_RETRY then
+        if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
+            QuickRestartLog.warn("mp client ignored SNAPSHOT_RETRY due to pendingRequestId mismatch pending="
+                .. tostring(state.pendingRequestId)
+                .. " received=" .. tostring(args.requestId))
+            return
+        end
+
+        QuickRestartLog.warn("mp client SNAPSHOT_RETRY requestId=" .. tostring(args.requestId)
+            .. " attempt=" .. tostring(args.attempt))
         local player = getPlayer()
         if player and options.retryPendingSnapshot then
             options.retryPendingSnapshot(player)
@@ -480,14 +604,17 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
         return
     end
 
-    if command == QuickRestartConstants.COMMANDS.APPLY_SKILLS_ACK then
+    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_ACK then
+        QuickRestartLog.info("mp client APPLY_AUTHORITATIVE_SNAPSHOT_ACK profileKey=" .. tostring(args.profileKey))
         if options.onApplySkillsAck then
             options.onApplySkillsAck()
         end
         return
     end
 
-    if command == QuickRestartConstants.COMMANDS.APPLY_SKILLS_RETRY then
+    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY then
+        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_RETRY grantId=" .. tostring(args.grantId)
+            .. " reason=" .. tostring(args.reason))
         if args.grantId and args.grantId ~= "" then
             state.pendingRestartGrantId = tostring(args.grantId)
         end
@@ -497,7 +624,8 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
         return
     end
 
-    if command == QuickRestartConstants.COMMANDS.APPLY_SKILLS_DENIED then
+    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED then
+        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_DENIED reason=" .. tostring(args.reason))
         state.pendingRestartGrantId = nil
         if options.onApplySkillsDenied then
             options.onApplySkillsDenied(args.reason)
@@ -506,10 +634,18 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
     end
 
     if state.pendingRestartRequestId and args.requestId and state.pendingRestartRequestId ~= args.requestId then
+        QuickRestartLog.warn("mp client ignored restart response due to pendingRestartRequestId mismatch command="
+            .. tostring(command)
+            .. " pending=" .. tostring(state.pendingRestartRequestId)
+            .. " received=" .. tostring(args.requestId))
         return
     end
 
     if command == QuickRestartConstants.COMMANDS.RESTART_ACCEPTED then
+        QuickRestartLog.info("mp client RESTART_ACCEPTED mode=" .. tostring(args.mode)
+            .. " requestId=" .. tostring(args.requestId)
+            .. " grantId=" .. tostring(args.grantId)
+            .. " hasServerSnapshot=" .. tostring(state.serverSnapshot ~= nil))
         state.pendingRestartApproved = true
         state.lastRestartDeniedReason = nil
         state.pendingRestartGrantId = args.grantId
@@ -523,6 +659,9 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
     end
 
     if command == QuickRestartConstants.COMMANDS.RESTART_DENIED then
+        QuickRestartLog.warn("mp client RESTART_DENIED mode=" .. tostring(args.mode)
+            .. " requestId=" .. tostring(args.requestId)
+            .. " reason=" .. tostring(args.reason))
         state.pendingRestartRequestId = nil
         state.pendingRestartApproved = false
         state.pendingRestartGrantId = nil
@@ -532,6 +671,18 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
     end
 
     if command == QuickRestartConstants.COMMANDS.SNAPSHOT_DATA then
+        local requestMatchesActive = state.pendingRequestId and args.requestId and state.pendingRequestId == args.requestId
+        local requestMatchesRestart = state.pendingRestartRequestId and args.requestId and state.pendingRestartRequestId == args.requestId
+        local hasTrackedRequest = state.pendingRequestId or state.pendingRestartRequestId
+
+        if hasTrackedRequest and args.requestId and not requestMatchesActive and not requestMatchesRestart then
+            QuickRestartLog.warn("mp client ignored SNAPSHOT_DATA due to request mismatch activePending="
+                .. tostring(state.pendingRequestId)
+                .. " restartPending=" .. tostring(state.pendingRestartRequestId)
+                .. " received=" .. tostring(args.requestId))
+            return
+        end
+
         if args.profileKey and args.profileKey ~= "" then
             state.pendingProfileKey = tostring(args.profileKey)
         end
@@ -545,6 +696,16 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
         state.serverSnapshot = hasValidSnapshot and snapshot or nil
         state.serverSnapshotLoaded = hasValidSnapshot
         state.waitingForActiveSnapshot = false
+        if requestMatchesActive then
+            state.pendingRequestId = nil
+        end
+
+        QuickRestartLog.info("mp client SNAPSHOT_DATA requestId=" .. tostring(args.requestId)
+            .. " found=" .. tostring(args.found)
+            .. " hasValidSnapshot=" .. tostring(hasValidSnapshot)
+            .. " profileKey=" .. tostring(args.profileKey)
+            .. " " .. summarizeSnapshot(snapshot)
+            .. " " .. summarizeFaceSnapshot(snapshot))
 
         if state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and state.serverSnapshot and options.startSameWorldRestartFromSnapshot then
             state.pendingRestartRequestId = nil
@@ -552,6 +713,7 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
             options.startSameWorldRestartFromSnapshot(state.serverSnapshot)
             state.pendingRestartMode = nil
         elseif state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and not state.serverSnapshot then
+            QuickRestartLog.warn("mp client same-world restart canceled: invalid server snapshot")
             state.pendingRestartRequestId = nil
             state.pendingRestartApproved = false
             state.pendingRestartGrantId = nil

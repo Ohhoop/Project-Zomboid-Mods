@@ -16,6 +16,7 @@ function QuickRestartSchema.newSnapshot()
         },
         world = {
             region = nil,
+            map = nil,
             isChallenge = false,
             challengeID = nil,
         },
@@ -23,6 +24,7 @@ function QuickRestartSchema.newSnapshot()
         visual = {},
         traits = {},
         skills = {},
+        recipes = {},
         clothing = {},
         sandbox = {},
     }
