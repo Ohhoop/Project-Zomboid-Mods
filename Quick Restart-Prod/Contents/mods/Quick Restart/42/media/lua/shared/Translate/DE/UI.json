@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "NEUE WELT",
+    "UI_QuickRestart_ThisWorld": "SELBE WELT",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Neue Welt, selber Startcharakter",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Selbe Welt, selber Startcharakter",
+    "UI_QuickRestart_NoData_Tooltip": "Keine Charakterdaten - starte einen neuen Speicherstand mit diesem Mod oder nutze \"Mit neuem Charakter fortfahren\" einmal, um Quick Restart zu aktivieren",
+    "UI_QuickRestart_MP_Tooltip": "Nicht verfügbar im Multiplayer / Splitscreen",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "NEUE WELT - SANDBOX-EINSTELLUNGEN",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Die Sandbox-Einstellungen haben sich seit der Erstellung dieser Welt geändert. Welche Einstellungen soll deine neue Welt verwenden?",
+    "UI_QuickRestart_SandboxConflict_Saved": "EINSTELLUNGEN BEI ERSTELLUNG",
+    "UI_QuickRestart_SandboxConflict_Current": "AKTUELLE EINSTELLUNGEN",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Sandbox-Einstellungen von der Welterstellung verwenden. Empfohlen, wenn du nichts manuell geändert hast. Ein Mod könnte deine aktuellen Einstellungen als Teil seiner Funktionen geändert haben.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Sandbox-Einstellungen so verwenden, wie sie jetzt sind. Wähle dies, wenn du absichtlich Änderungen vorgenommen hast und diese übernehmen möchtest."
+}

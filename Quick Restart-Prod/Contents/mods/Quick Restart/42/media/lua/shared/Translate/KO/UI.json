@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "새로운 세계",
+    "UI_QuickRestart_ThisWorld": "같은 세계",
+    "UI_QuickRestart_FreshWorld_Tooltip": "새로운 세계, 같은 시작 캐릭터",
+    "UI_QuickRestart_ThisWorld_Tooltip": "같은 세계, 같은 시작 캐릭터",
+    "UI_QuickRestart_NoData_Tooltip": "캐릭터 데이터 없음 - 이 모드를 활성화하고 새 저장 파일을 시작하거나 \"새 캐릭터로 계속\" 옵션을 한 번 사용하여 Quick Restart를 활성화하세요",
+    "UI_QuickRestart_MP_Tooltip": "멀티플레이어 / 분할 화면에서 사용 불가",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "새로운 세계 - 샌드박스 설정",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "이 세계가 생성된 이후 샌드박스 설정이 변경되었습니다. 새 세계에 어떤 설정을 사용하시겠습니까?",
+    "UI_QuickRestart_SandboxConflict_Saved": "생성 시 설정",
+    "UI_QuickRestart_SandboxConflict_Current": "현재 설정",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "세계 생성 당시의 샌드박스 설정을 사용합니다. 수동으로 변경한 것이 없다면 이 옵션을 권장합니다. 모드가 기능의 일부로 현재 설정을 변경했을 수 있습니다.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "현재 샌드박스 설정을 그대로 사용합니다. 의도적으로 변경하고 그 내용을 유지하려면 이것을 선택하세요."
+}

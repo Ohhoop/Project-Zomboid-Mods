@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "LUME NOUĂ",
+    "UI_QuickRestart_ThisWorld": "ACEEAŞI LUME",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Lume nouă, același personaj inițial",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Aceeași lume, același personaj inițial",
+    "UI_QuickRestart_NoData_Tooltip": "Fără date de personaj - începe o nouă salvare cu acest mod sau folosește \"Continuă cu un nou personaj\" o dată pentru a activa Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Indisponibil în multiplayer / ecran împărțit",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "LUME NOUĂ - SETĂRI SANDBOX",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Setările sandbox s-au schimbat de la crearea acestei lumi. Ce setări ar trebui să folosească noua ta lume?",
+    "UI_QuickRestart_SandboxConflict_Saved": "SETĂRI LA CREARE",
+    "UI_QuickRestart_SandboxConflict_Current": "SETĂRI ACTUALE",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Folosește setările sandbox de la momentul creării lumii. Recomandat dacă nu ai schimbat nimic manual. Un mod poate fi modificat setările tale actuale ca parte a funcțiilor sale.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Folosește setările sandbox așa cum sunt acum. Alege aceasta dacă ai făcut modificări intenționat și vrei să le păstrezi."
+}

@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "DUNIA BARU",
+    "UI_QuickRestart_ThisWorld": "DUNIA YANG SAMA",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Dunia baru, karakter awal yang sama",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Dunia yang sama, karakter awal yang sama",
+    "UI_QuickRestart_NoData_Tooltip": "Tidak ada data karakter - mulai penyimpanan baru dengan mod ini atau gunakan \"Lanjutkan dengan karakter baru\" sekali untuk mengaktifkan Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Tidak tersedia di multiplayer / layar terpisah",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "DUNIA BARU - PENGATURAN SANDBOX",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Pengaturan sandbox telah berubah sejak dunia ini dibuat. Pengaturan mana yang harus digunakan oleh Dunia Baru kamu?",
+    "UI_QuickRestart_SandboxConflict_Saved": "PENGATURAN SAAT DIBUAT",
+    "UI_QuickRestart_SandboxConflict_Current": "PENGATURAN SAAT INI",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Gunakan pengaturan sandbox dari saat dunia dibuat. Direkomendasikan jika kamu tidak mengubah apapun secara manual. Sebuah mod mungkin telah mengubah pengaturan saat ini sebagai bagian dari fiturnya.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Gunakan pengaturan sandbox seperti sekarang. Pilih ini jika kamu sengaja melakukan perubahan dan ingin membawanya."
+}

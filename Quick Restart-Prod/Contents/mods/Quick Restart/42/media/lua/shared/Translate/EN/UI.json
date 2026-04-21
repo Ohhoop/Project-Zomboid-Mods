@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "FRESH WORLD",
+    "UI_QuickRestart_ThisWorld": "SAME WORLD",
+    "UI_QuickRestart_FreshWorld_Tooltip": "New world, same starting character",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Same world, same starting character",
+    "UI_QuickRestart_NoData_Tooltip": "No character data - start a new save with this mod enabled or use \"Continue with new character\" once to enable Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Unavailable in multiplayer / split-screen",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "FRESH WORLD - SANDBOX SETTINGS",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "The sandbox settings have changed since this world was created. Which settings should your Fresh World use?",
+    "UI_QuickRestart_SandboxConflict_Saved": "WORLD CREATION SETTINGS",
+    "UI_QuickRestart_SandboxConflict_Current": "CURRENT SETTINGS",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Use sandbox settings from when the world was created. Recommended if you didn't change anything manually. A mod may have modified your current settings as part of its features.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Use sandbox settings as they are now. Choose this if you intentionally made changes and want them carried over."
+}
