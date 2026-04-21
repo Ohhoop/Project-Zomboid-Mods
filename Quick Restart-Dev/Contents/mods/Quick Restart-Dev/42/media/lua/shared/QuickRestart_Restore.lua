@@ -133,6 +133,7 @@ local function restoreBaseClothingServer(player, snapshot)
 
     removeBaseWornItems(player)
 
+    local pendingEquip = {}
     local restoredCount = 0
     for _, clothingData in ipairs(snapshot.clothing) do
         if shouldRestoreBaseClothingEntry(clothingData)
@@ -149,29 +150,43 @@ local function restoreBaseClothingServer(player, snapshot)
                 applyItemColor(item, clothingData.color)
                 applyItemVisual(item, clothingData)
                 pcall(function() item:synchWithVisual() end)
-                local equipped = pcall(function()
-                    player:setWornItem(item:getBodyLocation(), item)
-                end)
                 local syncedToContainer = pcall(function()
                     if sendAddItemToContainer then
                         sendAddItemToContainer(inventory, item)
                     end
                 end)
-                local syncedClothing = pcall(function()
-                    if sendClothing then
-                        sendClothing(player, item:getBodyLocation(), item)
-                    end
-                end)
                 if QuickRestartLog and QuickRestartLog.info then
-                    QuickRestartLog.info("server restore base clothing sync type=" .. tostring(clothingData.type)
-                        .. " equipped=" .. tostring(equipped)
-                        .. " syncedToContainer=" .. tostring(syncedToContainer)
-                        .. " syncedClothing=" .. tostring(syncedClothing))
+                    QuickRestartLog.info("server restore base clothing inventory sync type=" .. tostring(clothingData.type)
+                        .. " syncedToContainer=" .. tostring(syncedToContainer))
                 end
+                pendingEquip[#pendingEquip + 1] = item
                 restoredCount = restoredCount + 1
             elseif QuickRestartLog and QuickRestartLog.info then
                 QuickRestartLog.info("server restore base clothing add failed type=" .. tostring(clothingData.type))
             end
+        end
+    end
+
+    for _, item in ipairs(pendingEquip) do
+        local bodyLocation = nil
+        pcall(function()
+            bodyLocation = item:getBodyLocation()
+        end)
+
+        local equipped = pcall(function()
+            player:setWornItem(bodyLocation, item)
+        end)
+        local syncedClothing = pcall(function()
+            if sendClothing then
+                sendClothing(player, bodyLocation, item)
+            end
+        end)
+
+        if QuickRestartLog and QuickRestartLog.info then
+            QuickRestartLog.info("server restore base clothing equip sync type=" .. tostring(item:getFullType())
+                .. " bodyLocation=" .. tostring(bodyLocation)
+                .. " equipped=" .. tostring(equipped)
+                .. " syncedClothing=" .. tostring(syncedClothing))
         end
     end
 
@@ -334,6 +349,10 @@ end
 local function notifyClientBaseClothingRestored(player)
     if not player or type(sendServerCommand) ~= "function" then
         return
+    end
+
+    if QuickRestartLog and QuickRestartLog.info then
+        QuickRestartLog.info("server notify client base clothing restored")
     end
 
     pcall(function()
