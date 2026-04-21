@@ -612,6 +612,17 @@ function QuickRestartClientFlow.onServerCommand(module, command, args, options)
         return
     end
 
+    if command == QuickRestartConstants.COMMANDS.SERVER_CLOTHING_RESTORED then
+        QuickRestartLog.info("mp client SERVER_CLOTHING_RESTORED")
+        local player = getPlayer()
+        if player then
+            if QuickRestartApply and QuickRestartApply.refreshVisualAfterServerClothing then
+                QuickRestartApply.refreshVisualAfterServerClothing(player)
+            end
+        end
+        return
+    end
+
     if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY then
         QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_RETRY grantId=" .. tostring(args.grantId)
             .. " reason=" .. tostring(args.reason))

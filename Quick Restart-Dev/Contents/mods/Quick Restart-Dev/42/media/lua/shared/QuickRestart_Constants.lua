@@ -18,6 +18,7 @@ QuickRestartConstants.COMMANDS = {
     REQUEST_RESTART_FRESH_WORLD = "requestRestartFreshWorld",
     RESTART_ACCEPTED = "restartAccepted",
     RESTART_DENIED = "restartDenied",
+    SERVER_CLOTHING_RESTORED = "serverClothingRestored",
 }
 
 QuickRestartConstants.COMMANDS.APPLY_SKILLS = QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT

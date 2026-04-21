@@ -709,6 +709,30 @@ local function applyClothingToPlayer(player, data, options)
     end)
 end
 
+function QuickRestartApply.refreshVisualAfterServerClothing(player, options)
+    if not player then
+        return false
+    end
+
+    options = options or {}
+    local scheduler = options.scheduler or QuickRestartScheduler
+    local delayTicks = tonumber(options.delayTicks) or 2
+    local playerNum = player.getPlayerNum and player:getPlayerNum() or 0
+    local taskKey = "refresh_visual_after_server_clothing_" .. tostring(playerNum)
+
+    scheduler.scheduleAfterTicks(taskKey, delayTicks, function()
+        if not player then
+            return
+        end
+
+        logClothing("refreshVisualAfterServerClothing firing " .. describeWornItems(player))
+        resetPlayerModel(player)
+        triggerPlayerClothingUpdated(player)
+    end)
+
+    return true
+end
+
 function QuickRestartApply.refreshPlayerLighting(player, options)
     if not player then
         return false

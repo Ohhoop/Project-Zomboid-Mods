@@ -331,6 +331,17 @@ function QuickRestartRestore.applyAuthoritativeSnapshot(player, snapshot)
     return true, nil
 end
 
+local function notifyClientBaseClothingRestored(player)
+    if not player or type(sendServerCommand) ~= "function" then
+        return
+    end
+
+    pcall(function()
+        sendServerCommand(player, QuickRestartConstants.MODULE,
+            QuickRestartConstants.COMMANDS.SERVER_CLOTHING_RESTORED, {})
+    end)
+end
+
 function QuickRestartRestore.scheduleBaseClothingRestore(player, snapshot, delayTicks)
     if not isServer() or not player or type(snapshot) ~= "table" then
         return false
@@ -346,6 +357,7 @@ function QuickRestartRestore.scheduleBaseClothingRestore(player, snapshot, delay
         remaining = math.max(0, tonumber(delayTicks) or 0),
         fn = function()
             restoreBaseClothingServer(player, snapshot)
+            notifyClientBaseClothingRestored(player)
         end,
     }
 

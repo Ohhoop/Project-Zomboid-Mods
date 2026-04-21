@@ -215,6 +215,73 @@ local function applyProtectedModData()
     return true
 end
 
+local function resolveItemTexture(entry)
+    if type(entry) ~= "table" then
+        return 0
+    end
+    if type(entry.textureChoice) == "number" then
+        return entry.textureChoice
+    end
+    if type(entry.baseTexture) == "number" then
+        return entry.baseTexture
+    end
+    return 0
+end
+
+local function collectSPNCCFromClothing(snapshot)
+    if type(snapshot) ~= "table" or type(snapshot.clothing) ~= "table" then
+        return nil, nil
+    end
+
+    local face = nil
+    local bodyDetails = {}
+
+    for _, entry in ipairs(snapshot.clothing) do
+        if type(entry) == "table" and type(entry.bodyLocation) == "string" and type(entry.type) == "string" then
+            local loc = entry.bodyLocation
+            if loc == "spncc:face" then
+                if not face then
+                    face = {
+                        name = "QuickRestart_Restored",
+                        id = entry.type,
+                        texture = resolveItemTexture(entry),
+                    }
+                end
+            elseif loc == "spncc:bodydetail" or loc == "spncc:bodydetail2" then
+                bodyDetails[#bodyDetails + 1] = {
+                    name = "QuickRestart_Restored_" .. tostring(#bodyDetails + 1),
+                    id = entry.type,
+                    texture = resolveItemTexture(entry),
+                }
+            end
+        end
+    end
+
+    return face, bodyDetails
+end
+
+local function mergeSPNCharCustomWithClothing(snapshot, baseSPNCharCustom)
+    local clothingFace, clothingBodyDetails = collectSPNCCFromClothing(snapshot)
+    local hasClothingFace = type(clothingFace) == "table"
+    local hasClothingBodyDetails = type(clothingBodyDetails) == "table" and #clothingBodyDetails > 0
+
+    if not hasClothingFace and not hasClothingBodyDetails then
+        return baseSPNCharCustom, false
+    end
+
+    local merged = deepCopySupportedValue(baseSPNCharCustom, {}) or {}
+    if hasClothingFace then
+        merged.face = clothingFace
+        merged.hasCustomised = true
+    end
+    if hasClothingBodyDetails then
+        merged.bodyDetails = clothingBodyDetails
+        merged.hasCustomised = true
+    end
+
+    return merged, true
+end
+
 function QuickRestartSpongiesCompat.beginSnapshotProtection(snapshot)
     ensureSCCHookInstalled()
 
@@ -230,6 +297,14 @@ function QuickRestartSpongiesCompat.beginSnapshotProtection(snapshot)
         and type(snapshot.modData.descriptor.SPNCharCustom) == "table"
         and snapshot.modData.descriptor.SPNCharCustom
         or nil
+
+    local mergedPlayer, playerDidMerge = mergeSPNCharCustomWithClothing(snapshot, playerSPNCharCustom)
+    if playerDidMerge then
+        logCompat("merged player SPNCharCustom with clothing"
+            .. " faceId=" .. tostring(mergedPlayer and mergedPlayer.face and mergedPlayer.face.id)
+            .. " bodyDetails=" .. tostring(mergedPlayer and mergedPlayer.bodyDetails and #mergedPlayer.bodyDetails or 0))
+        playerSPNCharCustom = mergedPlayer
+    end
 
     if type(playerSPNCharCustom) ~= "table" and type(descriptorSPNCharCustom) ~= "table" then
         clearProtection()
@@ -250,8 +325,8 @@ function QuickRestartSpongiesCompat.beginSnapshotProtection(snapshot)
     }
 
     logCompat("begin protection"
-        .. " playerFace=" .. tostring(type(playerSPNCharCustom) == "table" and playerSPNCharCustom.face or nil)
-        .. " descriptorFace=" .. tostring(type(descriptorSPNCharCustom) == "table" and descriptorSPNCharCustom.face or nil))
+        .. " playerFaceId=" .. tostring(type(playerSPNCharCustom) == "table" and type(playerSPNCharCustom.face) == "table" and playerSPNCharCustom.face.id or nil)
+        .. " descriptorFaceId=" .. tostring(type(descriptorSPNCharCustom) == "table" and type(descriptorSPNCharCustom.face) == "table" and descriptorSPNCharCustom.face.id or nil))
 
     refreshProtectionTimeout()
 
