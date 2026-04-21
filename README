@@ -1,19 +1,15 @@
-Project Zomboid Mods Repository
+Competitive Play Framework
 
-This branch is the showcase/root branch for my Project Zomboid mod projects.
+Project overview branch for the Competitive Play Framework mod.
 
-Projects:
-- Quick Restart
-- Competitive Play Framework
+Purpose:
+- Keep a dedicated branch that explains the mod at a high level
+- Serve as the base branch for the Competitive Play Framework working branches
 
-Branch layout:
-- PZ-Hub: showcase/root branch
-- QuickRestart: project overview branch
-- QR-Main: Quick Restart stable branch
-- QR-Dev: Quick Restart development branch
-- CPF: project overview branch
-- CPF-Main: Competitive Play Framework stable branch
-- CPF-Dev: Competitive Play Framework development branch
+Child branches:
+- CPF-Main: stable/published line
+- CPF-Dev: active development line
 
-This branch intentionally stays lightweight and acts as a starting point for the
-project-specific branches.
+Notes:
+- This branch is intentionally lightweight
+- It acts as the project root for Competitive Play Framework in this repository layout
