@@ -1,0 +1,10 @@
+module Base
+{
+    character_profession_definition base:player
+    {
+        CharacterProfession = base:unemployed,
+        Cost = 8,
+        UIName = UI_prof_player,
+        IconPathName = profession_veteran2,
+    }
+}

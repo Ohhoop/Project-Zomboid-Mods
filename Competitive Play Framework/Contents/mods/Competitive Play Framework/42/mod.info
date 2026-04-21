@@ -1,0 +1,7 @@
+id=CompetitivePlayFramework
+name=Competitive Play Framework
+description=Adds Blue Team and Red Team professions for competitive play.
+modversion=1.0.0
+poster=poster.png
+icon=poster.png
+versionMin=42.0

@@ -1,0 +1,6 @@
+version=1
+id=3703095136
+title=Competitive Play Framework
+description=Adds Blue Team and Red Team professions for competitive play.
+tags=Build 42;Framework;Misc;Multiplayer;WIP
+visibility=unlisted

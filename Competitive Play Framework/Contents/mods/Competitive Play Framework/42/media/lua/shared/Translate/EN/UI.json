@@ -1,0 +1,11 @@
+{
+    "UI_prof_player": "Player",
+    "UI_CPF_ChooseTeam": "Choose your team",
+    "UI_CPF_RedTeam": "Red Team",
+    "UI_CPF_BlueTeam": "Blue Team",
+    "UI_CPF_AdminPanel": "Competitive Play",
+    "UI_CPF_MaxImbalance": "Max team gap",
+    "UI_CPF_EndMatch": "End Match",
+    "UI_CPF_RedCount": "Red: %1",
+    "UI_CPF_BlueCount": "Blue: %1"
+}
