@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "新世界",
+    "UI_QuickRestart_ThisWorld": "相同的世界",
+    "UI_QuickRestart_FreshWorld_Tooltip": "新世界，相同的起始角色",
+    "UI_QuickRestart_ThisWorld_Tooltip": "相同的世界，相同的起始角色",
+    "UI_QuickRestart_NoData_Tooltip": "没有角色数据 - 启用此模组开始新存档，或使用「以新角色继续」一次以启用 Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "多人游戏 / 分屏模式不可用",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "新世界 - 沙盒设置",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "自此世界创建以来，沙盒设置已发生变化。您的新世界应使用哪些设置？",
+    "UI_QuickRestart_SandboxConflict_Saved": "创建时的设置",
+    "UI_QuickRestart_SandboxConflict_Current": "当前设置",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "使用世界创建时的沙盒设置。若您未手动更改任何设置，建议选择此项。某个模组可能已作为其功能的一部分修改了您的当前设置。",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "使用当前的沙盒设置。若您是有意进行了更改并希望保留，请选择此项。"
+}

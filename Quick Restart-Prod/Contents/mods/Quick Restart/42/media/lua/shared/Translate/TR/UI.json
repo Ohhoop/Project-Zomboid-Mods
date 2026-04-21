@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "YENI DÜNYA",
+    "UI_QuickRestart_ThisWorld": "AYNI DÜNYA",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Yeni dünya, aynı başlangıç karakteri",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Aynı dünya, aynı başlangıç karakteri",
+    "UI_QuickRestart_NoData_Tooltip": "Karakter verisi yok - bu mod etkinken yeni bir kayıt başlatın veya Quick Restart'ı etkinleştirmek için \"Yeni karakterle devam et\" seçeneğini bir kez kullanın",
+    "UI_QuickRestart_MP_Tooltip": "Çok oyunculu / bölünmüş ekranda kullanılamaz",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "YENI DÜNYA - SANDBOX AYARLARI",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Bu dünya oluşturulduğundan beri sandbox ayarları değişti. Yeni dünyan hangi ayarları kullanmalı?",
+    "UI_QuickRestart_SandboxConflict_Saved": "OLUŞTURMA AYARLARI",
+    "UI_QuickRestart_SandboxConflict_Current": "MEVCUT AYARLAR",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Dünya oluşturulduğu andaki sandbox ayarlarını kullan. El ile hiçbir şey değiştirmediysen önerilir. Bir mod, mevcut ayarlarını özelliklerin bir parçası olarak değiştirmiş olabilir.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Sandbox ayarlarını şu an olduğu gibi kullan. Bunu, kasıtlı olarak değişiklik yaptıysan ve bunları aktarmak istiyorsan seç."
+}

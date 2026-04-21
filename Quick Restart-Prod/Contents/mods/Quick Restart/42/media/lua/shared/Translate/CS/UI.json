@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "NOVÝ SVĚT",
+    "UI_QuickRestart_ThisWorld": "STEJNÝ SVĚT",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Nový svět, stejná počáteční postava",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Stejný svět, stejná počáteční postava",
+    "UI_QuickRestart_NoData_Tooltip": "Žádná data postavy - spusťte nové uložení s tímto modem nebo použijte \"Pokračovat s novou postavou\" jednou pro aktivaci Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Nedostupné v multiplayeru / rozdělené obrazovce",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "NOVÝ SVĚT - NASTAVENÍ SANDBOXU",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "Nastavení sandboxu se od vytvoření tohoto světa změnilo. Která nastavení má váš nový svět použít?",
+    "UI_QuickRestart_SandboxConflict_Saved": "NASTAVENÍ PŘI VYTVOŘENÍ",
+    "UI_QuickRestart_SandboxConflict_Current": "AKTUÁLNÍ NASTAVENÍ",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Použít nastavení sandboxu z doby vytvoření světa. Doporučeno, pokud jste nic nezměnili ručně. Mod mohl upravit vaše aktuální nastavení jako součást svých funkcí.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Použít nastavení sandboxu taková, jaká jsou nyní. Zvolte tuto možnost, pokud jste změny provedli záměrně a chcete je přenést."
+}

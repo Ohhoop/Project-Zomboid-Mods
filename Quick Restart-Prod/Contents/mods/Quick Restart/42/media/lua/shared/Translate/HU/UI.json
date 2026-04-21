@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "ÚJ VILÁG",
+    "UI_QuickRestart_ThisWorld": "UGYANAZ A VILÁG",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Új világ, ugyanaz a kezdő karakter",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Ugyanaz a világ, ugyanaz a kezdő karakter",
+    "UI_QuickRestart_NoData_Tooltip": "Nincs karakteradat - kezdj új mentést ezzel a moddal vagy használd az \"Folytatás új karakterrel\" lehetőséget egyszer a Quick Restart aktiválásához",
+    "UI_QuickRestart_MP_Tooltip": "Nem elérhető többjátékos / osztott képernyős módban",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "ÚJ VILÁG - SANDBOX BEÁLLÍTÁSOK",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "A sandbox beállítások megváltoztak a világ létrehozása óta. Melyik beállításokat használja az új világod?",
+    "UI_QuickRestart_SandboxConflict_Saved": "LÉTREHOZÁSKORI BEÁLLÍTÁSOK",
+    "UI_QuickRestart_SandboxConflict_Current": "JELENLEGI BEÁLLÍTÁSOK",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "A világ létrehozásakori sandbox beállítások használata. Ajánlott, ha nem változtattál semmit kézzel. Egy mod módosíthatta az aktuális beállításaidat a saját funkciói részeként.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "A sandbox beállítások használata úgy, ahogy most vannak. Válaszd ezt, ha szándékosan végeztél módosításokat és meg szeretnéd tartani azokat."
+}

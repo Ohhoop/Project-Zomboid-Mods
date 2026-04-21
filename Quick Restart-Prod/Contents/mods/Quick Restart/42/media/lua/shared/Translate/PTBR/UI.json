@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "MUNDO NOVO",
+    "UI_QuickRestart_ThisWorld": "MESMO MUNDO",
+    "UI_QuickRestart_FreshWorld_Tooltip": "Mundo novo, mesmo personagem inicial",
+    "UI_QuickRestart_ThisWorld_Tooltip": "Mesmo mundo, mesmo personagem inicial",
+    "UI_QuickRestart_NoData_Tooltip": "Sem dados de personagem - inicie um novo save com este mod ou use \"Continuar com novo personagem\" uma vez para ativar o Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "Indisponível em multiplayer / tela dividida",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "MUNDO NOVO - CONFIGURAÇÕES SANDBOX",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "As configurações sandbox mudaram desde que este mundo foi criado. Quais configurações o seu novo mundo deve usar?",
+    "UI_QuickRestart_SandboxConflict_Saved": "CONFIGURAÇÕES DE CRIAÇÃO",
+    "UI_QuickRestart_SandboxConflict_Current": "CONFIGURAÇÕES ATUAIS",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "Usar as configurações sandbox do momento de criação do mundo. Recomendado se você não alterou nada manualmente. Um mod pode ter modificado suas configurações atuais como parte de suas funcionalidades.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "Usar as configurações sandbox como estão agora. Escolha isso se você fez alterações intencionalmente e quer mantê-las."
+}

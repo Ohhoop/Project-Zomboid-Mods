@@ -1,0 +1,16 @@
+{
+    "UI_QuickRestart_Title": "QUICK RESTART",
+    "UI_QuickRestart_FreshWorld": "عالم جديد",
+    "UI_QuickRestart_ThisWorld": "نفس العالم",
+    "UI_QuickRestart_FreshWorld_Tooltip": "عالم جديد، نفس الشخصية الابتدائية",
+    "UI_QuickRestart_ThisWorld_Tooltip": "نفس العالم، نفس الشخصية الابتدائية",
+    "UI_QuickRestart_NoData_Tooltip": "لا توجد بيانات للشخصية - ابدأ حفظة جديدة مع هذا المود أو استخدم \"متابعة مع شخصية جديدة\" مرة واحدة لتفعيل Quick Restart",
+    "UI_QuickRestart_MP_Tooltip": "غير متاح في اللعب الجماعي / الشاشة المقسمة",
+    "UI_QuickRestart_SandboxConflict_Title": "QUICK RESTART",
+    "UI_QuickRestart_SandboxConflictPanel_Label": "عالم جديد - إعدادات SANDBOX",
+    "UI_QuickRestart_SandboxConflict_Subtitle": "تغيّرت إعدادات sandbox منذ إنشاء هذا العالم. أي الإعدادات تريد استخدامها لعالمك الجديد؟",
+    "UI_QuickRestart_SandboxConflict_Saved": "إعدادات الإنشاء",
+    "UI_QuickRestart_SandboxConflict_Current": "الإعدادات الحالية",
+    "UI_QuickRestart_SandboxConflict_Saved_Tooltip": "استخدام إعدادات sandbox من وقت إنشاء العالم. موصى به إذا لم تغيّر أي شيء يدوياً. ربما عدّل أحد الموات إعداداتك الحالية كجزء من ميزاته.",
+    "UI_QuickRestart_SandboxConflict_Current_Tooltip": "استخدام إعدادات sandbox كما هي الآن. اختر هذا إذا أجريت تغييرات متعمدة وتريد الاحتفاظ بها."
+}
