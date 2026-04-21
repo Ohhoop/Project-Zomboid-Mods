@@ -1,0 +1,19 @@
+Project Zomboid Mods Repository
+
+This branch is the showcase/root branch for my Project Zomboid mod projects.
+
+Projects:
+- Quick Restart
+- Competitive Play Framework
+
+Branch layout:
+- PZ-Hub: showcase/root branch
+- QuickRestart: project overview branch
+- QR-Main: Quick Restart stable branch
+- QR-Dev: Quick Restart development branch
+- CPF: project overview branch
+- CPF-Main: Competitive Play Framework stable branch
+- CPF-Dev: Competitive Play Framework development branch
+
+This branch intentionally stays lightweight and acts as a starting point for the
+project-specific branches.

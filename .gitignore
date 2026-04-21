@@ -1,0 +1,17 @@
+.vscode/
+
+# Ignore markdown notes/docs
+*.md
+
+# Local notes / temporary plans
+/*.txt
+CLAUDE.md
+
+# Workshop backups
+*- Backup/
+*_BACKUP_*/
+ModTemplate/
+
+# Common OS/editor noise
+Thumbs.db
+Desktop.ini
