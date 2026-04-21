@@ -1,7 +1,7 @@
-id=QuickRestart-DEV
-name=Quick Restart-DEV
+id=QuickRestart
+name=Quick Restart
 description=Allows you to quickly restart in a new world with the same character, skills, traits, appearance, and spawn region after death.
-modversion=1.1.1
+modversion=2.1.0
 poster=poster.png
 icon=poster.png
 versionMin=42.0
