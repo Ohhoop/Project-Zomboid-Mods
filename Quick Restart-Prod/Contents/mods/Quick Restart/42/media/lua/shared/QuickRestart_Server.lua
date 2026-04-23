@@ -41,6 +41,7 @@ local function summarizeSnapshot(snapshot)
 
     return "name=" .. tostring(snapshot.name)
         .. " region=" .. tostring(snapshot.region)
+        .. " worldMap=" .. tostring(snapshot.worldMap)
         .. " profession=" .. tostring(snapshot.profession)
         .. " traits=" .. tostring(traitsCount)
         .. " skills=" .. tostring(skillsCount)

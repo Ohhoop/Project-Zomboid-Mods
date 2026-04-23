@@ -501,6 +501,16 @@ function QuickRestartCapture.captureCharacterData(player, options)
         end
     end
 
+    if QuickRestartLog and QuickRestartLog.info then
+        QuickRestartLog.info("capture world"
+            .. " region=" .. tostring(data.region)
+            .. " worldMap=" .. tostring(data.worldMap)
+            .. " isChallenge=" .. tostring(data.isChallenge)
+            .. " challengeID=" .. tostring(data.challengeID)
+            .. " hasMapSpawnSelect=" .. tostring(MapSpawnSelect ~= nil and MapSpawnSelect.instance ~= nil)
+            .. " selectedRegion=" .. tostring(MapSpawnSelect and MapSpawnSelect.instance and MapSpawnSelect.instance.selectedRegion and MapSpawnSelect.instance.selectedRegion.name or nil))
+    end
+
     local playerModData = captureModDataSnapshot(player)
     local descriptorModData = captureModDataSnapshot(desc)
     if playerModData or descriptorModData then
