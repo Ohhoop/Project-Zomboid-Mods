@@ -16,6 +16,7 @@ local function summarizeSnapshot(snapshot)
 
     return "name=" .. tostring(snapshot.name)
         .. " region=" .. tostring(snapshot.region)
+        .. " worldMap=" .. tostring(snapshot.worldMap)
         .. " profession=" .. tostring(snapshot.profession)
         .. " traits=" .. tostring(traitsCount)
         .. " skills=" .. tostring(skillsCount)
@@ -198,18 +199,26 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
 
         local mapSel = coop.mapSpawnSelect
         mapSel:fillList()
+        QuickRestartLog.info("mp client sameWorld map list prepared"
+            .. " requestedRegion=" .. tostring(data.region)
+            .. " worldMap=" .. tostring(data.worldMap)
+            .. " listCount=" .. tostring(mapSel and mapSel.listbox and mapSel.listbox.items and #mapSel.listbox.items or 0))
         local regionFound = false
         if data.region then
             for _, entry in ipairs(mapSel.listbox.items) do
                 if entry.item and entry.item.region and entry.item.region.name == data.region then
                     mapSel.selectedRegion = entry.item.region
                     regionFound = true
+                    QuickRestartLog.info("mp client sameWorld selected saved region region=" .. tostring(data.region))
                     break
                 end
             end
         end
         if not regionFound then
+            QuickRestartLog.warn("mp client sameWorld saved region not found, using default region=" .. tostring(data.region))
             mapSel:useDefaultSpawnRegion()
+            QuickRestartLog.info("mp client sameWorld default region selected="
+                .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil))
         end
 
         if isMultiplayer() and data.traits and #data.traits > 0 and coop.charCreationProfession then
