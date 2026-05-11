@@ -40,6 +40,31 @@ local function summarizeFaceSnapshot(snapshot)
     return "face=nil"
 end
 
+local function describeSpawnRegions(regions)
+    if type(regions) ~= "table" then
+        return "<nil>"
+    end
+
+    local names = {}
+    for _, region in ipairs(regions) do
+        names[#names + 1] = tostring(region and region.name or nil)
+    end
+    return "[" .. table.concat(names, ", ") .. "]"
+end
+
+local function describeListboxRegions(listbox)
+    if type(listbox) ~= "table" or type(listbox.items) ~= "table" then
+        return "<nil>"
+    end
+
+    local names = {}
+    for _, entry in ipairs(listbox.items) do
+        local region = entry and entry.item and entry.item.region or nil
+        names[#names + 1] = tostring(region and region.name or nil)
+    end
+    return "[" .. table.concat(names, ", ") .. "]"
+end
+
 function QuickRestartClientFlow.isRestartSnapshotAvailable(data)
     if type(data) ~= "table" then
         return false
@@ -198,28 +223,60 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
         end
 
         local mapSel = coop.mapSpawnSelect
+        mapSel.selectedRegion = nil
         mapSel:fillList()
+
+        local availableRegions = mapSel.getSpawnRegions and mapSel:getSpawnRegions() or nil
+        local listCount = mapSel and mapSel.listbox and mapSel.listbox.items and #mapSel.listbox.items or 0
         QuickRestartLog.info("mp client sameWorld map list prepared"
             .. " requestedRegion=" .. tostring(data.region)
             .. " worldMap=" .. tostring(data.worldMap)
-            .. " listCount=" .. tostring(mapSel and mapSel.listbox and mapSel.listbox.items and #mapSel.listbox.items or 0))
-        local regionFound = false
-        if data.region then
-            for _, entry in ipairs(mapSel.listbox.items) do
-                if entry.item and entry.item.region and entry.item.region.name == data.region then
-                    mapSel.selectedRegion = entry.item.region
-                    regionFound = true
-                    QuickRestartLog.info("mp client sameWorld selected saved region region=" .. tostring(data.region))
+            .. " listCount=" .. tostring(listCount)
+            .. " listboxRegions=" .. describeListboxRegions(mapSel and mapSel.listbox or nil)
+            .. " availableRegions=" .. describeSpawnRegions(availableRegions))
+
+        local selectedRegion = nil
+        if type(data.region) == "string" and data.region ~= ""
+            and mapSel.listbox and type(mapSel.listbox.items) == "table" then
+            for index, entry in ipairs(mapSel.listbox.items) do
+                local region = entry.item and entry.item.region or nil
+                if region and region.name == data.region then
+                    mapSel.listbox.selected = index
+                    selectedRegion = region
+                    QuickRestartLog.info("mp client sameWorld selected saved region from listbox region="
+                        .. tostring(data.region) .. " index=" .. tostring(index))
                     break
                 end
             end
         end
-        if not regionFound then
-            QuickRestartLog.warn("mp client sameWorld saved region not found, using default region=" .. tostring(data.region))
-            mapSel:useDefaultSpawnRegion()
-            QuickRestartLog.info("mp client sameWorld default region selected="
-                .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil))
+
+        if not selectedRegion and type(data.region) == "string" and data.region ~= ""
+            and type(availableRegions) == "table" then
+            for _, region in ipairs(availableRegions) do
+                if region and region.name == data.region then
+                    selectedRegion = region
+                    QuickRestartLog.warn("mp client sameWorld region found in spawn regions but absent from listbox region="
+                        .. tostring(data.region))
+                    break
+                end
+            end
         end
+
+        local usedDefault = false
+        if selectedRegion then
+            mapSel.selectedRegion = selectedRegion
+        else
+            QuickRestartLog.warn("mp client sameWorld saved region not found, using default requestedRegion="
+                .. tostring(data.region))
+            selectedRegion = mapSel:useDefaultSpawnRegion()
+            usedDefault = true
+        end
+
+        QuickRestartLog.info("mp client sameWorld region resolution finalized"
+            .. " requestedRegion=" .. tostring(data.region)
+            .. " finalSelectedRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil)
+            .. " usedDefault=" .. tostring(usedDefault)
+            .. " listboxSelectedIndex=" .. tostring(mapSel.listbox and mapSel.listbox.selected or nil))
 
         if isMultiplayer() and data.traits and #data.traits > 0 and coop.charCreationProfession then
             for _, traitStr in ipairs(data.traits) do
@@ -425,6 +482,80 @@ function QuickRestartClientFlow.onPlayerDeath(player, options)
     end
 end
 
+local SPAWN_REGION_MODDATA_KEY = "QuickRestart_spawnRegion"
+local SPAWN_REGION_DETECT_DELAY_TICKS = 5
+local SPAWN_REGION_DETECT_TASK_KEY = "spawn_region_detect"
+
+local function captureSpawnRegionFromCoords(player)
+    if not player or not player.getModData then
+        return
+    end
+
+    local modDataOk, modData = pcall(function() return player:getModData() end)
+    if not modDataOk or type(modData) ~= "table" then
+        QuickRestartLog.warn("captureSpawnRegionFromCoords aborted: no moddata access")
+        return
+    end
+
+    if type(modData[SPAWN_REGION_MODDATA_KEY]) == "string" and modData[SPAWN_REGION_MODDATA_KEY] ~= "" then
+        QuickRestartLog.info("captureSpawnRegionFromCoords skipped: moddata already populated value="
+            .. tostring(modData[SPAWN_REGION_MODDATA_KEY]))
+        return
+    end
+
+    local coordsOk, px, py, pz = pcall(function()
+        return player:getX(), player:getY(), player:getZ()
+    end)
+    if not coordsOk or type(px) ~= "number" or type(py) ~= "number" then
+        QuickRestartLog.warn("captureSpawnRegionFromCoords aborted: missing player coords")
+        return
+    end
+    if type(pz) ~= "number" then
+        pz = 0
+    end
+
+    local regions = nil
+    if SpawnRegionMgr and SpawnRegionMgr.getSpawnRegions then
+        local ok, result = pcall(function() return SpawnRegionMgr.getSpawnRegions() end)
+        if ok then
+            regions = result
+        end
+    end
+
+    if type(regions) ~= "table" or #regions == 0 then
+        QuickRestartLog.warn("captureSpawnRegionFromCoords aborted: no spawn regions available"
+            .. " px=" .. tostring(px) .. " py=" .. tostring(py) .. " pz=" .. tostring(pz))
+        return
+    end
+
+    local region, exactMatch, distance = QuickRestartUtil.findRegionMatchingPlayerCoords(px, py, pz, regions)
+    if not region or not region.name then
+        QuickRestartLog.warn("captureSpawnRegionFromCoords no region match found"
+            .. " px=" .. tostring(px) .. " py=" .. tostring(py) .. " pz=" .. tostring(pz)
+            .. " regionsCount=" .. tostring(#regions))
+        return
+    end
+
+    modData[SPAWN_REGION_MODDATA_KEY] = region.name
+    QuickRestartLog.info("captureSpawnRegionFromCoords stored region"
+        .. " region=" .. tostring(region.name)
+        .. " exactMatch=" .. tostring(exactMatch)
+        .. " distance=" .. tostring(distance)
+        .. " px=" .. tostring(px) .. " py=" .. tostring(py) .. " pz=" .. tostring(pz))
+end
+
+function QuickRestartClientFlow.scheduleSpawnRegionCoordCapture(player, options)
+    options = options or {}
+    local scheduler = options.scheduler or QuickRestartScheduler
+    if not player or not scheduler or not scheduler.scheduleAfterTicks then
+        return
+    end
+
+    scheduler.scheduleAfterTicks(SPAWN_REGION_DETECT_TASK_KEY, SPAWN_REGION_DETECT_DELAY_TICKS, function()
+        captureSpawnRegionFromCoords(player)
+    end)
+end
+
 function QuickRestartClientFlow.onNewGame(player, options)
     options = options or {}
 
@@ -432,6 +563,8 @@ function QuickRestartClientFlow.onNewGame(player, options)
         QuickRestartLog.info("mp client onNewGame begin"
             .. " player=" .. tostring(player and player.getUsername and player:getUsername() or nil))
     end
+
+    QuickRestartClientFlow.scheduleSpawnRegionCoordCapture(player, options)
 
     if options.closeRestartPanel then
         options.closeRestartPanel()
