@@ -491,6 +491,19 @@ function QuickRestartCapture.captureCharacterData(player, options)
         end
     end
 
+    if (type(data.region) ~= "string" or data.region == "") and player.getModData then
+        local fallbackOk, playerModData = call(function() return player:getModData() end)
+        if fallbackOk and type(playerModData) == "table"
+            and type(playerModData.QuickRestart_spawnRegion) == "string"
+            and playerModData.QuickRestart_spawnRegion ~= "" then
+            data.region = playerModData.QuickRestart_spawnRegion
+            if QuickRestartLog and QuickRestartLog.info then
+                QuickRestartLog.info("capture region fallback applied from moddata"
+                    .. " region=" .. tostring(data.region))
+            end
+        end
+    end
+
     local world = getWorld()
     if world and world.getMap then
         local success, mapName = call(function()
