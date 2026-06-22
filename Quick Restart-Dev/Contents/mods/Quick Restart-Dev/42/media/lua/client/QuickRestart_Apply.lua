@@ -438,6 +438,38 @@ local function applyTraitsToPlayer(player, data)
     QuickRestartTraits.applyToPlayer(player, data.traits)
 end
 
+local function clampWeight(weight)
+    if weight < 30 then
+        return 30
+    end
+    if weight > 130 then
+        return 130
+    end
+    return weight
+end
+
+local function applyWeightToPlayer(player, data)
+    if not player or not data or type(data.weight) ~= "number" then
+        return
+    end
+
+    if isMultiplayer() then
+        return
+    end
+
+    if not player.getNutrition then
+        return
+    end
+
+    local nutrition = nil
+    pcall(function() nutrition = player:getNutrition() end)
+    if not nutrition or not nutrition.setWeight then
+        return
+    end
+
+    pcall(function() nutrition:setWeight(clampWeight(data.weight)) end)
+end
+
 local function applyRecipesToPlayer(player, data)
     if not player or not data or type(data.recipes) ~= "table" or #data.recipes == 0 then
         return
@@ -805,6 +837,7 @@ function QuickRestartApply.applyLoadedCharacter(player, data, options)
 
     applyVoiceToPlayer(player, data)
     applyTraitsToPlayer(player, data)
+    applyWeightToPlayer(player, data)
     applyRecipesToPlayer(player, data)
     applySkillsToPlayer(player, data, options)
 

@@ -220,6 +220,10 @@ function QuickRestartValidate.validateSnapshotData(data)
         return false, "invalid_challenge_flag"
     end
 
+    if not isNumberOrNil(data.weight) then
+        return false, "invalid_weight"
+    end
+
     if data.visual then
         if data.visual.hairColor and not validateColor(data.visual.hairColor) then
             return false, "invalid_hair_color"
@@ -268,6 +272,7 @@ function QuickRestartValidate.normalizeSnapshotData(data)
         worldMap = data.worldMap ~= nil and tostring(data.worldMap) or nil,
         isChallenge = data.isChallenge == true,
         challengeID = data.challengeID ~= nil and tostring(data.challengeID) or nil,
+        weight = tonumber(data.weight),
         traits = {},
         skills = {},
         recipes = {},

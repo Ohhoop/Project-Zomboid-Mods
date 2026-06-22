@@ -258,6 +258,10 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
         appendScalarLine(content, "challengeID", data.challengeID)
     end
 
+    if type(data.weight) == "number" then
+        appendScalarLine(content, "weight", data.weight)
+    end
+
     if data.traits and #data.traits > 0 then
         appendScalarLine(content, "traits", table.concat(data.traits, ","))
     else
@@ -535,6 +539,8 @@ function QuickRestartSnapshotCodec.readDecodedContent(decodedContent)
                 data.isChallenge = (value == "true")
             elseif key == "challengeID" then
                 data.challengeID = value
+            elseif key == "weight" then
+                data.weight = toNum(value)
             else
                 data[key] = value
             end

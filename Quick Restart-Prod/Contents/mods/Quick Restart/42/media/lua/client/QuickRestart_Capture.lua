@@ -416,6 +416,16 @@ function QuickRestartCapture.captureCharacterData(player, options)
         end
     end
 
+    if player.getNutrition then
+        local nutritionOk, nutrition = call(function() return player:getNutrition() end)
+        if nutritionOk and nutrition and nutrition.getWeight then
+            local weightOk, weight = call(function() return nutrition:getWeight() end)
+            if weightOk and type(weight) == "number" then
+                data.weight = weight
+            end
+        end
+    end
+
     data.clothing = {}
     local success, wornItems = call(function() return player:getWornItems() end)
     if success and wornItems then

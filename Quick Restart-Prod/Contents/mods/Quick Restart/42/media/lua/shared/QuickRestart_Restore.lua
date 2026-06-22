@@ -335,6 +335,20 @@ function QuickRestartRestore.applyAuthoritativeSnapshot(player, snapshot)
         QuickRestartTraits.applyToPlayer(player, snapshot.traits)
     end
 
+    if type(snapshot.weight) == "number" and player.getNutrition then
+        local nutrition = nil
+        pcall(function() nutrition = player:getNutrition() end)
+        if nutrition and nutrition.setWeight then
+            local weight = snapshot.weight
+            if weight < 30 then
+                weight = 30
+            elseif weight > 130 then
+                weight = 130
+            end
+            pcall(function() nutrition:setWeight(weight) end)
+        end
+    end
+
     if type(snapshot.recipes) == "table" then
         applyKnownRecipes(player, snapshot.recipes)
     end

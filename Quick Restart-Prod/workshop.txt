@@ -1,6 +1,8 @@
 version=1
 id=3699503439
 title=Quick Restart
+description=[img]https://i.imgur.com/lja52Fs.gif[/img]
+description=
 description=Adds a Quick Restart panel on the death screen that gets you back into the game significantly faster than the normal process.
 description=
 description=Two options: Restart in a fresh world or respawn in the same one, both restoring your original character.
@@ -27,5 +29,5 @@ description=Fresh world Quick Restart is single-player only. (You don't want to 
 description=Same world Quick Restart in MP is available but still WIP, please let me know of any issues you encounter.
 description=
 description=Feel free to provide any feedback you may have in the comment section.
-tags=Build 42;Multiplayer;QoL;WIP
+tags=Build 42;Multiplayer;QoL
 visibility=public
