@@ -3,6 +3,7 @@ QuickRestartSnapshotCodec = QuickRestartSnapshotCodec or {}
 local ENCODE_KEY = "QuickRestart_B42_SecretKey_2026"
 local ENCODE_KEY_LEN = #ENCODE_KEY
 local CODEC_VERSION = "3"
+local OPTION_KEYS = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}
 
 function QuickRestartSnapshotCodec.encodeString(str)
     if not str or str == "" then return "" end
@@ -262,6 +263,10 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
         appendScalarLine(content, "weight", data.weight)
     end
 
+    if type(data.seed) == "string" and data.seed ~= "" then
+        appendScalarLine(content, "seed", data.seed)
+    end
+
     if data.traits and #data.traits > 0 then
         appendScalarLine(content, "traits", table.concat(data.traits, ","))
     else
@@ -373,6 +378,14 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
         end
     end
 
+    if type(data.options) == "table" then
+        for _, optionKey in ipairs(OPTION_KEYS) do
+            if type(data.options[optionKey]) == "string" then
+                appendScalarLine(content, "options_" .. optionKey, data.options[optionKey])
+            end
+        end
+    end
+
     return table.concat(content)
 end
 
@@ -467,6 +480,12 @@ function QuickRestartSnapshotCodec.readDecodedContent(decodedContent)
                 else
                     data.restoreDomains[domainKey] = value
                 end
+            elseif key:match("^options_") then
+                local optionKey = key:gsub("^options_", "")
+                if type(data.options) ~= "table" then
+                    data.options = {}
+                end
+                data.options[optionKey] = value
             elseif key == "modDataPlayer" or key:match("^modDataPlayer%.") then
                 local basePath = key:gsub("^modDataPlayer%.?", "")
                 if basePath == "" then

@@ -29,8 +29,37 @@ local restartPanel
 local captureCharacterData
 local startSameWorldRestartFromSnapshot
 
+local function buildRestartIntentExtra(player, commandName)
+    if not isMultiplayer() or commandName ~= QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD then
+        return nil
+    end
+
+    local ok, extra = pcall(function()
+        local options = QuickRestartRestartOptions.get(getPlayerIdentifier(player) or "player")
+        local payload = {options = options}
+
+        if QuickRestartRestartOptions.isAnyRandom(options) then
+            if QuickRestartClientState.serverSnapshot then
+                local _, deltas = QuickRestartRandomizer.transformSnapshot(QuickRestartClientState.serverSnapshot, options)
+                payload.randomized = deltas
+            else
+                QuickRestartLog.warn("mp client buildRestartIntentExtra random options set but no server snapshot available")
+            end
+        end
+
+        return payload
+    end)
+
+    if not ok then
+        QuickRestartLog.warn("mp client buildRestartIntentExtra failed, sending plain intent")
+        return nil
+    end
+
+    return extra
+end
+
 local function sendRestartIntent(player, commandName)
-    return QuickRestartClientNetwork.sendRestartIntent(player, commandName, QuickRestartClientState)
+    return QuickRestartClientNetwork.sendRestartIntent(player, commandName, QuickRestartClientState, buildRestartIntentExtra(player, commandName))
 end
 
 local function requestActiveServerSnapshot(player)
@@ -46,13 +75,30 @@ local function retryPendingSnapshot(player)
 end
 
 captureCharacterData = function(player)
-    return QuickRestartCapture.captureCharacterData(player, {
+    local data = QuickRestartCapture.captureCharacterData(player, {
         visualItemTypes = {
             fHairStubble = F_HAIR_STUBBLE,
             mHairStubble = M_HAIR_STUBBLE,
             mBeardStubble = M_BEARD_STUBBLE,
         },
     })
+
+    if type(data) == "table" then
+        pcall(function()
+            data.options = QuickRestartRestartOptions.get(getPlayerIdentifier(player))
+        end)
+
+        if not isMultiplayer() then
+            pcall(function()
+                local seed = WorldGenParams.INSTANCE:getSeedString()
+                if type(seed) == "string" and seed ~= "" then
+                    data.seed = seed
+                end
+            end)
+        end
+    end
+
+    return data
 end
 
 local function isFaceBodyLocation(bodyLocation)
@@ -265,6 +311,20 @@ function QuickRestart.RestartSameWorld()
         loadDataFromSaveFolder = loadDataFromSaveFolder,
         startSameWorldRestartFromSnapshot = startSameWorldRestartFromSnapshot,
         sendRestartIntent = sendRestartIntent,
+        transformSnapshotForRestart = function(data)
+            local options = QuickRestartRestartOptions.sanitize(data and data.options or nil)
+            if not QuickRestartRestartOptions.isAnyRandom(options) then
+                return data
+            end
+
+            local ok, transformed = pcall(QuickRestartRandomizer.transformSnapshot, data, options)
+            if ok and type(transformed) == "table" then
+                return transformed
+            end
+
+            QuickRestartLog.warn("solo sameWorld snapshot transform failed, applying saved snapshot")
+            return data
+        end,
     })
 end
 
@@ -402,6 +462,12 @@ local function buildFlowOptions(extra)
         end,
         onSandboxCurrent = function(data, playerIdentifier, sandboxVarsCurrent)
             doRestartNewWorld(data, playerIdentifier, sandboxVarsCurrent)
+        end,
+        getRestartOptions = function()
+            return QuickRestartRestartOptions.get(getPlayerIdentifier(getPlayer()))
+        end,
+        onRestartOptionChanged = function(category, value)
+            QuickRestartRestartOptions.set(getPlayerIdentifier(getPlayer()), category, value)
         end,
     }
 

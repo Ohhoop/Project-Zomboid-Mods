@@ -47,7 +47,7 @@ local function nextSnapshotRequestId()
     return tostring((getTimestamp and getTimestamp()) or 0) .. "_" .. tostring(snapshotRequestSeed)
 end
 
-function QuickRestartClientNetwork.sendRestartIntent(player, commandName, state)
+function QuickRestartClientNetwork.sendRestartIntent(player, commandName, state, extra)
     if not isClient() or not isMultiplayer() or not player or not state then
         return false
     end
@@ -66,13 +66,17 @@ function QuickRestartClientNetwork.sendRestartIntent(player, commandName, state)
 
     QuickRestartLog.info("mp client sendRestartIntent command=" .. tostring(commandName)
         .. " requestId=" .. tostring(requestId)
-        .. " profileKey=" .. tostring(state.pendingProfileKey))
+        .. " profileKey=" .. tostring(state.pendingProfileKey)
+        .. " hasOptions=" .. tostring(extra ~= nil and type(extra.options) == "table")
+        .. " hasRandomized=" .. tostring(extra ~= nil and type(extra.randomized) == "table"))
 
-    sendClientCommand(QuickRestartConstants.MODULE, commandName, {
+    sendClientCommand(QuickRestartConstants.MODULE, commandName, QuickRestartProtocol.buildRestartIntent({
         requestId = requestId,
         username = username,
         steamID = steamID,
-    })
+        options = extra and extra.options or nil,
+        randomized = extra and extra.randomized or nil,
+    }))
 
     return true
 end

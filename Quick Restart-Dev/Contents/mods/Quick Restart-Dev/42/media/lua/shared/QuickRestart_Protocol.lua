@@ -13,6 +13,18 @@ function QuickRestartProtocol.buildSnapshotSubmit(snapshot, options)
     }
 end
 
+function QuickRestartProtocol.buildRestartIntent(options)
+    options = options or {}
+
+    return {
+        requestId = options.requestId,
+        username = options.username,
+        steamID = options.steamID,
+        options = options.options,
+        randomized = options.randomized,
+    }
+end
+
 function QuickRestartProtocol.buildSnapshotAck(options)
     options = options or {}
 

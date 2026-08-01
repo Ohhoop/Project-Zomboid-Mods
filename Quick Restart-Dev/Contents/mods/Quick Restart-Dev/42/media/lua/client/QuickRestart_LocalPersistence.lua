@@ -24,7 +24,12 @@ end
 
 local function restoreSavedSpawnRegion(data)
     local savedRegionName = type(data) == "table" and type(data.region) == "string" and data.region ~= "" and data.region or nil
-    if not savedRegionName then
+    local wantRandomSpawn = false
+    pcall(function()
+        wantRandomSpawn = QuickRestartRestartOptions.sanitize(type(data) == "table" and data.options or nil).spawn == QuickRestartRestartOptions.RANDOM
+    end)
+
+    if not savedRegionName and not wantRandomSpawn then
         QuickRestartLog.warn("checkPendingRestart restoreSavedSpawnRegion skipped: no saved region")
         return nil
     end
@@ -38,8 +43,10 @@ local function restoreSavedSpawnRegion(data)
 
     if not mapSpawnSelect then
         QuickRestartLog.warn("checkPendingRestart restoreSavedSpawnRegion missing MapSpawnSelect requestedRegion=" .. tostring(savedRegionName))
-        setSpawnRegion(savedRegionName)
-        getCore():setSelectedMap(tostring(savedRegionName))
+        if savedRegionName then
+            setSpawnRegion(savedRegionName)
+            getCore():setSelectedMap(tostring(savedRegionName))
+        end
         return nil
     end
 
@@ -49,10 +56,37 @@ local function restoreSavedSpawnRegion(data)
     local availableRegions = mapSpawnSelect:getSpawnRegions()
     QuickRestartLog.info("checkPendingRestart restoreSavedSpawnRegion"
         .. " requestedRegion=" .. tostring(savedRegionName)
+        .. " randomSpawn=" .. tostring(wantRandomSpawn)
         .. " availableRegions=" .. describeSpawnRegions(availableRegions))
 
     local selectedRegion = nil
-    if mapSpawnSelect.listbox and type(mapSpawnSelect.listbox.items) == "table" then
+    if wantRandomSpawn then
+        if mapSpawnSelect.listbox and type(mapSpawnSelect.listbox.items) == "table" and #mapSpawnSelect.listbox.items > 0 then
+            local randomIndex = ZombRand(#mapSpawnSelect.listbox.items) + 1
+            local entry = mapSpawnSelect.listbox.items[randomIndex]
+            local region = entry and entry.item and entry.item.region or nil
+            if region and region.name then
+                mapSpawnSelect.listbox.selected = randomIndex
+                selectedRegion = region
+            end
+        end
+
+        if not selectedRegion then
+            local region = QuickRestartRandomizer.pickRandomRegion(availableRegions)
+            if region and region.name then
+                selectedRegion = region
+            end
+        end
+
+        if selectedRegion then
+            data.region = selectedRegion.name
+            QuickRestartLog.info("checkPendingRestart random spawn region selected region=" .. tostring(selectedRegion.name))
+        else
+            QuickRestartLog.warn("checkPendingRestart random spawn region unavailable, falling back to saved region")
+        end
+    end
+
+    if not selectedRegion and savedRegionName and mapSpawnSelect.listbox and type(mapSpawnSelect.listbox.items) == "table" then
         for index, entry in ipairs(mapSpawnSelect.listbox.items) do
             local region = entry.item and entry.item.region or nil
             if region and region.name == savedRegionName then
@@ -63,7 +97,7 @@ local function restoreSavedSpawnRegion(data)
         end
     end
 
-    if not selectedRegion and type(availableRegions) == "table" then
+    if not selectedRegion and savedRegionName and type(availableRegions) == "table" then
         for _, region in ipairs(availableRegions) do
             if region and region.name == savedRegionName then
                 selectedRegion = region
@@ -90,6 +124,28 @@ local function restoreSavedSpawnRegion(data)
 
     QuickRestartLog.warn("checkPendingRestart restoreSavedSpawnRegion failed requestedRegion=" .. tostring(savedRegionName))
     return nil
+end
+
+local function applyWorldSeed(data)
+    local options = QuickRestartRestartOptions.sanitize(type(data) == "table" and data.options or nil)
+    local ok = pcall(function()
+        local newSeed
+        if options.seed == QuickRestartRestartOptions.RANDOM then
+            newSeed = WorldGenUtils.INSTANCE:generateSeed()
+        elseif type(data.seed) == "string" and data.seed ~= "" then
+            newSeed = data.seed
+        else
+            newSeed = WorldGenUtils.INSTANCE:generateSeed()
+        end
+
+        WorldGenParams.INSTANCE:setSeedString(newSeed)
+        data.seed = newSeed
+        QuickRestartLog.info("checkPendingRestart applied world seed mode=" .. tostring(options.seed)
+            .. " seed=" .. tostring(newSeed))
+    end)
+    if not ok then
+        QuickRestartLog.warn("checkPendingRestart failed to apply world seed")
+    end
 end
 
 function QuickRestartLocalPersistence.getSaveFileName()
@@ -204,10 +260,32 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
     QuickRestartSandbox.logSnapshot("checkPendingRestart loaded", data.sandbox)
 
     if data.sandbox then
+        local sandboxRollOptions = QuickRestartRestartOptions.sanitize(data.options)
+        if sandboxRollOptions.sandbox == QuickRestartRestartOptions.RANDOM
+            or sandboxRollOptions.zombies == QuickRestartRestartOptions.RANDOM then
+            local ok, rolledSandbox = pcall(QuickRestartRandomizer.rollSandbox, data.sandbox, sandboxRollOptions)
+            if ok and type(rolledSandbox) == "table" then
+                data.sandbox = rolledSandbox
+                QuickRestartSandbox.logSnapshot("checkPendingRestart randomized sandbox", data.sandbox)
+            else
+                QuickRestartLog.warn("checkPendingRestart sandbox randomization failed, applying saved sandbox")
+            end
+        end
+
         for key, value in pairs(data.sandbox) do
             SandboxVars[key] = value
         end
         QuickRestartSandbox.logSnapshot("checkPendingRestart applied SandboxVars", SandboxVars)
+    end
+
+    local restartOptions = QuickRestartRestartOptions.sanitize(data.options)
+    if QuickRestartRestartOptions.isAnyRandom(restartOptions) then
+        local ok, transformed = pcall(QuickRestartRandomizer.transformSnapshot, data, restartOptions)
+        if ok and type(transformed) == "table" then
+            data = transformed
+        else
+            QuickRestartLog.warn("checkPendingRestart snapshot transform failed, applying saved snapshot")
+        end
     end
 
     if saveDataTable then
@@ -239,6 +317,12 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
         local characterProfession = resolveCharacterProfession(data.profession)
         if characterProfession then
             desc:setCharacterProfession(characterProfession)
+            pcall(function()
+                local professionDefinition = CharacterProfessionDefinition.getCharacterProfessionDefinition(characterProfession)
+                if professionDefinition then
+                    desc:setProfessionSkills(professionDefinition)
+                end
+            end)
         end
     end
 
@@ -309,6 +393,7 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
         getWorld():setGameMode("Sandbox")
         getWorld():setMap(targetMap)
         restoreSavedSpawnRegion(data)
+        applyWorldSeed(data)
         createWorld(worldName)
         GameWindow.doRenderEvent(false)
         forceChangeState(LoadingQueueState.new())
