@@ -212,6 +212,12 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
                 local prof = resolveCharacterProfession(data.profession)
                 if prof then
                     desc:setCharacterProfession(prof)
+                    pcall(function()
+                        local professionDefinition = CharacterProfessionDefinition.getCharacterProfessionDefinition(prof)
+                        if professionDefinition then
+                            desc:setProfessionSkills(professionDefinition)
+                        end
+                    end)
                 end
             end
             if data.voice then
@@ -235,8 +241,26 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
             .. " listboxRegions=" .. describeListboxRegions(mapSel and mapSel.listbox or nil)
             .. " availableRegions=" .. describeSpawnRegions(availableRegions))
 
+        local wantRandomSpawn = false
+        pcall(function()
+            wantRandomSpawn = QuickRestartRestartOptions.sanitize(data.options).spawn == QuickRestartRestartOptions.RANDOM
+        end)
+
         local selectedRegion = nil
-        if type(data.region) == "string" and data.region ~= ""
+        if wantRandomSpawn and mapSel.listbox and type(mapSel.listbox.items) == "table" and #mapSel.listbox.items > 0 then
+            local randomIndex = ZombRand(#mapSel.listbox.items) + 1
+            local entry = mapSel.listbox.items[randomIndex]
+            local region = entry and entry.item and entry.item.region or nil
+            if region and region.name then
+                mapSel.listbox.selected = randomIndex
+                selectedRegion = region
+                data.region = region.name
+                QuickRestartLog.info("mp client sameWorld random spawn region selected region="
+                    .. tostring(region.name) .. " index=" .. tostring(randomIndex))
+            end
+        end
+
+        if not selectedRegion and type(data.region) == "string" and data.region ~= ""
             and mapSel.listbox and type(mapSel.listbox.items) == "table" then
             for index, entry in ipairs(mapSel.listbox.items) do
                 local region = entry.item and entry.item.region or nil
@@ -392,6 +416,10 @@ function QuickRestartClientFlow.restartSameWorld(options)
         return false
     end
 
+    if options.transformSnapshotForRestart then
+        data = options.transformSnapshotForRestart(data) or data
+    end
+
     if options.startSameWorldRestartFromSnapshot then
         return options.startSameWorldRestartFromSnapshot(data)
     end
@@ -424,6 +452,8 @@ function QuickRestartClientFlow.addRestartPanel(options)
         onRestartSameWorld = options.onRestartSameWorld,
         onSandboxSaved = options.onSandboxSaved,
         onSandboxCurrent = options.onSandboxCurrent,
+        getRestartOptions = options.getRestartOptions,
+        onRestartOptionChanged = options.onRestartOptionChanged,
     })
 
     if options.setRestartPanel then

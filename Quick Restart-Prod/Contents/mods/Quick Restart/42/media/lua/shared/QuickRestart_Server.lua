@@ -10,6 +10,8 @@ require("QuickRestart_Skills")
 require("QuickRestart_Traits")
 require("QuickRestart_Restore")
 require("QuickRestart_Validate")
+require("QuickRestart_RestartOptions")
+require("QuickRestart_Randomizer")
 
 if not isServer() then return end
 
@@ -18,7 +20,9 @@ QuickRestartLog.info("server file loaded")
 QuickRestartServerState = QuickRestartServerState or {
     snapshotsByPlayer = {},
     restartGrantsById = {},
+    pendingMergedSnapshots = {},
 }
+QuickRestartServerState.pendingMergedSnapshots = QuickRestartServerState.pendingMergedSnapshots or {}
 
 local COMMANDS = QuickRestartConstants.COMMANDS
 local MODULE = QuickRestartConstants.MODULE
@@ -105,6 +109,12 @@ local function cleanupExpiredRestartGrants()
     for grantId, grant in pairs(QuickRestartServerState.restartGrantsById) do
         if not grant or type(grant.createdAt) ~= "number" or (now - grant.createdAt) > RESTART_GRANT_TTL_SECONDS then
             QuickRestartServerState.restartGrantsById[grantId] = nil
+        end
+    end
+
+    for profileKey, pendingMerged in pairs(QuickRestartServerState.pendingMergedSnapshots) do
+        if not pendingMerged or type(pendingMerged.createdAt) ~= "number" or (now - pendingMerged.createdAt) > RESTART_GRANT_TTL_SECONDS then
+            QuickRestartServerState.pendingMergedSnapshots[profileKey] = nil
         end
     end
 end
@@ -353,10 +363,46 @@ local function handleRequestRestartSameWorld(player, args)
         return
     end
 
+    local effectiveSnapshot = record.snapshot
+    QuickRestartServerState.pendingMergedSnapshots[profileKey] = nil
+
+    if type(args) == "table" and type(args.randomized) == "table" then
+        local merged = nil
+        local ok, reason = QuickRestartRandomizer.validateRandomizedResult(record.snapshot, args.randomized)
+        if ok then
+            merged = QuickRestartRandomizer.mergeDeltasOntoSnapshot(record.snapshot, args.randomized)
+            if merged then
+                local sanitizedOptions = QuickRestartRestartOptions.sanitizeOrNil(args.options)
+                if sanitizedOptions then
+                    merged.options = sanitizedOptions
+                end
+                merged, reason = normalizeAndValidateSnapshot(profileKey, merged)
+            else
+                reason = "merge_failed"
+            end
+        end
+
+        if merged then
+            effectiveSnapshot = merged
+            QuickRestartServerState.pendingMergedSnapshots[profileKey] = {
+                snapshot = merged,
+                createdAt = nowSeconds(),
+            }
+            QuickRestartLog.info("mp server handleRequestRestartSameWorld randomized deltas accepted requestId=" .. tostring(requestId)
+                .. " profileKey=" .. tostring(profileKey)
+                .. " " .. summarizeSnapshot(merged))
+        else
+            QuickRestartLog.warn("mp server handleRequestRestartSameWorld randomized deltas rejected requestId=" .. tostring(requestId)
+                .. " profileKey=" .. tostring(profileKey)
+                .. " reason=" .. tostring(reason)
+                .. " falling back to stored snapshot")
+        end
+    end
+
     QuickRestartLog.info("mp server handleRequestRestartSameWorld accepted requestId=" .. tostring(requestId)
         .. " profileKey=" .. tostring(profileKey)
-        .. " " .. summarizeSnapshot(record.snapshot))
-    sendSnapshotData(player, requestId, profileKey, record.snapshot, true)
+        .. " " .. summarizeSnapshot(effectiveSnapshot))
+    sendSnapshotData(player, requestId, profileKey, effectiveSnapshot, true)
     sendRestartAccepted(player, requestId, profileKey, COMMANDS.REQUEST_RESTART_SAME_WORLD)
 end
 
@@ -437,7 +483,10 @@ local function onClientCommand(module, command, player, args)
             return
         end
 
-        local restored, reason = QuickRestartRestore.applyAuthoritativeSnapshot(player, record.snapshot)
+        local pendingMerged = QuickRestartServerState.pendingMergedSnapshots[profileKey]
+        local effectiveSnapshot = pendingMerged and pendingMerged.snapshot or record.snapshot
+
+        local restored, reason = QuickRestartRestore.applyAuthoritativeSnapshot(player, effectiveSnapshot)
         if not restored then
             sendServerCommand(player, MODULE, COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED, QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse({
                 profileKey = profileKey,
@@ -446,7 +495,16 @@ local function onClientCommand(module, command, player, args)
             return
         end
 
-        QuickRestartRestore.scheduleBaseClothingRestore(player, record.snapshot, 2)
+        QuickRestartRestore.scheduleBaseClothingRestore(player, effectiveSnapshot, 2)
+
+        if pendingMerged then
+            if persistSnapshot(profileKey, pendingMerged.snapshot) then
+                QuickRestartLog.info("mp server persisted merged randomized snapshot profileKey=" .. tostring(profileKey))
+            else
+                QuickRestartLog.warn("mp server failed to persist merged randomized snapshot profileKey=" .. tostring(profileKey))
+            end
+            QuickRestartServerState.pendingMergedSnapshots[profileKey] = nil
+        end
 
         QuickRestartServerState.restartGrantsById[grantId] = nil
         sendServerCommand(player, MODULE, COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_ACK, QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse({

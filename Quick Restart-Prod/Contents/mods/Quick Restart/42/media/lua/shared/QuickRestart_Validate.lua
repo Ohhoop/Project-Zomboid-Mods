@@ -224,6 +224,14 @@ function QuickRestartValidate.validateSnapshotData(data)
         return false, "invalid_weight"
     end
 
+    if data.options ~= nil and type(data.options) ~= "table" then
+        return false, "invalid_options"
+    end
+
+    if data.seed ~= nil and (not isNonEmptyString(data.seed) or #data.seed > 16) then
+        return false, "invalid_seed"
+    end
+
     if data.visual then
         if data.visual.hairColor and not validateColor(data.visual.hairColor) then
             return false, "invalid_hair_color"
@@ -273,6 +281,7 @@ function QuickRestartValidate.normalizeSnapshotData(data)
         isChallenge = data.isChallenge == true,
         challengeID = data.challengeID ~= nil and tostring(data.challengeID) or nil,
         weight = tonumber(data.weight),
+        seed = isNonEmptyString(data.seed) and string.sub(data.seed, 1, 16) or nil,
         traits = {},
         skills = {},
         recipes = {},
@@ -375,10 +384,25 @@ function QuickRestartValidate.normalizeSnapshotData(data)
         end
     end
 
+    if type(data.options) == "table" then
+        normalized.options = {}
+        for _, optionKey in ipairs({"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}) do
+            if data.options[optionKey] == "random" then
+                normalized.options[optionKey] = "random"
+            else
+                normalized.options[optionKey] = "keep"
+            end
+        end
+    end
+
     return normalized
 end
 
 QuickRestartValidate.validateLegacyCharacterData = QuickRestartValidate.validateSnapshotData
 QuickRestartValidate.normalizeLegacyCharacterData = QuickRestartValidate.normalizeSnapshotData
+QuickRestartValidate.professionExists = professionExists
+QuickRestartValidate.getSafeProfessionType = getSafeProfessionType
+QuickRestartValidate.traitExists = traitExists
+QuickRestartValidate.perkIndexExists = perkIndexExists
 
 return QuickRestartValidate

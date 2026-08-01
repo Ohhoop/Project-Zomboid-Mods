@@ -3,6 +3,19 @@ QuickRestartUI = QuickRestartUI or {}
 QuickRestartPanel = ISPanel:derive("QuickRestartPanel")
 QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 
+local GEAR_TEXTURE_PATH = "media/ui/inventoryPanes/Button_Gear.png"
+
+local OPTION_ROWS = {
+    {category = "gender", labelKey = "UI_QuickRestart_Options_Gender", tooltipKey = "UI_QuickRestart_Options_Gender_Tooltip"},
+    {category = "profession", labelKey = "UI_QuickRestart_Options_Profession", tooltipKey = "UI_QuickRestart_Options_Profession_Tooltip"},
+    {category = "traits", labelKey = "UI_QuickRestart_Options_Traits", tooltipKey = "UI_QuickRestart_Options_Traits_Tooltip"},
+    {category = "clothing", labelKey = "UI_QuickRestart_Options_Clothing", tooltipKey = "UI_QuickRestart_Options_Clothing_Tooltip"},
+    {category = "spawn", labelKey = "UI_QuickRestart_Options_Spawn", tooltipKey = "UI_QuickRestart_Options_Spawn_Tooltip"},
+    {category = "seed", labelKey = "UI_QuickRestart_Options_Seed", tooltipKey = "UI_QuickRestart_Options_Seed_Tooltip", freshWorldOnly = true},
+    {category = "zombies", labelKey = "UI_QuickRestart_Options_Zombies", tooltipKey = "UI_QuickRestart_Options_Zombies_Tooltip", freshWorldOnly = true, confirmKey = "UI_QuickRestart_Options_Zombies_Warning"},
+    {category = "sandbox", labelKey = "UI_QuickRestart_Options_Sandbox", tooltipKey = "UI_QuickRestart_Options_Sandbox_Tooltip", freshWorldOnly = true, confirmKey = "UI_QuickRestart_Options_Sandbox_Warning"},
+}
+
 local function computeLayout()
     local textManager = getTextManager()
     local hgtSmall = textManager:getFontHeight(UIFont.Small)
@@ -171,6 +184,31 @@ function QuickRestartPanel:createChildren()
     self.sameButton.backgroundColor = sameEnabled and {r=0, g=0, b=0, a=0.9} or {r=0.3, g=0.3, b=0.3, a=0.9}
     self.sameButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
     self:addChild(self.sameButton)
+
+    local gearSize = layout.hgtSmall + layout.gapTiny * 2
+    self.gearButton = ISButton:new(self.width - gearSize - layout.gapTiny, layout.gapTiny, gearSize, gearSize, "", self, function()
+        QuickRestartUI.toggleOptionsWindow(self)
+    end)
+    self.gearButton:initialise()
+    self.gearButton:instantiate()
+    self.gearButton.backgroundColor = {r=0, g=0, b=0, a=0.9}
+    self.gearButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
+    local gearTexture = getTexture(GEAR_TEXTURE_PATH)
+    if gearTexture then
+        self.gearButton:setImage(gearTexture)
+        if self.gearButton.forceImageSize then
+            self.gearButton:forceImageSize(gearSize - layout.gapTiny * 2, gearSize - layout.gapTiny * 2)
+        end
+    end
+    if not charDataAvail then
+        self.gearButton.enable = false
+    end
+    self:addChild(self.gearButton)
+end
+
+function QuickRestartPanel:removeFromUIManager()
+    QuickRestartUI.closeOptionsWindow()
+    ISPanel.removeFromUIManager(self)
 end
 
 local function drawTooltip(panel, tooltipText, mouseX, mouseY)
@@ -185,21 +223,23 @@ local function drawTooltip(panel, tooltipText, mouseX, mouseY)
     local maxWidth = math.min(400, screenWidth * 0.4)
 
     local lines = {}
-    local line = ""
-    for word in tooltipText:gmatch("%S+") do
-        local test = line == "" and word or (line .. " " .. word)
-        if textManager:MeasureStringX(font, test) > maxWidth then
-            if line ~= "" then
-                lines[#lines + 1] = line
-                line = word
+    for segment in tooltipText:gmatch("[^\n]+") do
+        local line = ""
+        for word in segment:gmatch("%S+") do
+            local test = line == "" and word or (line .. " " .. word)
+            if textManager:MeasureStringX(font, test) > maxWidth then
+                if line ~= "" then
+                    lines[#lines + 1] = line
+                    line = word
+                else
+                    lines[#lines + 1] = word
+                end
             else
-                lines[#lines + 1] = word
+                line = test
             end
-        else
-            line = test
         end
+        if line ~= "" then lines[#lines + 1] = line end
     end
-    if line ~= "" then lines[#lines + 1] = line end
 
     local maxLineWidth = 0
     for _, l in ipairs(lines) do
@@ -224,7 +264,226 @@ local function drawTooltip(panel, tooltipText, mouseX, mouseY)
     end
 end
 
+QuickRestartOptionsWindow = ISPanel:derive("QuickRestartOptionsWindow")
+
+function QuickRestartOptionsWindow:new(x, y, width, height)
+    local o = ISPanel:new(x, y, width, height)
+    setmetatable(o, self)
+    self.__index = self
+    o.backgroundColor = {r=0, g=0, b=0, a=0.85}
+    o.borderColor = {r=0.7, g=0.7, b=0.7, a=0.5}
+    return o
+end
+
+function QuickRestartOptionsWindow:createChildren()
+    ISPanel.createChildren(self)
+
+    local layout = self.layout
+    local keepLabel = getText("UI_QuickRestart_Options_Keep")
+    local randomLabel = getText("UI_QuickRestart_Options_Random")
+    local valueX = self.width - layout.marginX - self.valueWidth
+    local rowY = layout.marginY + layout.hgtMedium + layout.spacing
+    self.optionRowButtons = {}
+
+    for _, row in ipairs(OPTION_ROWS) do
+        local category = row.category
+        local valueLabel = self.restartOptions[category] == "random" and randomLabel or keepLabel
+        local rowEnabled = not row.freshWorldOnly or self.freshWorldAllowed
+
+        local button
+        if rowEnabled then
+            button = ISButton:new(valueX, rowY, self.valueWidth, layout.buttonHeight, valueLabel, self, function()
+                self:onOptionRowClick(category)
+            end)
+        else
+            button = ISButton:new(valueX, rowY, self.valueWidth, layout.buttonHeight, "", self, nil)
+            button.enable = false
+            button.disabledLabel = valueLabel
+        end
+        button:initialise()
+        button:instantiate()
+        button.backgroundColor = rowEnabled and {r=0, g=0, b=0, a=0.9} or {r=0.3, g=0.3, b=0.3, a=0.9}
+        button.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
+        self:addChild(button)
+        self.optionRowButtons[category] = button
+
+        rowY = rowY + layout.buttonHeight + layout.gapTiny
+    end
+end
+
+function QuickRestartOptionsWindow:onOptionRowClick(category)
+    local newValue = self.restartOptions[category] == "random" and "keep" or "random"
+
+    if newValue == "random" then
+        local row = nil
+        for _, candidate in ipairs(OPTION_ROWS) do
+            if candidate.category == category then
+                row = candidate
+                break
+            end
+        end
+
+        if row and row.confirmKey then
+            local layout = self.layout or computeLayout()
+            local text = getText(row.confirmKey)
+            local modalWidth, modalHeight = ISModalDialog.CalcSize(0, 0, text)
+            modalWidth = modalWidth + layout.marginX * 2
+            modalHeight = modalHeight + layout.marginY
+            local screenWidth = getCore():getScreenWidth()
+            local screenHeight = getCore():getScreenHeight()
+            local modal = ISModalDialog:new((screenWidth - modalWidth) / 2, (screenHeight - modalHeight) / 2,
+                modalWidth, modalHeight, text, true, self, QuickRestartOptionsWindow.onConfirmRandom, nil, category)
+            modal:initialise()
+            modal:addToUIManager()
+            modal:setAlwaysOnTop(true)
+            modal:bringToTop()
+            return
+        end
+    end
+
+    self:applyOptionValue(category, newValue)
+end
+
+function QuickRestartOptionsWindow:onConfirmRandom(button, category)
+    if button.internal == "YES" then
+        self:applyOptionValue(category, "random")
+    end
+end
+
+function QuickRestartOptionsWindow:applyOptionValue(category, value)
+    self.restartOptions[category] = value
+
+    local button = self.optionRowButtons and self.optionRowButtons[category] or nil
+    if button then
+        local label = value == "random" and getText("UI_QuickRestart_Options_Random") or getText("UI_QuickRestart_Options_Keep")
+        button:setTitle(label)
+    end
+
+    if self.onRestartOptionChanged then
+        self.onRestartOptionChanged(category, value)
+    end
+end
+
+function QuickRestartOptionsWindow:render()
+    ISPanel.render(self)
+
+    local textManager = getTextManager()
+    local layout = self.layout
+    local font = layout.fontSmall
+    local fontHeight = layout.hgtSmall
+
+    local title = getText("UI_QuickRestart_Options_Title")
+    local titleWidth = textManager:MeasureStringX(layout.fontMedium, title)
+    local titleX = (self.width - titleWidth) / 2
+    local titleY = layout.marginY
+    self:drawText(title, titleX-1, titleY, 0, 0, 0, 0.5, layout.fontMedium)
+    self:drawText(title, titleX+1, titleY, 0, 0, 0, 0.5, layout.fontMedium)
+    self:drawText(title, titleX, titleY-1, 0, 0, 0, 0.5, layout.fontMedium)
+    self:drawText(title, titleX, titleY+1, 0, 0, 0, 0.5, layout.fontMedium)
+    self:drawText(title, titleX, titleY, 1, 1, 1, 1, layout.fontMedium)
+
+    local tooltipText = nil
+    for _, row in ipairs(OPTION_ROWS) do
+        local button = self.optionRowButtons and self.optionRowButtons[row.category] or nil
+        if button then
+            local label = getText(row.labelKey)
+            local labelY = button:getY() + (button:getHeight() - fontHeight) / 2
+            local shade = button.enable == false and 0.6 or 1
+            self:drawText(label, layout.marginX, labelY, shade, shade, shade, 1, font)
+
+            if button.disabledLabel then
+                local disabledWidth = textManager:MeasureStringX(font, button.disabledLabel)
+                local disabledX = button:getX() + (button:getWidth() - disabledWidth) / 2
+                self:drawText(button.disabledLabel, disabledX, labelY, 0.6, 0.6, 0.6, 1, font)
+            end
+
+            if not tooltipText and button:isMouseOver() then
+                tooltipText = getText(row.tooltipKey)
+            end
+        end
+    end
+
+    if tooltipText then
+        local mouseX = getMouseX() - self:getAbsoluteX()
+        local mouseY = getMouseY() - self:getAbsoluteY()
+        drawTooltip(self, tooltipText, mouseX, mouseY)
+    end
+end
+
+function QuickRestartUI.openOptionsWindow(ownerPanel)
+    QuickRestartUI.closeOptionsWindow()
+
+    local layout = computeLayout()
+    local textManager = getTextManager()
+    local core = getCore()
+    local screenWidth = core:getScreenWidth()
+    local screenHeight = core:getScreenHeight()
+
+    local labelWidth = 0
+    for _, row in ipairs(OPTION_ROWS) do
+        local rowLabelWidth = textManager:MeasureStringX(layout.fontSmall, getText(row.labelKey))
+        if rowLabelWidth > labelWidth then
+            labelWidth = rowLabelWidth
+        end
+    end
+
+    local valueWidth = math.max(
+        textManager:MeasureStringX(layout.fontSmall, getText("UI_QuickRestart_Options_Keep")),
+        textManager:MeasureStringX(layout.fontSmall, getText("UI_QuickRestart_Options_Random"))
+    ) + layout.buttonTextPad
+
+    local titleWidth = textManager:MeasureStringX(layout.fontMedium, getText("UI_QuickRestart_Options_Title"))
+    local contentWidth = math.max(titleWidth, labelWidth + layout.spacing + valueWidth)
+    local windowWidth = contentWidth + layout.marginX * 2
+    local windowHeight = layout.marginY + layout.hgtMedium + layout.spacing
+        + #OPTION_ROWS * layout.buttonHeight + (#OPTION_ROWS - 1) * layout.gapTiny
+        + layout.marginY
+
+    local x = (screenWidth - windowWidth) / 2
+    local y = math.max(0, screenHeight * 0.45 - windowHeight / 2)
+
+    local window = QuickRestartOptionsWindow:new(x, y, windowWidth, windowHeight)
+    window.layout = layout
+    window.valueWidth = valueWidth
+    window.freshWorldAllowed = (ownerPanel and ownerPanel.canUseFreshWorld and ownerPanel.canUseFreshWorld()) == true
+    window.restartOptions = (ownerPanel and ownerPanel.onGetRestartOptions and ownerPanel.onGetRestartOptions()) or {}
+    window.onRestartOptionChanged = ownerPanel and ownerPanel.onRestartOptionChanged or nil
+    window:initialise()
+    window:instantiate()
+    window:addToUIManager()
+    window:setVisible(true)
+    window:setAlwaysOnTop(true)
+    window:bringToTop()
+    QuickRestartUI.optionsWindow = window
+    return window
+end
+
+function QuickRestartUI.closeOptionsWindow()
+    local window = QuickRestartUI.optionsWindow
+    if not window then
+        return false
+    end
+
+    window:setVisible(false)
+    window:removeFromUIManager()
+    QuickRestartUI.optionsWindow = nil
+    return true
+end
+
+function QuickRestartUI.toggleOptionsWindow(ownerPanel)
+    if QuickRestartUI.optionsWindow then
+        QuickRestartUI.closeOptionsWindow()
+        return nil
+    end
+    return QuickRestartUI.openOptionsWindow(ownerPanel)
+end
+
 function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVarsCurrent)
+    QuickRestartUI.closeOptionsWindow()
+    if self.gearButton then
+        self.gearButton:setVisible(false)
+    end
+
     self:removeChild(self.freshButton)
     self:removeChild(self.sameButton)
     self.freshButton = nil
@@ -400,6 +659,8 @@ function QuickRestartPanel:render()
             else
                 tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip")
             end
+        elseif self.gearButton and self.gearButton:isVisible() and self.gearButton:isMouseOver() then
+            tooltipText = getText("UI_QuickRestart_Options_Tooltip")
         end
 
         if tooltipText then
@@ -449,6 +710,8 @@ function QuickRestartUI.createRestartPanel(options)
     panel.onRestartSameWorld = options.onRestartSameWorld
     panel.onSandboxSaved = options.onSandboxSaved
     panel.onSandboxCurrent = options.onSandboxCurrent
+    panel.onGetRestartOptions = options.getRestartOptions
+    panel.onRestartOptionChanged = options.onRestartOptionChanged
     panel:initialise()
     panel:instantiate()
     panel:addToUIManager()
