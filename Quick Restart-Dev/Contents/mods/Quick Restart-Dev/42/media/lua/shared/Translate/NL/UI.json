@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Behouden: past het opgeslagen geslacht opnieuw toe.\nWillekeurig: kiest willekeurig een geslacht, met bijpassend uiterlijk, stem en voornaam.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Behouden: past het opgeslagen beroep opnieuw toe.\nWillekeurig: kiest willekeurig een beroep; de bijbehorende eigenschappen zijn gegarandeerd.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Behouden: past de opgeslagen eigenschappen opnieuw toe.\nWillekeurig: kiest eigenschappen binnen het puntenbudget van de wereld en de onderlinge uitsluitingen.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Behouden: past de opgeslagen kleding opnieuw toe.\nWillekeurig: standaardoutfit van het beroep.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Behouden: past de opgeslagen kleding opnieuw toe.\nWillekeurig: selecteert een outfit uit de outfit-pool van het spel, waarvan het beroepsoutfit inbegrepen is.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Behouden: respawnt in de opgeslagen regio.\nWillekeurig: kiest willekeurig een regio uit de regio's die voor dit spel beschikbaar zijn.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Behouden: hergebruikt de originele wereldseed.\nWillekeurig: genereert een nieuwe seed. Alleen Nieuwe Wereld.",
     "UI_QuickRestart_Options_Title": "HERSTART-OPTIES",

@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Säilytä: palauttaa tallennetun sukupuolen.\nSatunnainen: arpoo sukupuolen sekä siihen sopivan ulkonäön, äänen ja etunimen.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Säilytä: palauttaa tallennetun ammatin.\nSatunnainen: arpoo ammatin; sen mukana tulevat piirteet ovat taattuja.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Säilytä: palauttaa tallennetut piirteet.\nSatunnainen: arpoo piirteet maailman pistebudjetin ja keskinäisten poissulkujen rajoissa.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Säilytä: palauttaa tallennetun vaatetuksen.\nSatunnainen: ammatin oletusasu.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Säilytä: palauttaa tallennetun vaatetuksen.\nSatunnainen: valitsee asun pelin asupoolista, ammatin asun mukaan lukien.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Säilytä: syntyy uudelleen tallennetulle alueelle.\nSatunnainen: arpoo alueen tälle pelille saatavilla olevista.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Säilytä: käyttää uudelleen maailman alkuperäistä seediä.\nSatunnainen: luo uuden seedin. Vain Uusi Maailma.",
     "UI_QuickRestart_Options_Title": "UUDELLEENKÄYNNISTYKSEN VALINNAT",

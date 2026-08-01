@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Koru: kaydedilen cinsiyeti yeniden uygular.\nRastgele: uyumlu görünüm, ses ve adla birlikte rastgele bir cinsiyet seçer.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Koru: kaydedilen mesleği yeniden uygular.\nRastgele: rastgele bir meslek seçer; mesleğin verdiği özellikler garantidir.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Koru: kaydedilen özellikleri yeniden uygular.\nRastgele: dünyanın puan bütçesi ve karşılıklı dışlamalar dahilinde rastgele özellikler seçer.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Koru: kaydedilen kıyafeti yeniden uygular.\nRastgele: mesleğin varsayılan kıyafeti.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Koru: kaydedilen kıyafeti yeniden uygular.\nRastgele: oyunun kıyafet havuzundan bir kıyafet seçer, mesleğin kıyafeti dahil.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Koru: kaydedilen bölgede yeniden doğarsın.\nRastgele: bu oyun için mevcut bölgeler arasından rastgele birini seçer.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Koru: orijinal dünya seed'ini yeniden kullanır.\nRastgele: yeni bir seed üretir. Yalnızca Yeni Dünya için.",
     "UI_QuickRestart_Options_Title": "YENİDEN BAŞLATMA SEÇENEKLERİ",

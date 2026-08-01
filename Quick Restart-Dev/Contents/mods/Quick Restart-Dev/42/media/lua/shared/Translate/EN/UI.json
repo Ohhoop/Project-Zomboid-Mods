@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Keep: reapply the saved gender.\nRandom: rolls a gender, with matching appearance, voice and first name.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Keep: reapply the saved occupation.\nRandom: rolls an occupation; its granted traits are guaranteed.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Keep: reapply the saved traits.\nRandom: rolls traits within the world's point budget and mutual exclusions.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Keep: reapply the saved clothing.\nRandom: default outfit of the occupation.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Keep: reapply the saved clothing.\nRandom: picks an outfit from the game's outfit pool, the occupation outfit included.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Keep: respawn in the saved region.\nRandom: rolls a region among those available for this game.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Keep: reuse the original world seed.\nRandom: generates a new seed. Fresh World only.",
     "UI_QuickRestart_Options_Title": "RESTART OPTIONS",

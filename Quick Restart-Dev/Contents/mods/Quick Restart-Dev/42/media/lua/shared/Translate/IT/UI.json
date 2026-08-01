@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Mantieni: riapplica il sesso salvato.\nCasuale: estrae un sesso a caso, con aspetto, voce e nome corrispondenti.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Mantieni: riapplica la professione salvata.\nCasuale: estrae una professione a caso; i suoi tratti concessi sono garantiti.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Mantieni: riapplica i tratti salvati.\nCasuale: estrae tratti a caso rispettando il budget di punti del mondo e le esclusioni reciproche.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Mantieni: riapplica l'abbigliamento salvato.\nCasuale: abbigliamento predefinito della professione.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Mantieni: riapplica l'abbigliamento salvato.\nCasuale: sceglie un abbigliamento dal pool di abbigliamenti del gioco, incluso quello della professione.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Mantieni: rinasci nella regione salvata.\nCasuale: estrae una regione tra quelle disponibili per questa partita.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Mantieni: riutilizza il seed del mondo originale.\nCasuale: genera un nuovo seed. Solo Nuovo mondo.",
     "UI_QuickRestart_Options_Title": "OPZIONI DI RIAVVIO",

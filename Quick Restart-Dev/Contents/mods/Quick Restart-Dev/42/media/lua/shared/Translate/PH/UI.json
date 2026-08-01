@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Panatilihin: ia-apply muli ang naka-save na kasarian.\nRandom: magra-random ng kasarian, kasama ang tugmang itsura, boses, at first name.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Panatilihin: ia-apply muli ang naka-save na trabaho.\nRandom: magra-random ng trabaho; garantisado ang mga trait na bigay nito.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Panatilihin: ia-apply muli ang mga naka-save na trait.\nRandom: magra-random ng mga trait sa loob ng point budget ng mundo at ng mga hindi puwedeng pagsamahin.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Panatilihin: ia-apply muli ang naka-save na damit.\nRandom: default na outfit ng trabaho.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Panatilihin: ia-apply muli ang naka-save na damit.\nRandom: pumipili ng damit mula sa damit pool ng laro, kasama ang damit ng trabaho.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Panatilihin: magsi-spawn muli sa naka-save na rehiyon.\nRandom: magra-random ng rehiyon mula sa mga available para sa larong ito.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Panatilihin: gagamitin muli ang orihinal na seed ng mundo.\nRandom: gagawa ng bagong seed. Para sa Bagong Mundo lamang.",
     "UI_QuickRestart_Options_Title": "MGA OPSYON SA PAG-RESTART",

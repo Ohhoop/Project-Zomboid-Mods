@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "維持：保存された性別を再適用します。\nランダム：性別をランダムに決定し、それに合った外見、声、名前を設定します。",
     "UI_QuickRestart_Options_Profession_Tooltip": "維持：保存された職業を再適用します。\nランダム：職業をランダムに決定します。その職業が付与する特性は保証されます。",
     "UI_QuickRestart_Options_Traits_Tooltip": "維持：保存された特性を再適用します。\nランダム：ワールドのポイント上限と相互排他ルールの範囲内で特性をランダムに決定します。",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "維持：保存された服装を再適用します。\nランダム：職業のデフォルトの服装になります。",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "維持：保存された服装を再適用します。\nランダム：ゲームの服装プールから服装を選びます。職業の服装も含まれます。",
     "UI_QuickRestart_Options_Spawn_Tooltip": "維持：保存された地域にリスポーンします。\nランダム：このゲームで利用可能な地域の中からランダムに選びます。",
     "UI_QuickRestart_Options_Seed_Tooltip": "維持：元のワールドのシードを再利用します。\nランダム：新しいシードを生成します。新しい世界のみ。",
     "UI_QuickRestart_Options_Title": "リスタートオプション",

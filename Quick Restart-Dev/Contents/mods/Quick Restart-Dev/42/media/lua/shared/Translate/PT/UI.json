@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Manter: reaplica o sexo guardado.\nAleatório: sorteia um sexo, com aparência, voz e nome próprio correspondentes.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Manter: reaplica a profissão guardada.\nAleatório: sorteia uma profissão; os seus traços concedidos são garantidos.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Manter: reaplica os traços guardados.\nAleatório: sorteia traços dentro do orçamento de pontos do mundo e das exclusões mútuas.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Manter: reaplica a roupa guardada.\nAleatório: vestuário predefinido da profissão.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Manter: reaplica a roupa guardada.\nAleatório: seleciona uma peça de roupa do banco de vestuário do jogo, incluindo a da profissão.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Manter: reapareces na região guardada.\nAleatório: sorteia uma região entre as disponíveis para este jogo.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Manter: reutiliza a seed do mundo original.\nAleatório: gera uma nova seed. Apenas Mundo novo.",
     "UI_QuickRestart_Options_Title": "OPÇÕES DE REINÍCIO",

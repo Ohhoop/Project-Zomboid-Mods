@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Zachowaj: ponownie stosuje zapisaną płeć.\nLosowo: losuje płeć wraz z dopasowanym wyglądem, głosem i imieniem.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Zachowaj: ponownie stosuje zapisany zawód.\nLosowo: losuje zawód; cechy, które on daje, są gwarantowane.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Zachowaj: ponownie stosuje zapisane cechy.\nLosowo: losuje cechy w ramach budżetu punktów świata i wzajemnych wykluczeń.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Zachowaj: ponownie stosuje zapisaną odzież.\nLosowo: domyślny strój zawodu.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Zachowaj: ponownie stosuje zapisaną odzież.\nLosowo: wybiera strój z puli strojów gry, włączając strój zawodu.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Zachowaj: odrodzenie w zapisanym regionie.\nLosowo: losuje region spośród dostępnych w tej grze.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Zachowaj: ponownie używa oryginalnego seeda świata.\nLosowo: generuje nowy seed. Tylko Nowy świat.",
     "UI_QuickRestart_Options_Title": "OPCJE RESTARTU",

@@ -324,8 +324,11 @@ function QuickRestartOptionsWindow:onOptionRowClick(category)
         end
 
         if row and row.confirmKey then
+            local layout = self.layout or computeLayout()
             local text = getText(row.confirmKey)
             local modalWidth, modalHeight = ISModalDialog.CalcSize(0, 0, text)
+            modalWidth = modalWidth + layout.marginX * 2
+            modalHeight = modalHeight + layout.marginY
             local screenWidth = getCore():getScreenWidth()
             local screenHeight = getCore():getScreenHeight()
             local modal = ISModalDialog:new((screenWidth - modalWidth) / 2, (screenHeight - modalHeight) / 2,

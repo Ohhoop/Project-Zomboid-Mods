@@ -617,94 +617,193 @@ function QuickRestartRandomizer.rollVoice(gender)
     return voice
 end
 
+local function isOptionalHeadwearLocation(bodyLocation)
+    if type(bodyLocation) ~= "string" or bodyLocation == "" then
+        return false
+    end
+
+    local segment = string.lower(bodyLocation):match("([^:]+)$")
+    return segment == "hat" or segment == "eyes"
+end
+
 function QuickRestartRandomizer.rollClothing(professionType, gender, traitStrings)
     local ok, clothing = pcall(function()
-        if not ClothingSelectionDefinitions or not instanceItem then
+        if not instanceItem then
             return nil
         end
 
         local female = gender == "female"
-        local outfitByLocation = {}
-        local locationOrder = {}
 
-        local function applyDefinition(definition)
-            if type(definition) ~= "table" then
-                return
+        local function buildProfessionOutfit()
+            if not ClothingSelectionDefinitions then
+                return nil
             end
-            for bodyLocation, locationTable in pairs(definition) do
-                if type(locationTable) == "table" and type(locationTable.items) == "table" and #locationTable.items > 0 then
-                    local chance = locationTable.chance
-                    if not chance or ZombRand(100) < chance then
-                        if outfitByLocation[bodyLocation] == nil then
-                            locationOrder[#locationOrder + 1] = bodyLocation
+
+            local outfitByLocation = {}
+            local locationOrder = {}
+
+            local function applyDefinition(definition)
+                if type(definition) ~= "table" then
+                    return
+                end
+                for bodyLocation, locationTable in pairs(definition) do
+                    if type(locationTable) == "table" and type(locationTable.items) == "table" and #locationTable.items > 0 then
+                        local chance = locationTable.chance
+                        if not chance or ZombRand(100) < chance then
+                            if outfitByLocation[bodyLocation] == nil then
+                                locationOrder[#locationOrder + 1] = bodyLocation
+                            end
+                            outfitByLocation[bodyLocation] = locationTable.items[ZombRand(#locationTable.items) + 1]
                         end
-                        outfitByLocation[bodyLocation] = locationTable.items[ZombRand(#locationTable.items) + 1]
                     end
                 end
             end
-        end
 
-        local function applyGenderedDefinition(definition)
-            if type(definition) ~= "table" then
-                return
+            local function applyGenderedDefinition(definition)
+                if type(definition) ~= "table" then
+                    return
+                end
+                if female then
+                    applyDefinition(definition.Female)
+                elseif definition.Male then
+                    applyDefinition(definition.Male)
+                else
+                    applyDefinition(definition.Female)
+                end
             end
-            if female then
-                applyDefinition(definition.Female)
-            elseif definition.Male then
-                applyDefinition(definition.Male)
-            else
-                applyDefinition(definition.Female)
+
+            applyGenderedDefinition(ClothingSelectionDefinitions.default)
+
+            local professionName = nil
+            pcall(function()
+                local characterProfession = CharacterProfession.get(ResourceLocation.of(tostring(professionType)))
+                if characterProfession then
+                    professionName = characterProfession:getName()
+                end
+            end)
+            if professionName and ClothingSelectionDefinitions[professionName] then
+                applyGenderedDefinition(ClothingSelectionDefinitions[professionName])
             end
-        end
 
-        applyGenderedDefinition(ClothingSelectionDefinitions.default)
-
-        local professionName = nil
-        pcall(function()
-            local characterProfession = CharacterProfession.get(ResourceLocation.of(tostring(professionType)))
-            if characterProfession then
-                professionName = characterProfession:getName()
+            if TraitClothingSelectionDefinitions and type(traitStrings) == "table" then
+                for _, traitString in ipairs(traitStrings) do
+                    pcall(function()
+                        local characterTrait = CharacterTrait.get(ResourceLocation.of(tostring(traitString)))
+                        if characterTrait and TraitClothingSelectionDefinitions[characterTrait] then
+                            applyGenderedDefinition(TraitClothingSelectionDefinitions[characterTrait])
+                        end
+                    end)
+                end
             end
-        end)
-        if professionName and ClothingSelectionDefinitions[professionName] then
-            applyGenderedDefinition(ClothingSelectionDefinitions[professionName])
-        end
 
-        if TraitClothingSelectionDefinitions and type(traitStrings) == "table" then
-            for _, traitString in ipairs(traitStrings) do
-                pcall(function()
-                    local characterTrait = CharacterTrait.get(ResourceLocation.of(tostring(traitString)))
-                    if characterTrait and TraitClothingSelectionDefinitions[characterTrait] then
-                        applyGenderedDefinition(TraitClothingSelectionDefinitions[characterTrait])
+            local entries = {}
+            for _, bodyLocation in ipairs(locationOrder) do
+                local itemType = outfitByLocation[bodyLocation]
+                if type(itemType) == "string" and itemType ~= "" and #entries < MAX_CLOTHING_ENTRIES then
+                    local item = instanceItem(itemType)
+                    if item then
+                        local entry = {type = itemType}
+
+                        local okType, fullType = pcall(function() return item:getFullType() end)
+                        if okType and type(fullType) == "string" and fullType ~= "" then
+                            entry.type = fullType
+                        end
+
+                        local okLoc, bodyLoc = pcall(function() return item:getBodyLocation() end)
+                        if okLoc and bodyLoc ~= nil and tostring(bodyLoc) ~= "" then
+                            entry.bodyLocation = tostring(bodyLoc)
+                        end
+
+                        entries[#entries + 1] = entry
                     end
-                end)
+                end
             end
+
+            return entries
         end
 
-        local entries = {}
-        for _, bodyLocation in ipairs(locationOrder) do
-            local itemType = outfitByLocation[bodyLocation]
-            if type(itemType) == "string" and itemType ~= "" and #entries < MAX_CLOTHING_ENTRIES then
-                local item = instanceItem(itemType)
-                if item then
-                    local entry = {type = itemType}
+        local function buildNamedOutfit(outfitName)
+            if not SurvivorFactory or not SurvivorFactory.CreateSurvivor then
+                return nil
+            end
 
+            local tempDesc = SurvivorFactory.CreateSurvivor(SurvivorType.Neutral, female)
+            if not tempDesc then
+                return nil
+            end
+
+            tempDesc:getWornItems():clear()
+            tempDesc:dressInNamedOutfit(outfitName)
+
+            local entries = {}
+            local wornItems = tempDesc:getWornItems()
+            for i = 0, wornItems:size() - 1 do
+                local item = wornItems:getItemByIndex(i)
+                if item and #entries < MAX_CLOTHING_ENTRIES then
                     local okType, fullType = pcall(function() return item:getFullType() end)
                     if okType and type(fullType) == "string" and fullType ~= "" then
-                        entry.type = fullType
-                    end
+                        local entry = {type = fullType}
 
-                    local okLoc, bodyLoc = pcall(function() return item:getBodyLocation() end)
-                    if okLoc and bodyLoc ~= nil and tostring(bodyLoc) ~= "" then
-                        entry.bodyLocation = tostring(bodyLoc)
-                    end
+                        local okLoc, bodyLoc = pcall(function() return item:getBodyLocation() end)
+                        if okLoc and bodyLoc ~= nil and tostring(bodyLoc) ~= "" then
+                            entry.bodyLocation = tostring(bodyLoc)
+                        end
 
-                    entries[#entries + 1] = entry
+                        if not (isOptionalHeadwearLocation(entry.bodyLocation) and ZombRand(2) == 0) then
+                            entries[#entries + 1] = entry
+                        end
+                    end
+                end
+            end
+
+            if #entries == 0 then
+                return nil
+            end
+            return entries
+        end
+
+        local outfitNames = {}
+        if getAllOutfits then
+            pcall(function()
+                local outfits = getAllOutfits(female)
+                if outfits then
+                    for i = 0, outfits:size() - 1 do
+                        local name = outfits:get(i)
+                        if type(name) == "string" and name ~= "" then
+                            outfitNames[#outfitNames + 1] = name
+                        end
+                    end
+                end
+            end)
+        end
+
+        local candidates = {}
+        for index = 0, #outfitNames do
+            candidates[#candidates + 1] = index
+        end
+
+        while #candidates > 0 do
+            local pickIndex = ZombRand(#candidates) + 1
+            local candidate = candidates[pickIndex]
+            table.remove(candidates, pickIndex)
+
+            if candidate == 0 then
+                local entries = buildProfessionOutfit()
+                if entries and #entries > 0 then
+                    logInfo("rollClothing profession outfit items=" .. tostring(#entries))
+                    return entries
+                end
+            else
+                local entries = buildNamedOutfit(outfitNames[candidate])
+                if entries then
+                    logInfo("rollClothing named outfit=" .. tostring(outfitNames[candidate]) .. " items=" .. tostring(#entries))
+                    return entries
                 end
             end
         end
 
-        return entries
+        logWarn("rollClothing no valid outfit available in pool")
+        return nil
     end)
     if not ok or type(clothing) ~= "table" then
         return nil

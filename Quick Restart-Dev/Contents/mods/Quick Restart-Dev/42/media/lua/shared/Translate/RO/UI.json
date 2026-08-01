@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Păstrează: reaplică sexul salvat.\nAleatoriu: alege un sex la întâmplare, cu aspect, voce și prenume potrivite.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Păstrează: reaplică ocupația salvată.\nAleatoriu: alege o ocupație la întâmplare; trăsăturile oferite de ea sunt garantate.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Păstrează: reaplică trăsăturile salvate.\nAleatoriu: alege trăsături în limita bugetului de puncte al lumii și a excluderilor reciproce.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Păstrează: reaplică îmbrăcămintea salvată.\nAleatoriu: ținuta implicită a ocupației.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Păstrează: reaplică îmbrăcămintea salvată.\nAleatoriu: alege o ținută din banca de ținute a jocului, inclusiv cea a ocupației.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Păstrează: reapari în regiunea salvată.\nAleatoriu: alege o regiune dintre cele disponibile pentru această partidă.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Păstrează: refolosește seed-ul lumii originale.\nAleatoriu: generează un seed nou. Doar pentru Lume Nouă.",
     "UI_QuickRestart_Options_Title": "OPȚIUNI DE REPORNIRE",

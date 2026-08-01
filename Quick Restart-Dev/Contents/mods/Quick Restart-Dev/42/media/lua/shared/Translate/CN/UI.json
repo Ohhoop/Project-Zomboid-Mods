@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "保留：重新应用已保存的性别。\n随机：随机决定性别，并搭配相符的外观、声音和名字。",
     "UI_QuickRestart_Options_Profession_Tooltip": "保留：重新应用已保存的职业。\n随机：随机决定职业；其附带的特质将得到保证。",
     "UI_QuickRestart_Options_Traits_Tooltip": "保留：重新应用已保存的特质。\n随机：在世界的点数预算和互斥规则内随机决定特质。",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "保留：重新应用已保存的服装。\n随机：使用职业的默认服装。",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "保留：重新应用已保存的服装。\n随机：从游戏的服装库中选择一套服装，包括职业服装。",
     "UI_QuickRestart_Options_Spawn_Tooltip": "保留：在已保存的区域重生。\n随机：从本局游戏可用的区域中随机选择一个。",
     "UI_QuickRestart_Options_Seed_Tooltip": "保留：重新使用原始世界种子。\n随机：生成新的种子。仅限新世界。",
     "UI_QuickRestart_Options_Title": "重启选项",

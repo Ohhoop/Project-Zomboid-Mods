@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Mantenir: reaplica el sexe desat.\nAleatori: tria un sexe a l'atzar, amb aparença, veu i nom de pila adaptats.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Mantenir: reaplica la professió desada.\nAleatori: tria una professió a l'atzar; els seus trets atorgats estan garantits.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Mantenir: reaplica els trets desats.\nAleatori: tria trets a l'atzar respectant el pressupost de punts del món i les exclusions mútues.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Mantenir: reaplica la roba desada.\nAleatori: vestimenta per defecte de la professió.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Mantenir: reaplica la roba desada.\nAleatori: tria una vestimenta del fons de vestimentes del joc, inclosa la de la professió.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Mantenir: reapareixes a la regió desada.\nAleatori: tria a l'atzar una regió entre les disponibles per a aquesta partida.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Mantenir: reutilitza la llavor del món original.\nAleatori: genera una nova llavor. Només Món nou.",
     "UI_QuickRestart_Options_Title": "OPCIONS DE REINICI",

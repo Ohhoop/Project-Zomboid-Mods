@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Mantener: reaplica el sexo guardado.\nAleatorio: elige un sexo al azar, con apariencia, voz y nombre acordes.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Mantener: reaplica la profesión guardada.\nAleatorio: elige una profesión al azar; sus rasgos otorgados están garantizados.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Mantener: reaplica los rasgos guardados.\nAleatorio: elige rasgos al azar respetando el presupuesto de puntos del mundo y las exclusiones mutuas.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Mantener: reaplica la ropa guardada.\nAleatorio: atuendo por defecto de la profesión.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Mantener: reaplica la ropa guardada.\nAleatorio: elige un atuendo del banco de atuendos del juego, incluyendo el de la profesión.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Mantener: reapareces en la región guardada.\nAleatorio: elige al azar una región entre las disponibles para esta partida.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Mantener: reutiliza la semilla del mundo original.\nAleatorio: genera una nueva semilla. Solo Mundo nuevo.",
     "UI_QuickRestart_Options_Title": "OPCIONES DE REINICIO",

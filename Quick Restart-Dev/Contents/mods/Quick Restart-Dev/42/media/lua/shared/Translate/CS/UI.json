@@ -25,7 +25,7 @@
     "UI_QuickRestart_Options_Gender_Tooltip": "Ponechat: znovu použije uložené pohlaví.\nNáhodně: vylosuje pohlaví s odpovídajícím vzhledem, hlasem a jménem.",
     "UI_QuickRestart_Options_Profession_Tooltip": "Ponechat: znovu použije uložené povolání.\nNáhodně: vylosuje povolání; vlastnosti, které dává, jsou zaručeny.",
     "UI_QuickRestart_Options_Traits_Tooltip": "Ponechat: znovu použije uložené vlastnosti.\nNáhodně: vylosuje vlastnosti v rámci bodového rozpočtu světa a vzájemných vyloučení.",
-    "UI_QuickRestart_Options_Clothing_Tooltip": "Ponechat: znovu použije uložené oblečení.\nNáhodně: výchozí oděv daného povolání.",
+    "UI_QuickRestart_Options_Clothing_Tooltip": "Ponechat: znovu použije uložené oblečení.\nNáhodně: vybere oděv z nabídky oděvů ve hře, včetně oděvu daného povolání.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Ponechat: oživení v uloženém regionu.\nNáhodně: vylosuje region z těch, které jsou v této hře dostupné.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Ponechat: znovu použije původní seed světa.\nNáhodně: vygeneruje nový seed. Pouze Nový svět.",
     "UI_QuickRestart_Options_Title": "MOŽNOSTI RESTARTU",
