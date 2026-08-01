@@ -3,6 +3,45 @@ QuickRestartUI = QuickRestartUI or {}
 QuickRestartPanel = ISPanel:derive("QuickRestartPanel")
 QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 
+local function computeLayout()
+    local textManager = getTextManager()
+    local hgtSmall = textManager:getFontHeight(UIFont.Small)
+    local hgtMedium = textManager:getFontHeight(UIFont.Medium)
+    return {
+        fontSmall = UIFont.Small,
+        fontMedium = UIFont.Medium,
+        hgtSmall = hgtSmall,
+        hgtMedium = hgtMedium,
+        buttonHeight = hgtSmall + 3 * 2,
+        spacing = math.ceil(hgtSmall * 0.5),
+        marginX = hgtSmall,
+        marginY = math.ceil(hgtSmall * 0.75),
+        buttonTextPad = hgtSmall * 2,
+        gapTiny = math.ceil(hgtSmall * 0.25),
+        maxPanelWidth = getCore():getScreenWidth() * 0.35,
+    }
+end
+
+local function resolveDeathButtonWidth()
+    if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
+        return nil
+    end
+
+    for _, deathUi in pairs(ISPostDeathUI.instance) do
+        local button = deathUi and deathUi.buttonRespawn
+        if button and button.getWidth then
+            local ok, width = pcall(function()
+                return button:getWidth()
+            end)
+            if ok and type(width) == "number" and width > 0 then
+                return width
+            end
+        end
+    end
+
+    return nil
+end
+
 function QuickRestartPanel:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
@@ -80,14 +119,13 @@ end
 function QuickRestartPanel:createChildren()
     ISPanel.createChildren(self)
 
-    local buttonWidth = self.width * 0.72
-    local buttonHeight = 20
-    local spacing = 12
+    self.layout = self.layout or computeLayout()
+    local layout = self.layout
+    local buttonWidth = self.buttonWidth or (self.width - layout.marginX * 2)
+    local buttonHeight = layout.buttonHeight
+    local spacing = layout.spacing
     local xCenter = (self.width - buttonWidth) / 2
-
-    local textHeight = 25
-    local totalButtonsHeight = buttonHeight * 2 + spacing
-    local yStart = (self.height - totalButtonsHeight - textHeight) / 2 + textHeight
+    local yStart = layout.marginY + layout.hgtMedium + layout.spacing
 
     self.freshWorldEnabled = self.canUseFreshWorld and self.canUseFreshWorld() or false
     local charDataAvail = self.charDataAvail
@@ -136,11 +174,15 @@ function QuickRestartPanel:createChildren()
 end
 
 local function drawTooltip(panel, tooltipText, mouseX, mouseY)
+    local layout = panel.layout or computeLayout()
     local textManager = getTextManager()
-    local font = UIFont.Small
-    local padding = 5
-    local fontHeight = textManager:getFontHeight(font)
-    local maxWidth = 400
+    local font = layout.fontSmall
+    local fontHeight = layout.hgtSmall
+    local padding = layout.gapTiny
+    local core = getCore()
+    local screenWidth = core:getScreenWidth()
+    local screenHeight = core:getScreenHeight()
+    local maxWidth = math.min(400, screenWidth * 0.4)
 
     local lines = {}
     local line = ""
@@ -166,14 +208,19 @@ local function drawTooltip(panel, tooltipText, mouseX, mouseY)
     end
 
     local boxWidth = maxLineWidth + padding * 2
-    local boxHeight = fontHeight * #lines + padding * 2 + (#lines - 1) * 2
-    local boxX = mouseX + 25
-    local boxY = mouseY + 25
+    local boxHeight = fontHeight * #lines + padding * 2 + (#lines - 1) * layout.gapTiny
+    local offset = math.ceil(fontHeight * 1.5)
+    local absX = panel:getAbsoluteX() + mouseX + offset
+    local absY = panel:getAbsoluteY() + mouseY + offset
+    absX = math.max(0, math.min(absX, screenWidth - boxWidth))
+    absY = math.max(0, math.min(absY, screenHeight - boxHeight))
+    local boxX = absX - panel:getAbsoluteX()
+    local boxY = absY - panel:getAbsoluteY()
 
     panel:drawRect(boxX, boxY, boxWidth, boxHeight, 0.9, 0, 0, 0)
     panel:drawRectBorder(boxX, boxY, boxWidth, boxHeight, 1, 0.7, 0.7, 0.7)
     for i, l in ipairs(lines) do
-        panel:drawText(l, boxX + padding, boxY + padding + (i - 1) * (fontHeight + 2), 1, 1, 1, 1, font)
+        panel:drawText(l, boxX + padding, boxY + padding + (i - 1) * (fontHeight + layout.gapTiny), 1, 1, 1, 1, font)
     end
 end
 
@@ -185,15 +232,38 @@ function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVars
 
     self.sandboxMode = true
 
-    local subtitle = getText("UI_QuickRestart_SandboxConflict_Subtitle")
+    self.layout = self.layout or computeLayout()
+    local layout = self.layout
     local textManager = getTextManager()
-    local font = UIFont.Small
-    local fontHeight = textManager:getFontHeight(font)
+    local core = getCore()
+    local screenWidth = core:getScreenWidth()
+    local screenHeight = core:getScreenHeight()
+
+    local title = getText("UI_QuickRestart_SandboxConflict_Title")
+    local label = getText("UI_QuickRestart_SandboxConflictPanel_Label")
+    local savedLabel = getText("UI_QuickRestart_SandboxConflict_Saved")
+    local currentLabel = getText("UI_QuickRestart_SandboxConflict_Current")
+
+    local titleWidth = textManager:MeasureStringX(layout.fontMedium, title)
+    local labelWidth = textManager:MeasureStringX(layout.fontSmall, label)
+    local buttonLabelWidth = math.max(
+        textManager:MeasureStringX(layout.fontSmall, savedLabel),
+        textManager:MeasureStringX(layout.fontSmall, currentLabel)
+    )
+    local contentWidth = math.max(math.max(titleWidth, labelWidth), buttonLabelWidth + layout.buttonTextPad * 2)
+    local newWidth = math.min(contentWidth + layout.marginX * 2, layout.maxPanelWidth)
+    if newWidth > self.width then
+        self:setWidth(newWidth)
+        self:setX((screenWidth - newWidth) / 2)
+    end
+
+    local subtitle = getText("UI_QuickRestart_SandboxConflict_Subtitle")
+    local wrapWidth = self.width - layout.marginX * 2
     local subtitleLines = {}
     local line = ""
     for word in subtitle:gmatch("%S+") do
         local test = line == "" and word or (line .. " " .. word)
-        if textManager:MeasureStringX(font, test) > self.width - 20 then
+        if textManager:MeasureStringX(layout.fontSmall, test) > wrapWidth then
             if line ~= "" then
                 subtitleLines[#subtitleLines + 1] = line
                 line = word
@@ -207,21 +277,22 @@ function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVars
     if line ~= "" then subtitleLines[#subtitleLines + 1] = line end
     self.subtitleLines = subtitleLines
 
-    local buttonWidth = self.width * 0.72
-    local buttonHeight = 20
-    local spacing = 10
+    local buttonWidth = self.width - layout.marginX * 2
+    local buttonHeight = layout.buttonHeight
+    local spacing = layout.spacing
     local xCenter = (self.width - buttonWidth) / 2
 
-    local titleMediumHeight = textManager:getFontHeight(UIFont.Medium)
-    local newHeight = 10 + titleMediumHeight + 4 + fontHeight + 8 + #subtitleLines * (fontHeight + 2) + 10 + buttonHeight + spacing + buttonHeight + 10
-    local oldBottom = self:getY() + self:getHeight()
+    local newHeight = layout.marginY + layout.hgtMedium + layout.gapTiny + layout.hgtSmall + layout.spacing
+        + #subtitleLines * (layout.hgtSmall + layout.gapTiny) + layout.spacing
+        + buttonHeight + spacing + buttonHeight + layout.marginY
+    local oldBottom = math.min(self:getY() + self:getHeight(), screenHeight)
     self:setHeight(newHeight)
-    self:setY(oldBottom - newHeight)
+    self:setY(math.max(0, oldBottom - newHeight))
 
-    local buttonY2 = self.height - 10 - buttonHeight
+    local buttonY2 = self.height - layout.marginY - buttonHeight
     local buttonY1 = buttonY2 - spacing - buttonHeight
 
-    self.savedButton = ISButton:new(xCenter, buttonY1, buttonWidth, buttonHeight, getText("UI_QuickRestart_SandboxConflict_Saved"), self, function()
+    self.savedButton = ISButton:new(xCenter, buttonY1, buttonWidth, buttonHeight, savedLabel, self, function()
         if self.onSandboxSaved then
             self.onSandboxSaved(data, playerIdentifier, sandboxVarsCurrent)
         end
@@ -232,7 +303,7 @@ function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVars
     self.savedButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
     self:addChild(self.savedButton)
 
-    self.currentButton = ISButton:new(xCenter, buttonY2, buttonWidth, buttonHeight, getText("UI_QuickRestart_SandboxConflict_Current"), self, function()
+    self.currentButton = ISButton:new(xCenter, buttonY2, buttonWidth, buttonHeight, currentLabel, self, function()
         if self.onSandboxCurrent then
             self.onSandboxCurrent(data, playerIdentifier, sandboxVarsCurrent)
         end
@@ -248,12 +319,13 @@ function QuickRestartPanel:render()
     ISPanel.render(self)
 
     local textManager = getTextManager()
-    local font = UIFont.Small
-    local fontHeight = textManager:getFontHeight(font)
+    local layout = self.layout or computeLayout()
+    local font = layout.fontSmall
+    local fontHeight = layout.hgtSmall
 
     if self.sandboxMode then
         local title = getText("UI_QuickRestart_SandboxConflict_Title")
-        local titleY = 10
+        local titleY = layout.marginY
 
         local titleWidth = textManager:MeasureStringX(UIFont.Medium, title)
         local titleX = (self.width - titleWidth) / 2
@@ -264,17 +336,17 @@ function QuickRestartPanel:render()
         self:drawText(title, titleX, titleY+1, 0, 0, 0, 0.5, UIFont.Medium)
         self:drawText(title, titleX, titleY, 1, 1, 1, 1, UIFont.Medium)
 
-        local labelY = titleY + textManager:getFontHeight(UIFont.Medium) + 4
+        local labelY = titleY + layout.hgtMedium + layout.gapTiny
         local label = getText("UI_QuickRestart_SandboxConflictPanel_Label")
         local labelWidth = textManager:MeasureStringX(font, label)
         local labelX = (self.width - labelWidth) / 2
         self:drawText(label, labelX, labelY, 1, 1, 1, 1, font)
 
-        local lineY = labelY + fontHeight + 8
+        local lineY = labelY + fontHeight + layout.spacing
         for _, l in ipairs(self.subtitleLines) do
             local lx = (self.width - textManager:MeasureStringX(font, l)) / 2
             self:drawText(l, lx, lineY, 1, 1, 1, 1, font)
-            lineY = lineY + fontHeight + 2
+            lineY = lineY + fontHeight + layout.gapTiny
         end
 
         local tooltipText = nil
@@ -291,7 +363,7 @@ function QuickRestartPanel:render()
         end
     else
         local text = getText("UI_QuickRestart_Title")
-        local y = 10
+        local y = layout.marginY
 
         local textWidth = textManager:MeasureStringX(UIFont.Medium, text)
         local x = (self.width - textWidth) / 2
@@ -345,12 +417,32 @@ function QuickRestartUI.createRestartPanel(options)
     local screenWidth = core:getScreenWidth()
     local screenHeight = core:getScreenHeight()
 
-    local panelWidth = screenWidth * 0.08
-    local panelHeight = screenHeight * 0.08
+    local layout = computeLayout()
+    local textManager = getTextManager()
+    local titleWidth = textManager:MeasureStringX(layout.fontMedium, getText("UI_QuickRestart_Title"))
+    local freshWidth = textManager:MeasureStringX(layout.fontSmall, getText("UI_QuickRestart_FreshWorld"))
+    local sameWidth = textManager:MeasureStringX(layout.fontSmall, getText("UI_QuickRestart_ThisWorld"))
+    local labelWidth = math.max(freshWidth, sameWidth)
+    local vanillaWidth = resolveDeathButtonWidth()
+    local buttonWidth
+    local panelWidth
+    if vanillaWidth then
+        buttonWidth = math.max(vanillaWidth, labelWidth + layout.spacing * 2)
+        panelWidth = math.max(titleWidth, buttonWidth) + layout.marginX * 2
+    else
+        buttonWidth = labelWidth + layout.buttonTextPad * 2
+        panelWidth = math.min(math.max(titleWidth, buttonWidth) + layout.marginX * 2, layout.maxPanelWidth)
+        buttonWidth = math.min(buttonWidth, panelWidth - layout.marginX * 2)
+    end
+    local panelHeight = layout.marginY + layout.hgtMedium + layout.spacing
+        + layout.buttonHeight + layout.spacing + layout.buttonHeight + layout.marginY
     local x = (screenWidth - panelWidth) / 2
-    local y = screenHeight * 0.75
+    local y = screenHeight * 0.83 - panelHeight
+    y = math.max(0, math.min(y, screenHeight - panelHeight))
 
     local panel = QuickRestartPanel:new(x, y, panelWidth, panelHeight)
+    panel.layout = layout
+    panel.buttonWidth = buttonWidth
     panel.charDataAvail = options.charDataAvail == true
     panel.canUseFreshWorld = options.canUseFreshWorld
     panel.onRestartNewWorld = options.onRestartNewWorld

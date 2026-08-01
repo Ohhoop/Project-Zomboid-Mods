@@ -29,5 +29,5 @@ description=Fresh world Quick Restart is single-player only. (You don't want to 
 description=Same world Quick Restart in MP is available but still WIP, please let me know of any issues you encounter.
 description=
 description=Feel free to provide any feedback you may have in the comment section.
-tags=Build 42;Multiplayer;QoL
+tags=Build 42;Misc;Multiplayer;QoL
 visibility=public
