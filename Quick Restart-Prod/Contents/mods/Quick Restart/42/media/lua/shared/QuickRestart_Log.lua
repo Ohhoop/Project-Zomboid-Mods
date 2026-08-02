@@ -1,7 +1,7 @@
 QuickRestartLog = QuickRestartLog or {}
 
-QRDebugLogging = true
-QuickRestartLog.DEBUG = true
+QRDebugLogging = false
+QuickRestartLog.DEBUG = false
 
 local PREFIX = "[QuickRestart] "
 
