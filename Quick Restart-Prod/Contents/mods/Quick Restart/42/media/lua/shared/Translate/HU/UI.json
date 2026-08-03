@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Megtartás: újra alkalmazza a mentett ruházatot.\nVéletlen: öltözéket választ a játék öltözetpooljából, beleértve a foglalkozás öltözetét.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Megtartás: a mentett régióban éledsz újra.\nVéletlen: régiót sorsol a játékban elérhetők közül.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Megtartás: újra felhasználja a világ eredeti seedjét.\nVéletlen: új seedet generál. Csak Új világ esetén.",
-    "UI_QuickRestart_Options_Title": "ÚJRAINDÍTÁSI OPCIÓK",
+    "UI_QuickRestart_Options_Title": "VÉLETLENSZERŰSÍTÉSI OPCIÓK",
     "UI_QuickRestart_Options_Zombies": "Zombik",
     "UI_QuickRestart_Options_Sandbox": "Sandbox beállítások",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Megtartás: újra felhasználja a mentett zombi beállításokat.\nVéletlen: véletlenszerűsíti a zombi beállításokat az érvényes értékeken belül. Csak Új világ esetén. Ez a választás mindig elsőbbséget élvez a \"Sandbox beállítások\" opcióval szemben a zombiknál.",

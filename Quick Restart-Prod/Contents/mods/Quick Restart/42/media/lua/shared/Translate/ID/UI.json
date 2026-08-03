@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Pertahankan: menerapkan kembali pakaian yang tersimpan.\nAcak: memilih pakaian dari koleksi pakaian permainan, termasuk pakaian pekerjaan.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Pertahankan: muncul kembali di wilayah yang tersimpan.\nAcak: memilih wilayah secara acak dari yang tersedia untuk permainan ini.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Pertahankan: menggunakan kembali seed dunia asli.\nAcak: membuat seed baru. Hanya untuk Dunia Baru.",
-    "UI_QuickRestart_Options_Title": "OPSI MULAI ULANG",
+    "UI_QuickRestart_Options_Title": "OPSI PENGACAKAN",
     "UI_QuickRestart_Options_Zombies": "Zombi",
     "UI_QuickRestart_Options_Sandbox": "Pengaturan sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Pertahankan: menggunakan kembali pengaturan zombi yang tersimpan.\nAcak: mengacak pengaturan zombi dalam nilai yang valid. Hanya untuk Dunia Baru. Pilihan ini selalu diutamakan daripada opsi Sandbox untuk zombi.",

@@ -576,8 +576,19 @@ end
 
 function QuickRestartClientFlow.scheduleSpawnRegionCoordCapture(player, options)
     options = options or {}
+    if not player then
+        return
+    end
+
+    if QuickRestartApply and QuickRestartApply.runWhenPlayerSquareReady then
+        QuickRestartApply.runWhenPlayerSquareReady(player, function()
+            captureSpawnRegionFromCoords(player)
+        end)
+        return
+    end
+
     local scheduler = options.scheduler or QuickRestartScheduler
-    if not player or not scheduler or not scheduler.scheduleAfterTicks then
+    if not scheduler or not scheduler.scheduleAfterTicks then
         return
     end
 
@@ -695,9 +706,6 @@ function QuickRestartClientFlow.onNewGame(player, options)
         end
     end
 
-    if not isMultiplayer() and options.scheduleSandboxCapture then
-        options.scheduleSandboxCapture(saveFilePath)
-    end
 end
 
 function QuickRestartClientFlow.onGameTimeLoaded(options)

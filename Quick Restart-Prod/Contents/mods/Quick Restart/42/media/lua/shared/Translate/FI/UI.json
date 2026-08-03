@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Säilytä: palauttaa tallennetun vaatetuksen.\nSatunnainen: valitsee asun pelin asupoolista, ammatin asun mukaan lukien.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Säilytä: syntyy uudelleen tallennetulle alueelle.\nSatunnainen: arpoo alueen tälle pelille saatavilla olevista.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Säilytä: käyttää uudelleen maailman alkuperäistä seediä.\nSatunnainen: luo uuden seedin. Vain Uusi Maailma.",
-    "UI_QuickRestart_Options_Title": "UUDELLEENKÄYNNISTYKSEN VALINNAT",
+    "UI_QuickRestart_Options_Title": "SATUNNAISTUSASETUKSET",
     "UI_QuickRestart_Options_Zombies": "Zombit",
     "UI_QuickRestart_Options_Sandbox": "Hiekkalaatikkoasetukset",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Säilytä: käyttää uudelleen tallennettuja zombiasetuksia.\nSatunnainen: satunnaistaa zombiasetukset kelvollisten arvojen rajoissa. Vain Uusi Maailma. Tämä valinta ohittaa aina Hiekkalaatikko-valinnan zombien osalta.",

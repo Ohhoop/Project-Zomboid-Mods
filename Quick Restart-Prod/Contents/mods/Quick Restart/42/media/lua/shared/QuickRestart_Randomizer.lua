@@ -722,87 +722,13 @@ function QuickRestartRandomizer.rollClothing(professionType, gender, traitString
             return entries
         end
 
-        local function buildNamedOutfit(outfitName)
-            if not SurvivorFactory or not SurvivorFactory.CreateSurvivor then
-                return nil
-            end
-
-            local tempDesc = SurvivorFactory.CreateSurvivor(SurvivorType.Neutral, female)
-            if not tempDesc then
-                return nil
-            end
-
-            tempDesc:getWornItems():clear()
-            tempDesc:dressInNamedOutfit(outfitName)
-
-            local entries = {}
-            local wornItems = tempDesc:getWornItems()
-            for i = 0, wornItems:size() - 1 do
-                local item = wornItems:getItemByIndex(i)
-                if item and #entries < MAX_CLOTHING_ENTRIES then
-                    local okType, fullType = pcall(function() return item:getFullType() end)
-                    if okType and type(fullType) == "string" and fullType ~= "" then
-                        local entry = {type = fullType}
-
-                        local okLoc, bodyLoc = pcall(function() return item:getBodyLocation() end)
-                        if okLoc and bodyLoc ~= nil and tostring(bodyLoc) ~= "" then
-                            entry.bodyLocation = tostring(bodyLoc)
-                        end
-
-                        if not (isOptionalHeadwearLocation(entry.bodyLocation) and ZombRand(2) == 0) then
-                            entries[#entries + 1] = entry
-                        end
-                    end
-                end
-            end
-
-            if #entries == 0 then
-                return nil
-            end
+        local entries = buildProfessionOutfit()
+        if entries and #entries > 0 then
+            logInfo("rollClothing character creation outfit items=" .. tostring(#entries))
             return entries
         end
 
-        local outfitNames = {}
-        if getAllOutfits then
-            pcall(function()
-                local outfits = getAllOutfits(female)
-                if outfits then
-                    for i = 0, outfits:size() - 1 do
-                        local name = outfits:get(i)
-                        if type(name) == "string" and name ~= "" then
-                            outfitNames[#outfitNames + 1] = name
-                        end
-                    end
-                end
-            end)
-        end
-
-        local candidates = {}
-        for index = 0, #outfitNames do
-            candidates[#candidates + 1] = index
-        end
-
-        while #candidates > 0 do
-            local pickIndex = ZombRand(#candidates) + 1
-            local candidate = candidates[pickIndex]
-            table.remove(candidates, pickIndex)
-
-            if candidate == 0 then
-                local entries = buildProfessionOutfit()
-                if entries and #entries > 0 then
-                    logInfo("rollClothing profession outfit items=" .. tostring(#entries))
-                    return entries
-                end
-            else
-                local entries = buildNamedOutfit(outfitNames[candidate])
-                if entries then
-                    logInfo("rollClothing named outfit=" .. tostring(outfitNames[candidate]) .. " items=" .. tostring(#entries))
-                    return entries
-                end
-            end
-        end
-
-        logWarn("rollClothing no valid outfit available in pool")
+        logWarn("rollClothing no valid outfit available")
         return nil
     end)
     if not ok or type(clothing) ~= "table" then

@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Behouden: past de opgeslagen kleding opnieuw toe.\nWillekeurig: selecteert een outfit uit de outfit-pool van het spel, waarvan het beroepsoutfit inbegrepen is.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Behouden: respawnt in de opgeslagen regio.\nWillekeurig: kiest willekeurig een regio uit de regio's die voor dit spel beschikbaar zijn.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Behouden: hergebruikt de originele wereldseed.\nWillekeurig: genereert een nieuwe seed. Alleen Nieuwe Wereld.",
-    "UI_QuickRestart_Options_Title": "HERSTART-OPTIES",
+    "UI_QuickRestart_Options_Title": "WILLEKEUR-OPTIES",
     "UI_QuickRestart_Options_Zombies": "Zombies",
     "UI_QuickRestart_Options_Sandbox": "Sandbox-instellingen",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Behouden: hergebruikt de opgeslagen zombie-instellingen.\nWillekeurig: randomiseert de zombie-instellingen binnen geldige waarden. Alleen Nieuwe Wereld. Deze keuze gaat voor zombies altijd boven de Sandbox-optie.",

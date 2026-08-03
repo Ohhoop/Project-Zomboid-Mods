@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Zachowaj: ponownie stosuje zapisaną odzież.\nLosowo: wybiera strój z puli strojów gry, włączając strój zawodu.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Zachowaj: odrodzenie w zapisanym regionie.\nLosowo: losuje region spośród dostępnych w tej grze.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Zachowaj: ponownie używa oryginalnego seeda świata.\nLosowo: generuje nowy seed. Tylko Nowy świat.",
-    "UI_QuickRestart_Options_Title": "OPCJE RESTARTU",
+    "UI_QuickRestart_Options_Title": "OPCJE LOSOWANIA",
     "UI_QuickRestart_Options_Zombies": "Zombie",
     "UI_QuickRestart_Options_Sandbox": "Ustawienia piaskownicy",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Zachowaj: ponownie używa zapisanych ustawień zombie.\nLosowo: losuje ustawienia zombie w ramach prawidłowych wartości. Tylko Nowy świat. Ten wybór ma zawsze pierwszeństwo przed opcją \"Ustawienia piaskownicy\" w kwestii zombie.",

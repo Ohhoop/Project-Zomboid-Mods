@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Mantieni: riapplica l'abbigliamento salvato.\nCasuale: sceglie un abbigliamento dal pool di abbigliamenti del gioco, incluso quello della professione.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Mantieni: rinasci nella regione salvata.\nCasuale: estrae una regione tra quelle disponibili per questa partita.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Mantieni: riutilizza il seed del mondo originale.\nCasuale: genera un nuovo seed. Solo Nuovo mondo.",
-    "UI_QuickRestart_Options_Title": "OPZIONI DI RIAVVIO",
+    "UI_QuickRestart_Options_Title": "OPZIONI DI CASUALITÀ",
     "UI_QuickRestart_Options_Zombies": "Zombie",
     "UI_QuickRestart_Options_Sandbox": "Impostazioni sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Mantieni: riutilizza le impostazioni degli zombie salvate.\nCasuale: rende casuali le impostazioni degli zombie entro valori validi. Solo Nuovo mondo. Questa scelta ha sempre priorità sull'opzione Sandbox per gli zombie.",

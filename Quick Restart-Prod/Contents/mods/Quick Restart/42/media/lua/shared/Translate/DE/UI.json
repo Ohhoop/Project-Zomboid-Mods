@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Behalten: wendet die gespeicherte Kleidung erneut an.\nZufällig: wählt ein Outfit aus dem Outfit-Pool des Spiels, das Beruf-Outfit eingeschlossen.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Behalten: spawnt erneut in der gespeicherten Region.\nZufällig: würfelt eine Region aus den für dieses Spiel verfügbaren.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Behalten: verwendet den ursprünglichen Welt-Seed erneut.\nZufällig: erzeugt einen neuen Seed. Nur Neue Welt.",
-    "UI_QuickRestart_Options_Title": "NEUSTART-OPTIONEN",
+    "UI_QuickRestart_Options_Title": "ZUFALLS-OPTIONEN",
     "UI_QuickRestart_Options_Zombies": "Zombies",
     "UI_QuickRestart_Options_Sandbox": "Sandbox-Einstellungen",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Behalten: verwendet die gespeicherten Zombie-Einstellungen erneut.\nZufällig: randomisiert die Zombie-Einstellungen innerhalb gültiger Werte. Nur Neue Welt. Diese Wahl hat bei Zombies immer Vorrang vor der Sandbox-Option.",

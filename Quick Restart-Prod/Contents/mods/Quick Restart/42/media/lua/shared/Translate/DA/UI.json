@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Behold: genanvender det gemte tøj.\nTilfældig: vælger et outfit fra spillets outfit-pool, erhvervsoutfitet inkluderet.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Behold: respawner i den gemte region.\nTilfældig: trækker en tilfældig region blandt dem, der er tilgængelige for dette spil.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Behold: genbruger verdenens oprindelige seed.\nTilfældig: genererer et nyt seed. Kun Ny Verden.",
-    "UI_QuickRestart_Options_Title": "GENSTARTSMULIGHEDER",
+    "UI_QuickRestart_Options_Title": "TILFÆLDIGHEDSINDSTILLINGER",
     "UI_QuickRestart_Options_Zombies": "Zombier",
     "UI_QuickRestart_Options_Sandbox": "Sandbox-indstillinger",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Behold: genbruger de gemte zombie-indstillinger.\nTilfældig: randomiserer zombie-indstillingerne inden for gyldige værdier. Kun Ny Verden. Dette valg har altid forrang over Sandbox-valget for zombier.",

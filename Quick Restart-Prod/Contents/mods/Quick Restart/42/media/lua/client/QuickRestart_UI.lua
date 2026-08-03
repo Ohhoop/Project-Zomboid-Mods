@@ -3,7 +3,9 @@ QuickRestartUI = QuickRestartUI or {}
 QuickRestartPanel = ISPanel:derive("QuickRestartPanel")
 QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 
-local GEAR_TEXTURE_PATH = "media/ui/inventoryPanes/Button_Gear.png"
+local DICE_KEEP_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Keep.png"
+local DICE_RANDOM_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Random.png"
+local DICE_PULSE_PERIOD_MS = 1600
 
 local OPTION_ROWS = {
     {category = "gender", labelKey = "UI_QuickRestart_Options_Gender", tooltipKey = "UI_QuickRestart_Options_Gender_Tooltip"},
@@ -20,6 +22,7 @@ local function computeLayout()
     local textManager = getTextManager()
     local hgtSmall = textManager:getFontHeight(UIFont.Small)
     local hgtMedium = textManager:getFontHeight(UIFont.Medium)
+    local gapTiny = math.ceil(hgtSmall * 0.25)
     return {
         fontSmall = UIFont.Small,
         fontMedium = UIFont.Medium,
@@ -30,7 +33,8 @@ local function computeLayout()
         marginX = hgtSmall,
         marginY = math.ceil(hgtSmall * 0.75),
         buttonTextPad = hgtSmall * 2,
-        gapTiny = math.ceil(hgtSmall * 0.25),
+        gapTiny = gapTiny,
+        gapSmall = gapTiny * 2,
         maxPanelWidth = getCore():getScreenWidth() * 0.35,
     }
 end
@@ -129,6 +133,16 @@ function QuickRestartTransitionOverlay:render()
     self:drawText(message, x, y, 1, 1, 1, self.currentAlpha * self.textAlphaScale, font)
 end
 
+function QuickRestartPanel:prerender()
+    ISPanel.prerender(self)
+
+    if self:hasAnyRandomOption() ~= (self.diceIsRandom == true) then
+        self:refreshOptionsButtonIcon()
+    end
+
+    self:updateDicePulse()
+end
+
 function QuickRestartPanel:createChildren()
     ISPanel.createChildren(self)
 
@@ -185,25 +199,72 @@ function QuickRestartPanel:createChildren()
     self.sameButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
     self:addChild(self.sameButton)
 
-    local gearSize = layout.hgtSmall + layout.gapTiny * 2
-    self.gearButton = ISButton:new(self.width - gearSize - layout.gapTiny, layout.gapTiny, gearSize, gearSize, "", self, function()
+    local optionsButtonSize = layout.hgtSmall + layout.gapTiny * 2
+    self.optionsButton = ISButton:new(self.width - optionsButtonSize - layout.gapSmall, layout.gapSmall, optionsButtonSize, optionsButtonSize, "", self, function()
         QuickRestartUI.toggleOptionsWindow(self)
     end)
-    self.gearButton:initialise()
-    self.gearButton:instantiate()
-    self.gearButton.backgroundColor = {r=0, g=0, b=0, a=0.9}
-    self.gearButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
-    local gearTexture = getTexture(GEAR_TEXTURE_PATH)
-    if gearTexture then
-        self.gearButton:setImage(gearTexture)
-        if self.gearButton.forceImageSize then
-            self.gearButton:forceImageSize(gearSize - layout.gapTiny * 2, gearSize - layout.gapTiny * 2)
+    self.optionsButton:initialise()
+    self.optionsButton:instantiate()
+    self.optionsButton.backgroundColor = {r=0, g=0, b=0, a=0.9}
+    self.optionsButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
+    self.diceIconSize = optionsButtonSize - layout.gapTiny * 2
+    self:refreshOptionsButtonIcon()
+    if not charDataAvail then
+        self.optionsButton.enable = false
+    end
+    self:addChild(self.optionsButton)
+end
+
+function QuickRestartPanel:hasAnyRandomOption()
+    local options = self.onGetRestartOptions and self.onGetRestartOptions() or nil
+    if type(options) ~= "table" then
+        return false
+    end
+
+    for _, value in pairs(options) do
+        if value == "random" then
+            return true
         end
     end
-    if not charDataAvail then
-        self.gearButton.enable = false
+
+    return false
+end
+
+function QuickRestartPanel:refreshOptionsButtonIcon()
+    if not self.optionsButton then
+        return
     end
-    self:addChild(self.gearButton)
+
+    local isRandom = self:hasAnyRandomOption()
+    self.diceIsRandom = isRandom
+
+    local texture = getTexture(isRandom and DICE_RANDOM_TEXTURE_PATH or DICE_KEEP_TEXTURE_PATH)
+    if not texture then
+        return
+    end
+
+    self.optionsButton:setImage(texture)
+    if self.optionsButton.forceImageSize and self.diceIconSize then
+        self.optionsButton:forceImageSize(self.diceIconSize, self.diceIconSize)
+    end
+
+    if not isRandom and self.optionsButton.textureColor then
+        self.optionsButton.textureColor.a = 1
+    end
+end
+
+function QuickRestartPanel:updateDicePulse()
+    if not self.optionsButton or not self.optionsButton.textureColor then
+        return
+    end
+
+    if not self.diceIsRandom then
+        self.optionsButton.textureColor.a = 1
+        return
+    end
+
+    local phase = (getTimestampMs() % DICE_PULSE_PERIOD_MS) / DICE_PULSE_PERIOD_MS
+    self.optionsButton.textureColor.a = 0.7 + 0.3 * math.sin(2 * math.pi * phase)
 end
 
 function QuickRestartPanel:removeFromUIManager()
@@ -270,7 +331,7 @@ function QuickRestartOptionsWindow:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.backgroundColor = {r=0, g=0, b=0, a=0.85}
+    o.backgroundColor = {r=0, g=0, b=0, a=0.6}
     o.borderColor = {r=0.7, g=0.7, b=0.7, a=0.5}
     return o
 end
@@ -279,6 +340,18 @@ function QuickRestartOptionsWindow:createChildren()
     ISPanel.createChildren(self)
 
     local layout = self.layout
+
+    local closeSize = layout.hgtSmall
+    self.closeButton = ISButton:new(self.width - closeSize - layout.gapTiny, layout.gapTiny, closeSize, closeSize, "X", self, function()
+        QuickRestartUI.closeOptionsWindow()
+    end)
+    self.closeButton:initialise()
+    self.closeButton:instantiate()
+    self.closeButton.backgroundColor = {r=0, g=0, b=0, a=0}
+    self.closeButton.backgroundColorMouseOver = {r=0.6, g=0.15, b=0.15, a=0.8}
+    self.closeButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
+    self:addChild(self.closeButton)
+
     local keepLabel = getText("UI_QuickRestart_Options_Keep")
     local randomLabel = getText("UI_QuickRestart_Options_Random")
     local valueX = self.width - layout.marginX - self.valueWidth
@@ -399,6 +472,9 @@ function QuickRestartOptionsWindow:render()
 
             if not tooltipText and button:isMouseOver() then
                 tooltipText = getText(row.tooltipKey)
+                if button.enable == false then
+                    tooltipText = tooltipText .. "\n" .. getText("UI_QuickRestart_MP_Tooltip")
+                end
             end
         end
     end
@@ -435,12 +511,31 @@ function QuickRestartUI.openOptionsWindow(ownerPanel)
     local titleWidth = textManager:MeasureStringX(layout.fontMedium, getText("UI_QuickRestart_Options_Title"))
     local contentWidth = math.max(titleWidth, labelWidth + layout.spacing + valueWidth)
     local windowWidth = contentWidth + layout.marginX * 2
+
+    if ownerPanel and ownerPanel.getWidth then
+        local okWidth, panelWidth = pcall(function()
+            return ownerPanel:getWidth()
+        end)
+        if okWidth and type(panelWidth) == "number" and panelWidth > 0 then
+            windowWidth = math.max(windowWidth, panelWidth)
+        end
+    end
     local windowHeight = layout.marginY + layout.hgtMedium + layout.spacing
         + #OPTION_ROWS * layout.buttonHeight + (#OPTION_ROWS - 1) * layout.gapTiny
         + layout.marginY
 
     local x = (screenWidth - windowWidth) / 2
     local y = math.max(0, screenHeight * 0.45 - windowHeight / 2)
+
+    if ownerPanel and ownerPanel.getX and ownerPanel.getY and ownerPanel.getWidth then
+        local okAnchor, anchorX, anchorY = pcall(function()
+            return ownerPanel:getX() + (ownerPanel:getWidth() - windowWidth) / 2, ownerPanel:getY()
+        end)
+        if okAnchor and anchorX and anchorY then
+            x = math.max(0, math.min(anchorX, screenWidth - windowWidth))
+            y = math.max(0, math.min(anchorY - windowHeight - layout.spacing, screenHeight - windowHeight))
+        end
+    end
 
     local window = QuickRestartOptionsWindow:new(x, y, windowWidth, windowHeight)
     window.layout = layout
@@ -452,7 +547,6 @@ function QuickRestartUI.openOptionsWindow(ownerPanel)
     window:instantiate()
     window:addToUIManager()
     window:setVisible(true)
-    window:setAlwaysOnTop(true)
     window:bringToTop()
     QuickRestartUI.optionsWindow = window
     return window
@@ -480,8 +574,8 @@ end
 
 function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVarsCurrent)
     QuickRestartUI.closeOptionsWindow()
-    if self.gearButton then
-        self.gearButton:setVisible(false)
+    if self.optionsButton then
+        self.optionsButton:setVisible(false)
     end
 
     self:removeChild(self.freshButton)
@@ -659,7 +753,7 @@ function QuickRestartPanel:render()
             else
                 tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip")
             end
-        elseif self.gearButton and self.gearButton:isVisible() and self.gearButton:isMouseOver() then
+        elseif self.optionsButton and self.optionsButton:isVisible() and self.optionsButton:isMouseOver() then
             tooltipText = getText("UI_QuickRestart_Options_Tooltip")
         end
 

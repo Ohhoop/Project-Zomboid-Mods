@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Manter: reaplica a roupa guardada.\nAleatório: seleciona uma peça de roupa do banco de vestuário do jogo, incluindo a da profissão.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Manter: reapareces na região guardada.\nAleatório: sorteia uma região entre as disponíveis para este jogo.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Manter: reutiliza a seed do mundo original.\nAleatório: gera uma nova seed. Apenas Mundo novo.",
-    "UI_QuickRestart_Options_Title": "OPÇÕES DE REINÍCIO",
+    "UI_QuickRestart_Options_Title": "OPÇÕES DE ALEATORIEDADE",
     "UI_QuickRestart_Options_Zombies": "Zombies",
     "UI_QuickRestart_Options_Sandbox": "Definições sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Manter: reutiliza as definições de zombies guardadas.\nAleatório: aleatoriza as definições de zombies dentro de valores válidos. Apenas Mundo novo. Esta escolha tem sempre prioridade sobre a opção Sandbox para os zombies.",

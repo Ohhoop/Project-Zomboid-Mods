@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "คงเดิม: ใช้เสื้อผ้าที่บันทึกไว้อีกครั้ง\nสุ่ม: เลือกชุดจากคลังชุดของเกม รวมถึงชุดของอาชีพด้วย",
     "UI_QuickRestart_Options_Spawn_Tooltip": "คงเดิม: เกิดใหม่ในพื้นที่ที่บันทึกไว้\nสุ่ม: สุ่มพื้นที่จากพื้นที่ที่มีให้ในเกมนี้",
     "UI_QuickRestart_Options_Seed_Tooltip": "คงเดิม: ใช้ซีดเดิมของโลกอีกครั้ง\nสุ่ม: สร้างซีดใหม่ ใช้ได้กับโลกใหม่เท่านั้น",
-    "UI_QuickRestart_Options_Title": "ตัวเลือกการเริ่มใหม่",
+    "UI_QuickRestart_Options_Title": "ตัวเลือกการสุ่ม",
     "UI_QuickRestart_Options_Zombies": "ซอมบี้",
     "UI_QuickRestart_Options_Sandbox": "การตั้งค่าแซนด์บ็อกซ์",
     "UI_QuickRestart_Options_Zombies_Tooltip": "คงเดิม: ใช้การตั้งค่าซอมบี้ที่บันทึกไว้อีกครั้ง\nสุ่ม: สุ่มการตั้งค่าซอมบี้ภายในค่าที่ใช้ได้ ใช้ได้กับโลกใหม่เท่านั้น ตัวเลือกนี้จะมีผลเหนือตัวเลือกแซนด์บ็อกซ์ในส่วนของซอมบี้เสมอ",

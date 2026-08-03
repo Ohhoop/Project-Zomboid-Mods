@@ -80,8 +80,30 @@ local function unequipWornItem(player, item)
     end)
 end
 
-local function isSPNCCBodyLocationRaw(bodyLoc)
-    return type(bodyLoc) == "string" and bodyLoc ~= "" and string.find(string.lower(bodyLoc), "spncc", 1, true) ~= nil
+QuickRestartApply.externalBodyLocationMarkers = QuickRestartApply.externalBodyLocationMarkers or {}
+
+function QuickRestartApply.registerExternalBodyLocationMarker(marker)
+    if type(marker) ~= "string" or marker == "" then
+        return false
+    end
+
+    QuickRestartApply.externalBodyLocationMarkers[string.lower(marker)] = true
+    return true
+end
+
+local function isExternalBodyLocation(bodyLoc)
+    if type(bodyLoc) ~= "string" or bodyLoc == "" then
+        return false
+    end
+
+    local lowered = string.lower(bodyLoc)
+    for marker in pairs(QuickRestartApply.externalBodyLocationMarkers) do
+        if string.find(lowered, marker, 1, true) ~= nil then
+            return true
+        end
+    end
+
+    return false
 end
 
 local function clearNonBaseWornItems(player)
@@ -104,7 +126,7 @@ local function clearNonBaseWornItems(player)
             pcall(function()
                 bodyLoc = item:getBodyLocation()
             end)
-            if not isBaseBodyLocation(bodyLoc) and not isSPNCCBodyLocationRaw(bodyLoc) then
+            if not isBaseBodyLocation(bodyLoc) and not isExternalBodyLocation(bodyLoc) then
                 itemsToRemove[#itemsToRemove + 1] = item
             end
         end
@@ -130,10 +152,22 @@ local function resetPlayerModel(player)
     end
 end
 
+function QuickRestartApply.registerClothingUpdatedNotifier(notifier)
+    if type(notifier) ~= "function" then
+        return false
+    end
+
+    QuickRestartApply.clothingUpdatedNotifier = notifier
+    return true
+end
+
 local function triggerPlayerClothingUpdated(player)
-    if QuickRestartSpongiesCompat and QuickRestartSpongiesCompat.triggerClothingUpdated then
-        QuickRestartSpongiesCompat.triggerClothingUpdated(player)
-        return
+    local notifier = QuickRestartApply.clothingUpdatedNotifier
+    if type(notifier) == "function" then
+        local ok, handled = pcall(notifier, player)
+        if ok and handled then
+            return
+        end
     end
 
     triggerEvent("OnClothingUpdated", player)
@@ -619,15 +653,15 @@ local function restoreClothingItem(player, inventory, clothingData, options)
     return equipClothingItem(player, item)
 end
 
-local function shouldSkipSPNCCOwnedEntry(clothingData)
+local function shouldSkipExternalOwnedEntry(clothingData)
     if type(clothingData) ~= "table" then
         return false
     end
 
-    return isSPNCCBodyLocationRaw(clothingData.bodyLocation)
+    return isExternalBodyLocation(clothingData.bodyLocation)
 end
 
-local function clearNonSPNCCWornItems(player)
+local function clearNonExternalWornItems(player)
     if not player then
         return
     end
@@ -647,7 +681,7 @@ local function clearNonSPNCCWornItems(player)
             pcall(function()
                 bodyLoc = item:getBodyLocation()
             end)
-            if not isSPNCCBodyLocationRaw(bodyLoc) then
+            if not isExternalBodyLocation(bodyLoc) then
                 itemsToRemove[#itemsToRemove + 1] = item
             end
         end
@@ -668,13 +702,13 @@ local function restoreClothing(player, clothing, options)
     local clothingToRestore = {}
     if isMultiplayer() then
         for _, clothingData in ipairs(clothing) do
-            if not shouldRestoreBaseClothingEntry(clothingData) and not shouldSkipSPNCCOwnedEntry(clothingData) then
+            if not shouldRestoreBaseClothingEntry(clothingData) and not shouldSkipExternalOwnedEntry(clothingData) then
                 clothingToRestore[#clothingToRestore + 1] = clothingData
             end
         end
     else
         for _, clothingData in ipairs(clothing) do
-            if not shouldSkipSPNCCOwnedEntry(clothingData) then
+            if not shouldSkipExternalOwnedEntry(clothingData) then
                 clothingToRestore[#clothingToRestore + 1] = clothingData
             end
         end
@@ -689,7 +723,7 @@ local function restoreClothing(player, clothing, options)
     if isMultiplayer() then
         clearNonBaseWornItems(player)
     else
-        clearNonSPNCCWornItems(player)
+        clearNonExternalWornItems(player)
     end
 
     if isMultiplayer() then
@@ -765,19 +799,25 @@ function QuickRestartApply.refreshVisualAfterServerClothing(player, options)
     return true
 end
 
-function QuickRestartApply.refreshPlayerLighting(player, options)
-    if not player then
+local SPAWN_CLEAR_ZOMBIE_RADIUS = QuickRestartConstants.SPAWN_CLEAR_ZOMBIE_RADIUS
+
+function QuickRestartApply.runWhenPlayerSquareReady(player, action)
+    if not player or type(action) ~= "function" then
         return false
     end
 
-    options = options or {}
-    local scheduler = options.scheduler or QuickRestartScheduler
-    local delayTicks = tonumber(options.delayTicks) or 15
-    local playerNum = player.getPlayerNum and player:getPlayerNum() or 0
-    local taskKey = "refresh_player_lighting_" .. tostring(playerNum)
+    local handler
+    handler = function(updatedPlayer)
+        if updatedPlayer ~= player then
+            return
+        end
 
-    scheduler.scheduleAfterTicks(taskKey, delayTicks, function()
-        if not player then
+        local isDead = false
+        pcall(function()
+            isDead = player:isDead()
+        end)
+        if isDead then
+            Events.OnPlayerUpdate.Remove(handler)
             return
         end
 
@@ -785,8 +825,111 @@ function QuickRestartApply.refreshPlayerLighting(player, options)
         pcall(function()
             square = player:getCurrentSquare()
         end)
+        if not square then
+            return
+        end
 
-        if square and square.RecalcAllWithNeighbours then
+        Events.OnPlayerUpdate.Remove(handler)
+        action(player, square)
+    end
+
+    Events.OnPlayerUpdate.Add(handler)
+    return true
+end
+
+local function removeZombiesAroundPlayer(player, clearRadius)
+    local okCell, cell = pcall(getCell)
+    if not okCell or not cell or not cell.getZombieList then
+        return 0
+    end
+
+    local okList, zombies = pcall(function()
+        return cell:getZombieList()
+    end)
+    if not okList or not zombies then
+        return 0
+    end
+
+    local playerX, playerY, playerZ
+    local okPos = pcall(function()
+        playerX = player:getX()
+        playerY = player:getY()
+        playerZ = player:getZ()
+    end)
+    if not okPos or not playerX or not playerY then
+        return 0
+    end
+
+    local squaredRadius = clearRadius * clearRadius
+    local listSize = zombies:size()
+    local removed = 0
+    local scanned = 0
+    local nearest = nil
+
+    for i = zombies:size() - 1, 0, -1 do
+        local zombie = zombies:get(i)
+        if zombie then
+            local zombieX, zombieY, zombieZ
+            local okZombie = pcall(function()
+                zombieX = zombie:getX()
+                zombieY = zombie:getY()
+                zombieZ = zombie:getZ()
+            end)
+
+            if okZombie and zombieX and zombieY then
+                scanned = scanned + 1
+                local deltaX = zombieX - playerX
+                local deltaY = zombieY - playerY
+                local squaredDistance = (deltaX * deltaX) + (deltaY * deltaY)
+                if nearest == nil or squaredDistance < nearest then
+                    nearest = squaredDistance
+                end
+
+                if zombieZ == playerZ and squaredDistance <= squaredRadius then
+                    local okRemove = pcall(function()
+                        zombie:removeFromWorld()
+                        zombie:removeFromSquare()
+                    end)
+                    if okRemove then
+                        removed = removed + 1
+                    end
+                end
+            end
+        end
+    end
+
+    local nearestDistance = nearest and math.floor(math.sqrt(nearest) * 10) / 10 or nil
+    logRestore("clearZombiesAroundPlayer radius=" .. tostring(clearRadius)
+        .. " listSize=" .. tostring(listSize)
+        .. " scanned=" .. tostring(scanned)
+        .. " nearest=" .. tostring(nearestDistance)
+        .. " removed=" .. tostring(removed))
+    return removed
+end
+
+function QuickRestartApply.clearZombiesAroundPlayer(player, options)
+    if not player or isMultiplayer() then
+        return false
+    end
+
+    options = options or {}
+    local clearRadius = tonumber(options.radius) or SPAWN_CLEAR_ZOMBIE_RADIUS
+    if clearRadius <= 0 then
+        return false
+    end
+
+    return QuickRestartApply.runWhenPlayerSquareReady(player, function()
+        removeZombiesAroundPlayer(player, clearRadius)
+    end)
+end
+
+function QuickRestartApply.refreshPlayerLighting(player, options)
+    if not player then
+        return false
+    end
+
+    return QuickRestartApply.runWhenPlayerSquareReady(player, function(_, square)
+        if square.RecalcAllWithNeighbours then
             pcall(function()
                 square:RecalcAllWithNeighbours(true)
             end)
@@ -804,8 +947,6 @@ function QuickRestartApply.refreshPlayerLighting(player, options)
 
         triggerPlayerClothingUpdated(player)
     end)
-
-    return true
 end
 
 function QuickRestartApply.applyLoadedCharacter(player, data, options)
@@ -824,13 +965,10 @@ function QuickRestartApply.applyLoadedCharacter(player, data, options)
 
     local restoreDomains = resolveRestoreDomains(data)
     local appliedModData = applyModDataPhase(player, data)
-    local compatVisualOptions = (QuickRestartSpongiesCompat
-        and QuickRestartSpongiesCompat.resolveBaseVisualOptions
-        and QuickRestartSpongiesCompat.resolveBaseVisualOptions(data)) or {}
 
     if restoreDomains.visualOwnedByMod then
         logRestore("applyLoadedCharacter applying base visual only due to mod-owned domain")
-        applyBaseVisualToPlayer(player, data, compatVisualOptions)
+        applyBaseVisualToPlayer(player, data)
     else
         applyVisualToPlayer(player, data, options.visualItemTypes or {}, options)
     end

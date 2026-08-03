@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "유지: 저장된 의상을 다시 적용합니다.\n무작위: 게임의 의상 풀에서 의상을 선택합니다. 직업 의상도 포함됩니다.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "유지: 저장된 지역에서 다시 스폰합니다.\n무작위: 이 게임에서 사용 가능한 지역 중 하나를 무작위로 선택합니다.",
     "UI_QuickRestart_Options_Seed_Tooltip": "유지: 원래 세계의 시드를 재사용합니다.\n무작위: 새 시드를 생성합니다. 새로운 세계 전용.",
-    "UI_QuickRestart_Options_Title": "재시작 옵션",
+    "UI_QuickRestart_Options_Title": "랜덤화 옵션",
     "UI_QuickRestart_Options_Zombies": "좀비",
     "UI_QuickRestart_Options_Sandbox": "샌드박스 설정",
     "UI_QuickRestart_Options_Zombies_Tooltip": "유지: 저장된 좀비 설정을 재사용합니다.\n무작위: 좀비 설정을 유효한 값 범위 내에서 무작위로 설정합니다. 새로운 세계 전용. 좀비에 관해서는 이 선택이 항상 샌드박스 옵션보다 우선합니다.",

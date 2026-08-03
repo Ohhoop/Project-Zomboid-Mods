@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Panatilihin: ia-apply muli ang naka-save na damit.\nRandom: pumipili ng damit mula sa damit pool ng laro, kasama ang damit ng trabaho.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Panatilihin: magsi-spawn muli sa naka-save na rehiyon.\nRandom: magra-random ng rehiyon mula sa mga available para sa larong ito.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Panatilihin: gagamitin muli ang orihinal na seed ng mundo.\nRandom: gagawa ng bagong seed. Para sa Bagong Mundo lamang.",
-    "UI_QuickRestart_Options_Title": "MGA OPSYON SA PAG-RESTART",
+    "UI_QuickRestart_Options_Title": "MGA OPSYON SA PAG-RANDOMIZE",
     "UI_QuickRestart_Options_Zombies": "Mga zombie",
     "UI_QuickRestart_Options_Sandbox": "Mga setting ng sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Panatilihin: gagamitin muli ang mga naka-save na setting ng zombie.\nRandom: ira-random ang mga setting ng zombie sa loob ng mga valid na value. Para sa Bagong Mundo lamang. Laging nananaig ang opsyong ito sa opsyong Sandbox para sa mga zombie.",
