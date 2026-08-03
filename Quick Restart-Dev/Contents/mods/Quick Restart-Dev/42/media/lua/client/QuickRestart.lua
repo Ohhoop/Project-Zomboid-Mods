@@ -241,6 +241,7 @@ local function saveCharacterData(player, saveFilePath)
 end
 
 local characterDataSaved = false
+local lastDelayedSaveContext = nil
 
 local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
 local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
@@ -503,6 +504,11 @@ local function buildOnNewGameOptions()
                 return
             end
 
+            lastDelayedSaveContext = {
+                player = playerObj,
+                saveFilePath = saveFilePath,
+            }
+
             if isMultiplayer() then
                 QuickRestartLog.info("mp client scheduleDelayedSave queued delayTicks=60 saveFilePath=" .. tostring(saveFilePath))
             end
@@ -547,6 +553,7 @@ local function buildOnNewGameOptions()
             triggerEvent("OnQuickRestartAfterApply", data, sameWorldRestart, playerObj)
         end,
         onSameWorldRestartApplied = function(playerObj)
+            QuickRestartApply.clearZombiesAroundPlayer(playerObj)
             QuickRestartApply.refreshPlayerLighting(playerObj, {
                 scheduler = QuickRestartScheduler,
                 delayTicks = isMultiplayer() and 4 or 20,
@@ -590,6 +597,33 @@ end)
 Events.OnNewGame.Add(function(player, square)
     QuickRestartClientFlow.onNewGame(player, buildOnNewGameOptions())
 end)
+
+QuickRestart.updateSavedSnapshot = function(mutate)
+    if type(mutate) ~= "function" then
+        return false
+    end
+
+    local context = lastDelayedSaveContext
+    if type(context) ~= "table" then
+        return false
+    end
+
+    local saveFilePath = context.saveFilePath
+    local data = loadDataFromFile(saveFilePath)
+    if type(data) ~= "table" then
+        QuickRestartLog.warn("updateSavedSnapshot skipped: no snapshot on disk file=" .. tostring(saveFilePath))
+        return false
+    end
+
+    local ok, changed = pcall(mutate, data)
+    if not ok or not changed then
+        return false
+    end
+
+    writeDataToFile(data, saveFilePath, data.sandbox)
+    QuickRestartLog.info("updateSavedSnapshot wrote partial update file=" .. tostring(saveFilePath))
+    return true
+end
 
 Events.OnGameTimeLoaded.Add(function()
     QuickRestartClientFlow.onGameTimeLoaded({
