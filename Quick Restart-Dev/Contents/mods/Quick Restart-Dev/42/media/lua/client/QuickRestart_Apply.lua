@@ -801,6 +801,42 @@ end
 
 local SPAWN_CLEAR_ZOMBIE_RADIUS = 15
 
+function QuickRestartApply.runWhenPlayerSquareReady(player, action)
+    if not player or type(action) ~= "function" then
+        return false
+    end
+
+    local handler
+    handler = function(updatedPlayer)
+        if updatedPlayer ~= player then
+            return
+        end
+
+        local isDead = false
+        pcall(function()
+            isDead = player:isDead()
+        end)
+        if isDead then
+            Events.OnPlayerUpdate.Remove(handler)
+            return
+        end
+
+        local square = nil
+        pcall(function()
+            square = player:getCurrentSquare()
+        end)
+        if not square then
+            return
+        end
+
+        Events.OnPlayerUpdate.Remove(handler)
+        action(player, square)
+    end
+
+    Events.OnPlayerUpdate.Add(handler)
+    return true
+end
+
 local function removeZombiesAroundPlayer(player, clearRadius)
     local okCell, cell = pcall(getCell)
     if not okCell or not cell or not cell.getZombieList then
@@ -825,7 +861,10 @@ local function removeZombiesAroundPlayer(player, clearRadius)
     end
 
     local squaredRadius = clearRadius * clearRadius
+    local listSize = zombies:size()
     local removed = 0
+    local scanned = 0
+    local nearest = nil
 
     for i = zombies:size() - 1, 0, -1 do
         local zombie = zombies:get(i)
@@ -837,10 +876,16 @@ local function removeZombiesAroundPlayer(player, clearRadius)
                 zombieZ = zombie:getZ()
             end)
 
-            if okZombie and zombieX and zombieY and zombieZ == playerZ then
+            if okZombie and zombieX and zombieY then
+                scanned = scanned + 1
                 local deltaX = zombieX - playerX
                 local deltaY = zombieY - playerY
-                if (deltaX * deltaX) + (deltaY * deltaY) <= squaredRadius then
+                local squaredDistance = (deltaX * deltaX) + (deltaY * deltaY)
+                if nearest == nil or squaredDistance < nearest then
+                    nearest = squaredDistance
+                end
+
+                if zombieZ == playerZ and squaredDistance <= squaredRadius then
                     local okRemove = pcall(function()
                         zombie:removeFromWorld()
                         zombie:removeFromSquare()
@@ -853,7 +898,12 @@ local function removeZombiesAroundPlayer(player, clearRadius)
         end
     end
 
-    logRestore("clearZombiesAroundPlayer radius=" .. tostring(clearRadius) .. " removed=" .. tostring(removed))
+    local nearestDistance = nearest and math.floor(math.sqrt(nearest) * 10) / 10 or nil
+    logRestore("clearZombiesAroundPlayer radius=" .. tostring(clearRadius)
+        .. " listSize=" .. tostring(listSize)
+        .. " scanned=" .. tostring(scanned)
+        .. " nearest=" .. tostring(nearestDistance)
+        .. " removed=" .. tostring(removed))
     return removed
 end
 
@@ -868,36 +918,9 @@ function QuickRestartApply.clearZombiesAroundPlayer(player, options)
         return false
     end
 
-    local handler
-    handler = function(updatedPlayer)
-        if updatedPlayer ~= player then
-            return
-        end
-
-        local isDead = false
-        pcall(function()
-            isDead = player:isDead()
-        end)
-        if isDead then
-            Events.OnPlayerUpdate.Remove(handler)
-            logRestore("clearZombiesAroundPlayer aborted: player is dead")
-            return
-        end
-
-        local square = nil
-        pcall(function()
-            square = player:getCurrentSquare()
-        end)
-        if not square then
-            return
-        end
-
-        Events.OnPlayerUpdate.Remove(handler)
+    return QuickRestartApply.runWhenPlayerSquareReady(player, function()
         removeZombiesAroundPlayer(player, clearRadius)
-    end
-
-    Events.OnPlayerUpdate.Add(handler)
-    return true
+    end)
 end
 
 function QuickRestartApply.refreshPlayerLighting(player, options)
@@ -905,23 +928,8 @@ function QuickRestartApply.refreshPlayerLighting(player, options)
         return false
     end
 
-    options = options or {}
-    local scheduler = options.scheduler or QuickRestartScheduler
-    local delayTicks = tonumber(options.delayTicks) or 15
-    local playerNum = player.getPlayerNum and player:getPlayerNum() or 0
-    local taskKey = "refresh_player_lighting_" .. tostring(playerNum)
-
-    scheduler.scheduleAfterTicks(taskKey, delayTicks, function()
-        if not player then
-            return
-        end
-
-        local square = nil
-        pcall(function()
-            square = player:getCurrentSquare()
-        end)
-
-        if square and square.RecalcAllWithNeighbours then
+    return QuickRestartApply.runWhenPlayerSquareReady(player, function(_, square)
+        if square.RecalcAllWithNeighbours then
             pcall(function()
                 square:RecalcAllWithNeighbours(true)
             end)
@@ -939,8 +947,6 @@ function QuickRestartApply.refreshPlayerLighting(player, options)
 
         triggerPlayerClothingUpdated(player)
     end)
-
-    return true
 end
 
 function QuickRestartApply.applyLoadedCharacter(player, data, options)

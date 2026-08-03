@@ -24,6 +24,7 @@ end
 
 local writeDataToFile
 local loadDataFromFile
+local saveSandboxData
 local loadDataFromSaveFolder
 local restartPanel
 local captureCharacterData
@@ -210,6 +211,7 @@ local function saveCharacterData(player, saveFilePath)
 
     if saveFilePath and not isMultiplayer() then
         writeDataToFile(data, saveFilePath)
+        saveSandboxData(saveFilePath)
     end
 
     if isMultiplayer() then
@@ -260,7 +262,6 @@ local function deleteDataFile()
     return QuickRestartLocalPersistence.deletePendingDataFile()
 end
 
-local saveSandboxData
 saveSandboxData = function(saveFilePath)
     return QuickRestartLocalPersistence.saveSandboxData(saveFilePath)
 end
@@ -558,20 +559,13 @@ local function buildOnNewGameOptions()
                 scheduler = QuickRestartScheduler,
                 delayTicks = isMultiplayer() and 4 or 20,
             })
-            QuickRestartScheduler.scheduleAfterTicks("hide_same_world_transition_overlay", 30, function()
+            QuickRestartScheduler.scheduleAfterMs("hide_same_world_transition_overlay", 500, function()
                 QuickRestartUI.hideTransitionOverlay()
             end)
         end,
         persistAppliedData = function(data, saveFilePath)
             writeDataToFile(data, saveFilePath, data.sandbox)
             deleteDataFile()
-        end,
-        scheduleSandboxCapture = function(saveFilePath)
-            QuickRestartScheduler.scheduleAfterTicks("sandbox_capture_" .. tostring(saveFilePath or "default"), 60, function()
-                if saveFilePath then
-                    saveSandboxData(saveFilePath)
-                end
-            end)
         end,
     }
 end
