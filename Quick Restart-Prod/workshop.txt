@@ -3,7 +3,7 @@ id=3699503439
 title=Quick Restart [B42.20 Stable]
 description=[img]https://i.imgur.com/Pu2nMwd.gif[/img]
 description=
-description=Adds a Quick Restart panel on the death screen that gets you back into the game significantly faster than the normal process.description=
+description=Adds a Quick Restart panel on the death screen that gets you back into the game significantly faster than the normal process.
 description=Two options: Restart in a fresh world or respawn in the same one, both restoring your original character.
 description=
 description=Character is saved upon CREATION and reapplied automatically:
@@ -83,5 +83,7 @@ description=Q: Does Fresh World delete my current world?
 description=A: Yes. Fresh World wipes the world and generates a new one; only your character survives the move. Same World keeps the world as is.
 description=
 description=Feel free to provide any feedback you may have in the comment section.
+description=
+description=[img]https://i.imgur.com/lja52Fs.gif[/img]
 tags=Build 42;Misc;Multiplayer;QoL
 visibility=public
