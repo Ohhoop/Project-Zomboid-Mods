@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "維持：保存された服装を再適用します。\nランダム：ゲームの服装プールから服装を選びます。職業の服装も含まれます。",
     "UI_QuickRestart_Options_Spawn_Tooltip": "維持：保存された地域にリスポーンします。\nランダム：このゲームで利用可能な地域の中からランダムに選びます。",
     "UI_QuickRestart_Options_Seed_Tooltip": "維持：元のワールドのシードを再利用します。\nランダム：新しいシードを生成します。新しい世界のみ。",
-    "UI_QuickRestart_Options_Title": "リスタートオプション",
+    "UI_QuickRestart_Options_Title": "ランダマイザーオプション",
     "UI_QuickRestart_Options_Zombies": "ゾンビ",
     "UI_QuickRestart_Options_Sandbox": "サンドボックス設定",
     "UI_QuickRestart_Options_Zombies_Tooltip": "維持：保存されたゾンビ設定を再利用します。\nランダム：ゾンビ設定を有効な値の範囲内でランダム化します。新しい世界のみ。ゾンビに関しては、この選択が常にサンドボックスオプションより優先されます。",

@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "احتفاظ: يعيد تطبيق الملابس المحفوظة.\nعشوائي: يختار ملابس من مجموعة الملابس في اللعبة، بما في ذلك ملابس المهنة.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "احتفاظ: يعيد الظهور في المنطقة المحفوظة.\nعشوائي: يختار منطقة من بين المناطق المتاحة لهذه اللعبة.",
     "UI_QuickRestart_Options_Seed_Tooltip": "احتفاظ: يعيد استخدام seed العالم الأصلي.\nعشوائي: يولّد seed جديداً. عالم جديد فقط.",
-    "UI_QuickRestart_Options_Title": "خيارات إعادة التشغيل",
+    "UI_QuickRestart_Options_Title": "خيارات العشوائية",
     "UI_QuickRestart_Options_Zombies": "الزومبي",
     "UI_QuickRestart_Options_Sandbox": "إعدادات sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "احتفاظ: يعيد استخدام إعدادات الزومبي المحفوظة.\nعشوائي: يجعل إعدادات الزومبي عشوائية ضمن قيم صالحة. عالم جديد فقط. لهذا الخيار الأولوية دائماً على خيار sandbox فيما يخص الزومبي.",

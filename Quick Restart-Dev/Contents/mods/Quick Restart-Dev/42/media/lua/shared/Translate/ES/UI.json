@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Mantener: reaplica la ropa guardada.\nAleatorio: elige un atuendo del banco de atuendos del juego, incluyendo el de la profesión.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Mantener: reapareces en la región guardada.\nAleatorio: elige al azar una región entre las disponibles para esta partida.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Mantener: reutiliza la semilla del mundo original.\nAleatorio: genera una nueva semilla. Solo Mundo nuevo.",
-    "UI_QuickRestart_Options_Title": "OPCIONES DE REINICIO",
+    "UI_QuickRestart_Options_Title": "OPCIONES DE ALEATORIZACIÓN",
     "UI_QuickRestart_Options_Zombies": "Zombis",
     "UI_QuickRestart_Options_Sandbox": "Ajustes sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Mantener: reutiliza los ajustes de zombis guardados.\nAleatorio: aleatoriza los ajustes de zombis dentro de valores válidos. Solo Mundo nuevo. Esta elección siempre tiene prioridad sobre la opción Sandbox para los zombis.",

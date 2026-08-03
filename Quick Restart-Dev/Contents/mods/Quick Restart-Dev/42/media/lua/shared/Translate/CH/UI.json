@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "保留：重新套用已儲存的服裝。\n隨機：從遊戲的服裝庫中選擇一套服裝，包括職業服裝。",
     "UI_QuickRestart_Options_Spawn_Tooltip": "保留：在已儲存的區域重生。\n隨機：從本局遊戲可用的區域中隨機選擇一個。",
     "UI_QuickRestart_Options_Seed_Tooltip": "保留：重新使用原始世界種子。\n隨機：產生新的種子。僅限新世界。",
-    "UI_QuickRestart_Options_Title": "重啟選項",
+    "UI_QuickRestart_Options_Title": "隨機化選項",
     "UI_QuickRestart_Options_Zombies": "殭屍",
     "UI_QuickRestart_Options_Sandbox": "沙盒設定",
     "UI_QuickRestart_Options_Zombies_Tooltip": "保留：重新使用已儲存的殭屍設定。\n隨機：在有效值範圍內隨機化殭屍設定。僅限新世界。此選項在殭屍設定上始終優先於沙盒選項。",

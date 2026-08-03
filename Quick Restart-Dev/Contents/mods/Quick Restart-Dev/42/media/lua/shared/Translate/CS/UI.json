@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Ponechat: znovu použije uložené oblečení.\nNáhodně: vybere oděv z nabídky oděvů ve hře, včetně oděvu daného povolání.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Ponechat: oživení v uloženém regionu.\nNáhodně: vylosuje region z těch, které jsou v této hře dostupné.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Ponechat: znovu použije původní seed světa.\nNáhodně: vygeneruje nový seed. Pouze Nový svět.",
-    "UI_QuickRestart_Options_Title": "MOŽNOSTI RESTARTU",
+    "UI_QuickRestart_Options_Title": "MOŽNOSTI NÁHODNOSTI",
     "UI_QuickRestart_Options_Zombies": "Zombie",
     "UI_QuickRestart_Options_Sandbox": "Nastavení sandboxu",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Ponechat: znovu použije uložené nastavení zombie.\nNáhodně: náhodně změní nastavení zombie v rámci platných hodnot. Pouze Nový svět. Tato volba má u zombie vždy přednost před možností \"Nastavení sandboxu\".",

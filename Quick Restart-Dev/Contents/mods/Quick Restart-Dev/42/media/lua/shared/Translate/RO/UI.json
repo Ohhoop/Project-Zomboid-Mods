@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Păstrează: reaplică îmbrăcămintea salvată.\nAleatoriu: alege o ținută din banca de ținute a jocului, inclusiv cea a ocupației.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Păstrează: reapari în regiunea salvată.\nAleatoriu: alege o regiune dintre cele disponibile pentru această partidă.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Păstrează: refolosește seed-ul lumii originale.\nAleatoriu: generează un seed nou. Doar pentru Lume Nouă.",
-    "UI_QuickRestart_Options_Title": "OPȚIUNI DE REPORNIRE",
+    "UI_QuickRestart_Options_Title": "OPȚIUNI DE ALEATORIZARE",
     "UI_QuickRestart_Options_Zombies": "Zombi",
     "UI_QuickRestart_Options_Sandbox": "Setări sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Păstrează: refolosește setările pentru zombi salvate.\nAleatoriu: randomizează setările pentru zombi în limitele valorilor valide. Doar pentru Lume Nouă. Această alegere are întotdeauna prioritate față de opțiunea Sandbox pentru zombi.",

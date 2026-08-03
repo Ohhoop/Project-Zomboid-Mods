@@ -28,7 +28,7 @@
     "UI_QuickRestart_Options_Clothing_Tooltip": "Mantenir: reaplica la roba desada.\nAleatori: tria una vestimenta del fons de vestimentes del joc, inclosa la de la professió.",
     "UI_QuickRestart_Options_Spawn_Tooltip": "Mantenir: reapareixes a la regió desada.\nAleatori: tria a l'atzar una regió entre les disponibles per a aquesta partida.",
     "UI_QuickRestart_Options_Seed_Tooltip": "Mantenir: reutilitza la llavor del món original.\nAleatori: genera una nova llavor. Només Món nou.",
-    "UI_QuickRestart_Options_Title": "OPCIONS DE REINICI",
+    "UI_QuickRestart_Options_Title": "OPCIONS D'ALEATORITZACIÓ",
     "UI_QuickRestart_Options_Zombies": "Zombis",
     "UI_QuickRestart_Options_Sandbox": "Paràmetres sandbox",
     "UI_QuickRestart_Options_Zombies_Tooltip": "Mantenir: reutilitza els paràmetres de zombis desats.\nAleatori: aleatoritza els paràmetres de zombis dins de valors vàlids. Només Món nou. Aquesta tria sempre té prioritat sobre l'opció Sandbox per als zombis.",
