@@ -472,6 +472,9 @@ function QuickRestartOptionsWindow:render()
 
             if not tooltipText and button:isMouseOver() then
                 tooltipText = getText(row.tooltipKey)
+                if button.enable == false then
+                    tooltipText = tooltipText .. "\n" .. getText("UI_QuickRestart_MP_Tooltip")
+                end
             end
         end
     end
