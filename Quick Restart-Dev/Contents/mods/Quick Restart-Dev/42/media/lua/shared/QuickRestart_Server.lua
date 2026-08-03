@@ -421,6 +421,68 @@ local function handleRequestRestartFreshWorld(player, args)
     )
 end
 
+local function clearZombiesAroundPlayer(player)
+    local clearRadius = tonumber(QuickRestartConstants.SPAWN_CLEAR_ZOMBIE_RADIUS) or 0
+    if not player or clearRadius <= 0 then
+        return 0
+    end
+
+    local okCell, cell = pcall(getCell)
+    if not okCell or not cell or not cell.getZombieList then
+        return 0
+    end
+
+    local okList, zombies = pcall(function()
+        return cell:getZombieList()
+    end)
+    if not okList or not zombies then
+        return 0
+    end
+
+    local playerX, playerY, playerZ
+    local okPos = pcall(function()
+        playerX = player:getX()
+        playerY = player:getY()
+        playerZ = player:getZ()
+    end)
+    if not okPos or not playerX or not playerY then
+        return 0
+    end
+
+    local squaredRadius = clearRadius * clearRadius
+    local removed = 0
+
+    for i = zombies:size() - 1, 0, -1 do
+        local zombie = zombies:get(i)
+        if zombie then
+            local zombieX, zombieY, zombieZ
+            local okZombie = pcall(function()
+                zombieX = zombie:getX()
+                zombieY = zombie:getY()
+                zombieZ = zombie:getZ()
+            end)
+
+            if okZombie and zombieX and zombieY and zombieZ == playerZ then
+                local deltaX = zombieX - playerX
+                local deltaY = zombieY - playerY
+                if (deltaX * deltaX) + (deltaY * deltaY) <= squaredRadius then
+                    local okRemove = pcall(function()
+                        zombie:removeFromWorld()
+                        zombie:removeFromSquare()
+                    end)
+                    if okRemove then
+                        removed = removed + 1
+                    end
+                end
+            end
+        end
+    end
+
+    QuickRestartLog.info("mp server clearZombiesAroundPlayer radius=" .. tostring(clearRadius)
+        .. " removed=" .. tostring(removed))
+    return removed
+end
+
 local function onClientCommand(module, command, player, args)
     if module ~= MODULE then return end
 
@@ -496,6 +558,7 @@ local function onClientCommand(module, command, player, args)
         end
 
         QuickRestartRestore.scheduleBaseClothingRestore(player, effectiveSnapshot, 2)
+        clearZombiesAroundPlayer(player)
 
         if pendingMerged then
             if persistSnapshot(profileKey, pendingMerged.snapshot) then

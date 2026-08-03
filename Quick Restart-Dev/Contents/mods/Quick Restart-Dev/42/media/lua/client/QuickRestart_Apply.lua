@@ -799,7 +799,7 @@ function QuickRestartApply.refreshVisualAfterServerClothing(player, options)
     return true
 end
 
-local SPAWN_CLEAR_ZOMBIE_RADIUS = 15
+local SPAWN_CLEAR_ZOMBIE_RADIUS = QuickRestartConstants.SPAWN_CLEAR_ZOMBIE_RADIUS
 
 function QuickRestartApply.runWhenPlayerSquareReady(player, action)
     if not player or type(action) ~= "function" then

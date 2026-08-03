@@ -3,6 +3,7 @@ QuickRestartConstants = QuickRestartConstants or {}
 QuickRestartConstants.SCHEMA_VERSION = 2
 QuickRestartConstants.MOD_ID = "QuickRestart-DEV"
 QuickRestartConstants.MODULE = "QuickRestart"
+QuickRestartConstants.SPAWN_CLEAR_ZOMBIE_RADIUS = 15
 
 QuickRestartConstants.COMMANDS = {
     APPLY_AUTHORITATIVE_SNAPSHOT = "applyAuthoritativeSnapshot",
