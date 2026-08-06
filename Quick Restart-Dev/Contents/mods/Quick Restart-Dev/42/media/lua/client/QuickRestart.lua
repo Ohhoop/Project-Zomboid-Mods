@@ -398,6 +398,9 @@ local function closeRestartPanel()
     end
 end
 
+Events.OnMainMenuEnter.Add(closeRestartPanel)
+Events.OnCreatePlayer.Add(closeRestartPanel)
+
 local function consumePendingSameWorldData()
     if QuickRestart.pendingSameWorld and QuickRestart.sameWorldData then
         local data = QuickRestart.sameWorldData
@@ -584,6 +587,7 @@ Events.OnPlayerDeath.Add(function(player)
 end)
 
 Events.OnPostUIDraw.Add(function()
+    QuickRestartUI.updateDeathScreenFade()
     tryShowRestartPanel()
 end)
 
