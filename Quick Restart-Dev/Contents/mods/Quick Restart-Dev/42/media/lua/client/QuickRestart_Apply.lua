@@ -350,18 +350,6 @@ local function countTableEntries(tbl)
     return count
 end
 
-local function countNestedEntries(tbl, key)
-    if type(tbl) ~= "table" or type(tbl[key]) ~= "table" then
-        return 0
-    end
-
-    local count = 0
-    for _ in pairs(tbl[key]) do
-        count = count + 1
-    end
-    return count
-end
-
 local function resolveRestoreDomains(data)
     local restoreDomains = type(data and data.restoreDomains) == "table" and data.restoreDomains or nil
     local result = {
@@ -388,10 +376,10 @@ local function applyModDataPhase(player, data)
     logRestore("applyModDataPhase begin"
         .. " snapshotHasPlayerModData=" .. tostring(type(data.modData.player) == "table")
         .. " snapshotPlayerEntries=" .. tostring(countTableEntries(data.modData.player))
-        .. " snapshotPlayerSPNCharCustomEntries=" .. tostring(countNestedEntries(data.modData.player or {}, "SPNCharCustom"))
+        .. QuickRestartLog.describeWatchedKeys("snapshotPlayer", data.modData.player)
         .. " snapshotHasDescriptorModData=" .. tostring(type(data.modData.descriptor) == "table")
         .. " snapshotDescriptorEntries=" .. tostring(countTableEntries(data.modData.descriptor))
-        .. " snapshotDescriptorSPNCharCustomEntries=" .. tostring(countNestedEntries(data.modData.descriptor or {}, "SPNCharCustom")))
+        .. QuickRestartLog.describeWatchedKeys("snapshotDescriptor", data.modData.descriptor))
 
     if type(data.modData.player) == "table" and player.getModData then
         local ok, playerModData = pcall(function()
@@ -400,8 +388,8 @@ local function applyModDataPhase(player, data)
         if ok and type(playerModData) == "table" then
             applyTableData(playerModData, data.modData.player)
             applied = true
-            logRestore("applyModDataPhase player entries=" .. tostring(countTableEntries(playerModData)))
-            logRestore("applyModDataPhase player SPNCharCustom entries=" .. tostring(countNestedEntries(playerModData, "SPNCharCustom")))
+            logRestore("applyModDataPhase player entries=" .. tostring(countTableEntries(playerModData))
+                .. QuickRestartLog.describeWatchedKeys("player", playerModData))
         end
     end
 
@@ -416,8 +404,8 @@ local function applyModDataPhase(player, data)
             if okModData and type(descriptorModData) == "table" then
                 applyTableData(descriptorModData, data.modData.descriptor)
                 applied = true
-                logRestore("applyModDataPhase descriptor entries=" .. tostring(countTableEntries(descriptorModData)))
-                logRestore("applyModDataPhase descriptor SPNCharCustom entries=" .. tostring(countNestedEntries(descriptorModData, "SPNCharCustom")))
+                logRestore("applyModDataPhase descriptor entries=" .. tostring(countTableEntries(descriptorModData))
+                    .. QuickRestartLog.describeWatchedKeys("descriptor", descriptorModData))
             end
         end
     end
