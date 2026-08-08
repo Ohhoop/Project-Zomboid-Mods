@@ -1,7 +1,7 @@
 QuickRestartConstants = QuickRestartConstants or {}
 
 QuickRestartConstants.SCHEMA_VERSION = 2
-QuickRestartConstants.MOD_ID = "QuickRestart-DEV"
+QuickRestartConstants.MOD_ID = "QuickRestart"
 QuickRestartConstants.MODULE = "QuickRestart"
 QuickRestartConstants.SPAWN_CLEAR = {
     RADIUS = 15,
