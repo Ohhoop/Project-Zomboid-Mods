@@ -799,8 +799,6 @@ function QuickRestartApply.refreshVisualAfterServerClothing(player, options)
     return true
 end
 
-local SPAWN_CLEAR_ZOMBIE_RADIUS = QuickRestartConstants.SPAWN_CLEAR_ZOMBIE_RADIUS
-
 function QuickRestartApply.runWhenPlayerSquareReady(player, action)
     if not player or type(action) ~= "function" then
         return false
@@ -837,90 +835,12 @@ function QuickRestartApply.runWhenPlayerSquareReady(player, action)
     return true
 end
 
-local function removeZombiesAroundPlayer(player, clearRadius)
-    local okCell, cell = pcall(getCell)
-    if not okCell or not cell or not cell.getZombieList then
-        return 0
-    end
-
-    local okList, zombies = pcall(function()
-        return cell:getZombieList()
-    end)
-    if not okList or not zombies then
-        return 0
-    end
-
-    local playerX, playerY, playerZ
-    local okPos = pcall(function()
-        playerX = player:getX()
-        playerY = player:getY()
-        playerZ = player:getZ()
-    end)
-    if not okPos or not playerX or not playerY then
-        return 0
-    end
-
-    local squaredRadius = clearRadius * clearRadius
-    local listSize = zombies:size()
-    local removed = 0
-    local scanned = 0
-    local nearest = nil
-
-    for i = zombies:size() - 1, 0, -1 do
-        local zombie = zombies:get(i)
-        if zombie then
-            local zombieX, zombieY, zombieZ
-            local okZombie = pcall(function()
-                zombieX = zombie:getX()
-                zombieY = zombie:getY()
-                zombieZ = zombie:getZ()
-            end)
-
-            if okZombie and zombieX and zombieY then
-                scanned = scanned + 1
-                local deltaX = zombieX - playerX
-                local deltaY = zombieY - playerY
-                local squaredDistance = (deltaX * deltaX) + (deltaY * deltaY)
-                if nearest == nil or squaredDistance < nearest then
-                    nearest = squaredDistance
-                end
-
-                if zombieZ == playerZ and squaredDistance <= squaredRadius then
-                    local okRemove = pcall(function()
-                        zombie:removeFromWorld()
-                        zombie:removeFromSquare()
-                    end)
-                    if okRemove then
-                        removed = removed + 1
-                    end
-                end
-            end
-        end
-    end
-
-    local nearestDistance = nearest and math.floor(math.sqrt(nearest) * 10) / 10 or nil
-    logRestore("clearZombiesAroundPlayer radius=" .. tostring(clearRadius)
-        .. " listSize=" .. tostring(listSize)
-        .. " scanned=" .. tostring(scanned)
-        .. " nearest=" .. tostring(nearestDistance)
-        .. " removed=" .. tostring(removed))
-    return removed
-end
-
 function QuickRestartApply.clearZombiesAroundPlayer(player, options)
     if not player or isMultiplayer() then
         return false
     end
 
-    options = options or {}
-    local clearRadius = tonumber(options.radius) or SPAWN_CLEAR_ZOMBIE_RADIUS
-    if clearRadius <= 0 then
-        return false
-    end
-
-    return QuickRestartApply.runWhenPlayerSquareReady(player, function()
-        removeZombiesAroundPlayer(player, clearRadius)
-    end)
+    return QuickRestartRestore.startSpawnZombiePurge(player, options)
 end
 
 function QuickRestartApply.refreshPlayerLighting(player, options)
