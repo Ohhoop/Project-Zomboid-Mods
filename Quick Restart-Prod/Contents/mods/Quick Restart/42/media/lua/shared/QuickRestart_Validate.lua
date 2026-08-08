@@ -1,5 +1,27 @@
 QuickRestartValidate = QuickRestartValidate or {}
 
+local captureGuards = {}
+
+function QuickRestartValidate.addCaptureGuard(guard)
+    if type(guard) ~= "function" then
+        return false
+    end
+
+    captureGuards[#captureGuards + 1] = guard
+    return true
+end
+
+function QuickRestartValidate.runCaptureGuards(capturedData, existingSnapshot)
+    for _, guard in ipairs(captureGuards) do
+        local ok, reject, reason = pcall(guard, capturedData, existingSnapshot)
+        if ok and reject == true then
+            return true, reason
+        end
+    end
+
+    return false, nil
+end
+
 local function isNonEmptyString(value)
     return type(value) == "string" and value ~= ""
 end

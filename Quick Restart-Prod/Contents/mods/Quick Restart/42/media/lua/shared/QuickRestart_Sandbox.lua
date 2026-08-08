@@ -69,15 +69,19 @@ function QuickRestartSandbox.describeSnapshot(snapshot)
     end
 
     local rootKeys = sortKeysShallow(snapshot)
-    local spn = snapshot.SPNCharCustom
-    local spnSummary = summarizeTableForLog("SPNCharCustom", spn)
+    local watched = {}
+    if QuickRestartLog and QuickRestartLog.getWatchedModDataKeys then
+        for _, key in ipairs(QuickRestartLog.getWatchedModDataKeys()) do
+            watched[#watched + 1] = summarizeTableForLog(key, snapshot[key])
+        end
+    end
 
     return "snapshotRootCount="
         .. tostring(#rootKeys)
         .. " rootKeys=["
         .. table.concat(rootKeys, ",")
         .. "] "
-        .. spnSummary
+        .. table.concat(watched, " ")
 end
 
 function QuickRestartSandbox.logSnapshot(label, snapshot)

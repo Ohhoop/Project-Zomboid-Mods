@@ -133,29 +133,6 @@ local function summarizeFaceEntry(faceEntry)
         .. " faceBodyLocation=" .. tostring(faceEntry.bodyLocation)
 end
 
-local function countTableEntries(tbl)
-    if type(tbl) ~= "table" then
-        return 0
-    end
-
-    local count = 0
-    for _ in pairs(tbl) do
-        count = count + 1
-    end
-    return count
-end
-
-local function getPlayerSPNCharCustom(data)
-    if type(data) ~= "table"
-        or type(data.modData) ~= "table"
-        or type(data.modData.player) ~= "table"
-        or type(data.modData.player.SPNCharCustom) ~= "table" then
-        return nil
-    end
-
-    return data.modData.player.SPNCharCustom
-end
-
 local function shouldRejectRegressiveSnapshot(capturedData, existingSnapshot)
     if type(capturedData) ~= "table" or type(existingSnapshot) ~= "table" then
         return false, nil
@@ -167,19 +144,7 @@ local function shouldRejectRegressiveSnapshot(capturedData, existingSnapshot)
         return true, "missing_face_layer"
     end
 
-    local existingSPN = getPlayerSPNCharCustom(existingSnapshot)
-    local capturedSPN = getPlayerSPNCharCustom(capturedData)
-    if existingSPN and not capturedSPN then
-        return true, "missing_player_SPNCharCustom"
-    end
-
-    local existingSPNCount = countTableEntries(existingSPN)
-    local capturedSPNCount = countTableEntries(capturedSPN)
-    if existingSPNCount > 0 and capturedSPNCount == 0 then
-        return true, "empty_player_SPNCharCustom"
-    end
-
-    return false, nil
+    return QuickRestartValidate.runCaptureGuards(capturedData, existingSnapshot)
 end
 
 local function shouldReplaceSnapshotForFace(capturedData, existingSnapshot)
@@ -398,6 +363,9 @@ local function closeRestartPanel()
     end
 end
 
+Events.OnMainMenuEnter.Add(closeRestartPanel)
+Events.OnCreatePlayer.Add(closeRestartPanel)
+
 local function consumePendingSameWorldData()
     if QuickRestart.pendingSameWorld and QuickRestart.sameWorldData then
         local data = QuickRestart.sameWorldData
@@ -584,6 +552,7 @@ Events.OnPlayerDeath.Add(function(player)
 end)
 
 Events.OnPostUIDraw.Add(function()
+    QuickRestartUI.updateDeathScreenFade()
     tryShowRestartPanel()
 end)
 

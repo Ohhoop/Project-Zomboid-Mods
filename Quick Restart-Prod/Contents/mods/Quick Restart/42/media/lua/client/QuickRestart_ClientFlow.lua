@@ -429,8 +429,15 @@ end
 
 function QuickRestartClientFlow.addRestartPanel(options)
     options = options or {}
-    if options.getRestartPanel and options.getRestartPanel() then
-        return options.getRestartPanel()
+    local existingPanel = options.getRestartPanel and options.getRestartPanel() or nil
+    if existingPanel then
+        if not existingPanel.isRemoved or not existingPanel:isRemoved() then
+            return existingPanel
+        end
+
+        if options.setRestartPanel then
+            options.setRestartPanel(nil)
+        end
     end
 
     local charDataAvail = false
@@ -494,6 +501,12 @@ function QuickRestartClientFlow.onPlayerDeath(player, options)
 
     if options.resetPendingMPRestore then
         options.resetPendingMPRestore()
+    end
+
+    if player and player.getPlayerNum then
+        local playerNum = player:getPlayerNum()
+        QuickRestartUI.removeDeathScreenDelay(playerNum)
+        QuickRestartUI.beginDeathScreenFade(playerNum)
     end
 
     state.awaitingRestartPanel = true

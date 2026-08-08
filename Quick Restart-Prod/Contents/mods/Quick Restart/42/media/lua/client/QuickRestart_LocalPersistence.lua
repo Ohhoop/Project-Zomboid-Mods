@@ -327,10 +327,9 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
     end
 
     if type(data.modData) == "table" and type(data.modData.descriptor) == "table" and desc.getModData then
-        local hasSPNCharCustom = type(data.modData.descriptor.SPNCharCustom) == "table"
         QuickRestartLog.info("checkPendingRestart descriptor injection begin"
             .. " hasDescriptorModData=true"
-            .. " hasSPNCharCustom=" .. tostring(hasSPNCharCustom))
+            .. QuickRestartLog.describeWatchedKeys("descriptor", data.modData.descriptor))
         local okModData, descriptorModData = pcall(function()
             return desc:getModData()
         end)
@@ -339,7 +338,7 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
                 descriptorModData[key] = value
             end
             QuickRestartLog.info("checkPendingRestart descriptor injection applied"
-                .. " hasSPNCharCustomAfter=" .. tostring(type(descriptorModData.SPNCharCustom) == "table"))
+                .. QuickRestartLog.describeWatchedKeys("descriptorAfter", descriptorModData))
         else
             QuickRestartLog.warn("checkPendingRestart descriptor injection failed to read descriptor modData")
         end

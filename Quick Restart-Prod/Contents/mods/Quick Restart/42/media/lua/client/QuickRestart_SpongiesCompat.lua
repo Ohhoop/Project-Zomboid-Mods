@@ -643,4 +643,47 @@ if QuickRestartApply and QuickRestartApply.registerClothingUpdatedNotifier then
     QuickRestartApply.registerClothingUpdatedNotifier(QuickRestartSpongiesCompat.notifyClothingUpdated)
 end
 
+local SPN_MODDATA_KEY = "SPNCharCustom"
+
+local function countSnapshotSPNEntries(snapshot)
+    if type(snapshot) ~= "table"
+        or type(snapshot.modData) ~= "table"
+        or type(snapshot.modData.player) ~= "table"
+        or type(snapshot.modData.player[SPN_MODDATA_KEY]) ~= "table" then
+        return nil
+    end
+
+    local count = 0
+    for _ in pairs(snapshot.modData.player[SPN_MODDATA_KEY]) do
+        count = count + 1
+    end
+    return count
+end
+
+local function rejectRegressiveSPNCapture(capturedData, existingSnapshot)
+    local existingCount = countSnapshotSPNEntries(existingSnapshot)
+    if existingCount == nil then
+        return false, nil
+    end
+
+    local capturedCount = countSnapshotSPNEntries(capturedData)
+    if capturedCount == nil then
+        return true, "missing_player_" .. SPN_MODDATA_KEY
+    end
+
+    if existingCount > 0 and capturedCount == 0 then
+        return true, "empty_player_" .. SPN_MODDATA_KEY
+    end
+
+    return false, nil
+end
+
+if QuickRestartValidate and QuickRestartValidate.addCaptureGuard then
+    QuickRestartValidate.addCaptureGuard(rejectRegressiveSPNCapture)
+end
+
+if QuickRestartLog and QuickRestartLog.watchModDataKey then
+    QuickRestartLog.watchModDataKey(SPN_MODDATA_KEY)
+end
+
 return QuickRestartSpongiesCompat

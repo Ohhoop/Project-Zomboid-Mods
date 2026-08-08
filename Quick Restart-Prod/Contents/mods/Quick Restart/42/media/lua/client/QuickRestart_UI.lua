@@ -6,6 +6,90 @@ QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 local DICE_KEEP_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Keep.png"
 local DICE_RANDOM_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Random.png"
 local DICE_PULSE_PERIOD_MS = 1600
+local FADE_IN_DURATION_MS = 450
+
+local deathScreenFadeStartMs = nil
+
+local function currentFadeProgress()
+    if not deathScreenFadeStartMs then
+        return 1
+    end
+
+    local elapsed = getTimestampMs() - deathScreenFadeStartMs
+    if elapsed <= 0 then
+        return 0
+    end
+    if elapsed >= FADE_IN_DURATION_MS then
+        return 1
+    end
+
+    return elapsed / FADE_IN_DURATION_MS
+end
+
+local function captureButtonBaseAlpha(button)
+    if not button or button.baseAlpha then
+        return
+    end
+
+    button.baseAlpha = {
+        background = button.backgroundColor and button.backgroundColor.a or 1,
+        border = button.borderColor and button.borderColor.a or 1,
+        text = button.textColor and button.textColor.a or 1,
+        mouseOver = button.backgroundColorMouseOver and button.backgroundColorMouseOver.a or 1,
+    }
+end
+
+local function applyAlphaToButton(button, progress)
+    if not button or not button.baseAlpha then
+        return
+    end
+
+    local base = button.baseAlpha
+    if button.backgroundColor then
+        button.backgroundColor.a = base.background * progress
+    end
+    if button.borderColor then
+        button.borderColor.a = base.border * progress
+    end
+    if button.textColor then
+        button.textColor.a = base.text * progress
+    end
+    if button.backgroundColorMouseOver then
+        button.backgroundColorMouseOver.a = base.mouseOver * progress
+    end
+end
+
+local function applyFadeToDeathScreen(progress)
+    if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
+        return
+    end
+
+    for _, deathUi in pairs(ISPostDeathUI.instance) do
+        if deathUi then
+            applyAlphaToButton(deathUi.buttonRespawn, progress)
+            applyAlphaToButton(deathUi.buttonExit, progress)
+            applyAlphaToButton(deathUi.buttonQuit, progress)
+        end
+    end
+end
+
+local function isDeathScreenDismissed()
+    if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
+        return false
+    end
+
+    local found = false
+    for _, deathUi in pairs(ISPostDeathUI.instance) do
+        if deathUi then
+            found = true
+            if not deathUi.isRemoved or not deathUi:isRemoved() then
+                return false
+            end
+        end
+    end
+
+    return found
+end
 
 local OPTION_ROWS = {
     {category = "gender", labelKey = "UI_QuickRestart_Options_Gender", tooltipKey = "UI_QuickRestart_Options_Gender_Tooltip"},
@@ -59,13 +143,74 @@ local function resolveDeathButtonWidth()
     return nil
 end
 
+function QuickRestartUI.removeDeathScreenDelay(playerNum)
+    if type(playerNum) ~= "number" then
+        return false
+    end
+
+    if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
+        return false
+    end
+
+    local deathUi = ISPostDeathUI.instance[playerNum]
+    if not deathUi or deathUi.waitOver then
+        return false
+    end
+
+    deathUi.waitOver = true
+    return true
+end
+
+function QuickRestartUI.beginDeathScreenFade(playerNum)
+    deathScreenFadeStartMs = getTimestampMs()
+
+    if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
+        return
+    end
+
+    local deathUi = ISPostDeathUI.instance[playerNum]
+    if not deathUi then
+        return
+    end
+
+    captureButtonBaseAlpha(deathUi.buttonRespawn)
+    captureButtonBaseAlpha(deathUi.buttonExit)
+    captureButtonBaseAlpha(deathUi.buttonQuit)
+    applyFadeToDeathScreen(0)
+end
+
+function QuickRestartUI.updateDeathScreenFade()
+    if not deathScreenFadeStartMs then
+        return
+    end
+
+    local progress = currentFadeProgress()
+    applyFadeToDeathScreen(progress)
+
+    if progress >= 1 then
+        deathScreenFadeStartMs = nil
+    end
+end
+
 function QuickRestartPanel:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
     o.backgroundColor = {r=0, g=0, b=0, a=0.3}
     o.borderColor = {r=0, g=0, b=0, a=0}
+    o.baseBackgroundAlpha = 0.3
+    o.fadeAlpha = 1
     return o
+end
+
+function QuickRestartPanel:applyFadeAlpha(progress)
+    self.fadeAlpha = progress
+    self.backgroundColor.a = (self.baseBackgroundAlpha or 0.3) * progress
+    applyAlphaToButton(self.freshButton, progress)
+    applyAlphaToButton(self.sameButton, progress)
+    applyAlphaToButton(self.optionsButton, progress)
+    applyAlphaToButton(self.savedButton, progress)
+    applyAlphaToButton(self.currentButton, progress)
 end
 
 function QuickRestartTransitionOverlay:new(x, y, width, height)
@@ -134,6 +279,13 @@ function QuickRestartTransitionOverlay:render()
 end
 
 function QuickRestartPanel:prerender()
+    if isDeathScreenDismissed() then
+        self:removeFromUIManager()
+        return
+    end
+
+    self:applyFadeAlpha(currentFadeProgress())
+
     ISPanel.prerender(self)
 
     if self:hasAnyRandomOption() ~= (self.diceIsRandom == true) then
@@ -213,6 +365,10 @@ function QuickRestartPanel:createChildren()
         self.optionsButton.enable = false
     end
     self:addChild(self.optionsButton)
+
+    captureButtonBaseAlpha(self.freshButton)
+    captureButtonBaseAlpha(self.sameButton)
+    captureButtonBaseAlpha(self.optionsButton)
 end
 
 function QuickRestartPanel:hasAnyRandomOption()
@@ -258,13 +414,15 @@ function QuickRestartPanel:updateDicePulse()
         return
     end
 
+    local fade = self.fadeAlpha or 1
+
     if not self.diceIsRandom then
-        self.optionsButton.textureColor.a = 1
+        self.optionsButton.textureColor.a = fade
         return
     end
 
     local phase = (getTimestampMs() % DICE_PULSE_PERIOD_MS) / DICE_PULSE_PERIOD_MS
-    self.optionsButton.textureColor.a = 0.7 + 0.3 * math.sin(2 * math.pi * phase)
+    self.optionsButton.textureColor.a = (0.7 + 0.3 * math.sin(2 * math.pi * phase)) * fade
 end
 
 function QuickRestartPanel:removeFromUIManager()
@@ -666,6 +824,9 @@ function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVars
     self.currentButton.backgroundColor = {r=0, g=0, b=0, a=0.9}
     self.currentButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
     self:addChild(self.currentButton)
+
+    captureButtonBaseAlpha(self.savedButton)
+    captureButtonBaseAlpha(self.currentButton)
 end
 
 function QuickRestartPanel:render()
@@ -675,6 +836,7 @@ function QuickRestartPanel:render()
     local layout = self.layout or computeLayout()
     local font = layout.fontSmall
     local fontHeight = layout.hgtSmall
+    local fade = self.fadeAlpha or 1
 
     if self.sandboxMode then
         local title = getText("UI_QuickRestart_SandboxConflict_Title")
@@ -683,22 +845,22 @@ function QuickRestartPanel:render()
         local titleWidth = textManager:MeasureStringX(UIFont.Medium, title)
         local titleX = (self.width - titleWidth) / 2
 
-        self:drawText(title, titleX-1, titleY, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(title, titleX+1, titleY, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(title, titleX, titleY-1, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(title, titleX, titleY+1, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(title, titleX, titleY, 1, 1, 1, 1, UIFont.Medium)
+        self:drawText(title, titleX-1, titleY, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(title, titleX+1, titleY, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(title, titleX, titleY-1, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(title, titleX, titleY+1, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(title, titleX, titleY, 1, 1, 1, fade, UIFont.Medium)
 
         local labelY = titleY + layout.hgtMedium + layout.gapTiny
         local label = getText("UI_QuickRestart_SandboxConflictPanel_Label")
         local labelWidth = textManager:MeasureStringX(font, label)
         local labelX = (self.width - labelWidth) / 2
-        self:drawText(label, labelX, labelY, 1, 1, 1, 1, font)
+        self:drawText(label, labelX, labelY, 1, 1, 1, fade, font)
 
         local lineY = labelY + fontHeight + layout.spacing
         for _, l in ipairs(self.subtitleLines) do
             local lx = (self.width - textManager:MeasureStringX(font, l)) / 2
-            self:drawText(l, lx, lineY, 1, 1, 1, 1, font)
+            self:drawText(l, lx, lineY, 1, 1, 1, fade, font)
             lineY = lineY + fontHeight + layout.gapTiny
         end
 
@@ -721,18 +883,18 @@ function QuickRestartPanel:render()
         local textWidth = textManager:MeasureStringX(UIFont.Medium, text)
         local x = (self.width - textWidth) / 2
 
-        self:drawText(text, x-1, y, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(text, x+1, y, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(text, x, y-1, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(text, x, y+1, 0, 0, 0, 0.5, UIFont.Medium)
-        self:drawText(text, x, y, 1, 1, 1, 1, UIFont.Medium)
+        self:drawText(text, x-1, y, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(text, x+1, y, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(text, x, y-1, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(text, x, y+1, 0, 0, 0, 0.5 * fade, UIFont.Medium)
+        self:drawText(text, x, y, 1, 1, 1, fade, UIFont.Medium)
 
         local function drawDisabledLabel(btn)
             if btn and btn.disabledLabel then
                 local lw = textManager:MeasureStringX(font, btn.disabledLabel)
                 local lx = btn:getX() + (btn:getWidth() - lw) / 2
                 local ly = btn:getY() + (btn:getHeight() - fontHeight) / 2
-                self:drawText(btn.disabledLabel, lx, ly, 0.6, 0.6, 0.6, 1, font)
+                self:drawText(btn.disabledLabel, lx, ly, 0.6, 0.6, 0.6, fade, font)
             end
         end
         drawDisabledLabel(self.freshButton)
