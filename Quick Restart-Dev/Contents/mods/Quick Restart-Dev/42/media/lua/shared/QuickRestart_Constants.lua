@@ -7,7 +7,6 @@ QuickRestartConstants.SPAWN_CLEAR = {
     RADIUS = 15,
     WINDOW_MS = 3000,
     SWEEP_INTERVAL_TICKS = 10,
-    POST_CHUNK_DELAY_TICKS = 5,
     QUIET_SWEEPS_TO_CLOSE = 3,
 }
 
