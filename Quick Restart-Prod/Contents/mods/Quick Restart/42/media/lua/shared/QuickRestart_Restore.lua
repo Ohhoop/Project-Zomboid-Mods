@@ -566,7 +566,7 @@ local function spawnPurgeTick()
                 sweepSpawnPurgeWindow(window)
             end
 
-            if now >= window.expiresAt then
+            if now >= window.expiresAt and window.sweeps >= settings.MIN_SWEEPS_BEFORE_EXPIRY then
                 closeSpawnPurgeWindow(key, "expired")
             elseif window.totalRemoved > 0 and window.quietSweeps >= settings.QUIET_SWEEPS_TO_CLOSE then
                 closeSpawnPurgeWindow(key, "quiet")
