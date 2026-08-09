@@ -503,12 +503,19 @@ local function sweepSpawnPurgeWindow(window)
                 local deltaX = zombieX - window.x
                 local deltaY = zombieY - window.y
                 if (deltaX * deltaX) + (deltaY * deltaY) <= squaredRadius then
-                    local okRemove = pcall(function()
-                        zombie:removeFromWorld()
-                        zombie:removeFromSquare()
+                    local isReanimated = false
+                    pcall(function()
+                        isReanimated = zombie:isReanimatedPlayer() == true
                     end)
-                    if okRemove then
-                        removed = removed + 1
+
+                    if not isReanimated then
+                        local okRemove = pcall(function()
+                            zombie:removeFromWorld()
+                            zombie:removeFromSquare()
+                        end)
+                        if okRemove then
+                            removed = removed + 1
+                        end
                     end
                 end
             end
