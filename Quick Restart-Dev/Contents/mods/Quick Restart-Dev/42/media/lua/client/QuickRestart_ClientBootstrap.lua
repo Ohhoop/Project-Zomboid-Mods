@@ -1,3 +1,4 @@
+LuaEventManager.AddEvent("OnQuickRestartSnapshotCaptured")
 LuaEventManager.AddEvent("OnQuickRestartBeforeApply")
 LuaEventManager.AddEvent("OnQuickRestartAfterApply")
 

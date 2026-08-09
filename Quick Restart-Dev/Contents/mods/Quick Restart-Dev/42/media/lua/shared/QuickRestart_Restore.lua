@@ -3,6 +3,16 @@ QuickRestartRestore._serverClothingTasks = QuickRestartRestore._serverClothingTa
 QuickRestartRestore._serverClothingTickRegistered = QuickRestartRestore._serverClothingTickRegistered == true
 QuickRestartRestore._spawnPurgeWindows = QuickRestartRestore._spawnPurgeWindows or {}
 QuickRestartRestore._spawnPurgeTickRegistered = QuickRestartRestore._spawnPurgeTickRegistered == true
+QuickRestartRestore._spawnPurgeExemptModDataKeys = QuickRestartRestore._spawnPurgeExemptModDataKeys or {}
+
+function QuickRestartRestore.registerSpawnPurgeExemptModDataKey(key)
+    if type(key) ~= "string" or key == "" then
+        return false
+    end
+
+    QuickRestartRestore._spawnPurgeExemptModDataKeys[key] = true
+    return true
+end
 
 local function applyKnownRecipes(player, recipes)
     if not player or type(recipes) ~= "table" then
@@ -263,19 +273,37 @@ local function deepCopySupportedValue(value, visited)
     return copy
 end
 
+local function resolveModOwnedModDataKeys()
+    local keys = {}
+
+    pcall(function()
+        if QuickRestartValidate and QuickRestartValidate.getModOwnedModDataKeys then
+            for key in pairs(QuickRestartValidate.getModOwnedModDataKeys()) do
+                keys[key] = true
+            end
+        end
+    end)
+
+    return keys
+end
+
 local function applySnapshotTableIntoTarget(target, source)
     if type(target) ~= "table" or type(source) ~= "table" then
         return false
     end
 
+    local modOwnedKeys = resolveModOwnedModDataKeys()
+
     for key, value in pairs(source) do
-        local valueType = type(value)
-        if valueType == "string" or valueType == "number" or valueType == "boolean" then
-            target[key] = value
-        elseif valueType == "table" then
-            local copy = deepCopySupportedValue(value, {})
-            if copy ~= nil then
-                target[key] = copy
+        if not modOwnedKeys[key] then
+            local valueType = type(value)
+            if valueType == "string" or valueType == "number" or valueType == "boolean" then
+                target[key] = value
+            elseif valueType == "table" then
+                local copy = deepCopySupportedValue(value, {})
+                if copy ~= nil then
+                    target[key] = copy
+                end
             end
         end
     end
@@ -473,6 +501,34 @@ local function resolveSpawnPurgeOrigin(window)
     return true
 end
 
+local function hasSpawnPurgeExemptModData(zombie)
+    local exemptKeys = QuickRestartRestore._spawnPurgeExemptModDataKeys
+
+    local hasKeys = false
+    for _ in pairs(exemptKeys) do
+        hasKeys = true
+        break
+    end
+    if not hasKeys then
+        return false
+    end
+
+    local exempt = false
+    pcall(function()
+        local modData = zombie:getModData()
+        if type(modData) == "table" then
+            for key in pairs(exemptKeys) do
+                if modData[key] ~= nil then
+                    exempt = true
+                    return
+                end
+            end
+        end
+    end)
+
+    return exempt
+end
+
 local function sweepSpawnPurgeWindow(window)
     local okCell, cell = pcall(getCell)
     if not okCell or not cell or not cell.getZombieList then
@@ -508,7 +564,7 @@ local function sweepSpawnPurgeWindow(window)
                         isReanimated = zombie:isReanimatedPlayer() == true
                     end)
 
-                    if not isReanimated then
+                    if not isReanimated and not hasSpawnPurgeExemptModData(zombie) then
                         local okRemove = pcall(function()
                             zombie:removeFromWorld()
                             zombie:removeFromSquare()

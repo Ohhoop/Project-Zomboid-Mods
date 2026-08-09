@@ -749,6 +749,98 @@ local EXCLUDED_SANDBOX_OPTIONS = {
     NegativeTraitsPenalty = true,
 }
 
+local sandboxRollExclusions = {}
+
+function QuickRestartRandomizer.registerSandboxRollExclusion(prefix)
+    if type(prefix) ~= "string" or prefix == "" then
+        return false
+    end
+
+    sandboxRollExclusions[prefix] = true
+    return true
+end
+
+local function isExcludedSandboxOption(name)
+    if EXCLUDED_SANDBOX_OPTIONS[name] then
+        return true
+    end
+
+    for prefix in pairs(sandboxRollExclusions) do
+        if string.find(name, prefix, 1, true) == 1 then
+            return true
+        end
+    end
+
+    return false
+end
+
+local activatedModIdSetCache = nil
+
+local function getActivatedModIdSet()
+    if activatedModIdSetCache then
+        return activatedModIdSetCache
+    end
+
+    local ids = nil
+    local ok = pcall(function()
+        local mods = getActivatedMods()
+        if mods and mods.size then
+            ids = {}
+            for i = 0, mods:size() - 1 do
+                local id = mods:get(i)
+                if id ~= nil and tostring(id) ~= "" then
+                    ids[tostring(id)] = true
+                end
+            end
+        end
+    end)
+
+    if ok and ids then
+        activatedModIdSetCache = ids
+        return ids
+    end
+
+    return {}
+end
+
+function QuickRestartRandomizer.isModSandboxOptionName(name)
+    if type(name) ~= "string" or name == "" then
+        return false
+    end
+
+    local prefix = string.match(name, "^([^%.]+)%.")
+    if not prefix then
+        return false
+    end
+
+    return getActivatedModIdSet()[prefix] == true
+end
+
+function QuickRestartRandomizer.hasModSandboxOptions()
+    local found = false
+
+    pcall(function()
+        local sandboxOptions = getSandboxOptions()
+        if not sandboxOptions then
+            return
+        end
+
+        for i = 1, sandboxOptions:getNumOptions() do
+            local option = sandboxOptions:getOptionByIndex(i - 1)
+            if option then
+                local name = nil
+                pcall(function() name = option:getName() end)
+                if QuickRestartRandomizer.isModSandboxOptionName(name) then
+                    found = true
+                    return
+                end
+            end
+        end
+    end)
+
+    return found
+end
+
 local ZOMBIE_RESPAWN_HOURS = {16.0, 72.0, 216.0, 0.0}
 local ZOMBIE_RESPAWN_UNSEEN_HOURS = {6.0, 16.0, 48.0, 0.0}
 local ZOMBIE_RESPAWN_MULTIPLIER = {0.5, 0.1, 0.05, 0.0}
@@ -849,8 +941,9 @@ function QuickRestartRandomizer.rollSandbox(sandboxTable, options)
     local RANDOM = QuickRestartRestartOptions.RANDOM
     local randomizeSandbox = sanitized.sandbox == RANDOM
     local randomizeZombies = sanitized.zombies == RANDOM
+    local randomizeSandboxMods = sanitized.sandboxMods == RANDOM
 
-    if not randomizeSandbox and not randomizeZombies then
+    if not randomizeSandbox and not randomizeZombies and not randomizeSandboxMods then
         return nil
     end
 
@@ -868,9 +961,17 @@ function QuickRestartRandomizer.rollSandbox(sandboxTable, options)
             if option then
                 local name = nil
                 pcall(function() name = option:getName() end)
-                if type(name) == "string" and name ~= "" and not EXCLUDED_SANDBOX_OPTIONS[name] then
+                if type(name) == "string" and name ~= "" and not isExcludedSandboxOption(name) then
                     local zombieOption = isZombieOptionName(name)
-                    local shouldRoll = (zombieOption and randomizeZombies) or (not zombieOption and randomizeSandbox)
+                    local modOption = not zombieOption and QuickRestartRandomizer.isModSandboxOptionName(name)
+                    local shouldRoll
+                    if zombieOption then
+                        shouldRoll = randomizeZombies
+                    elseif modOption then
+                        shouldRoll = randomizeSandboxMods
+                    else
+                        shouldRoll = randomizeSandbox
+                    end
                     if shouldRoll then
                         local value = rollSandboxOptionValue(option)
                         if value ~= nil then
@@ -887,7 +988,8 @@ function QuickRestartRandomizer.rollSandbox(sandboxTable, options)
 
         logInfo("rollSandbox randomized options=" .. tostring(rolledCount)
             .. " sandbox=" .. tostring(randomizeSandbox)
-            .. " zombies=" .. tostring(randomizeZombies))
+            .. " zombies=" .. tostring(randomizeZombies)
+            .. " sandboxMods=" .. tostring(randomizeSandboxMods))
 
         return rolled
     end)

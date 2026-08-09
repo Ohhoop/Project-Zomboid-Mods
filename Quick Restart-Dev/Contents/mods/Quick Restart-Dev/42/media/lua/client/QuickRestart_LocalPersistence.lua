@@ -43,9 +43,16 @@ local function restoreSavedSpawnRegion(data)
 
     if not mapSpawnSelect then
         QuickRestartLog.warn("checkPendingRestart restoreSavedSpawnRegion missing MapSpawnSelect requestedRegion=" .. tostring(savedRegionName))
-        if savedRegionName then
-            setSpawnRegion(savedRegionName)
-            getCore():setSelectedMap(tostring(savedRegionName))
+        local preparedRegionName = QuickRestartClientFlow.prepareSpawnRegion({
+            data = data,
+            mapSpawnSelect = nil,
+            sameWorld = false,
+            regionName = savedRegionName,
+        }, nil)
+        local finalRegionName = preparedRegionName or savedRegionName
+        if finalRegionName then
+            setSpawnRegion(finalRegionName)
+            getCore():setSelectedMap(tostring(finalRegionName))
         end
         return nil
     end
@@ -110,6 +117,23 @@ local function restoreSavedSpawnRegion(data)
         mapSpawnSelect.selectedRegion = selectedRegion
     else
         selectedRegion = mapSpawnSelect:useDefaultSpawnRegion()
+    end
+
+    local preparedRegionName, preparedRegion = QuickRestartClientFlow.prepareSpawnRegion({
+        data = data,
+        mapSpawnSelect = mapSpawnSelect,
+        sameWorld = false,
+        regionName = selectedRegion and selectedRegion.name or nil,
+    }, availableRegions)
+
+    if preparedRegionName then
+        if preparedRegion then
+            selectedRegion = preparedRegion
+        end
+        QuickRestartLog.info("checkPendingRestart spawn region preparer override"
+            .. " requestedRegion=" .. tostring(preparedRegionName)
+            .. " applied=" .. tostring(preparedRegion ~= nil)
+            .. " finalSelectedRegion=" .. tostring(selectedRegion and selectedRegion.name or nil))
     end
 
     if selectedRegion and selectedRegion.name then

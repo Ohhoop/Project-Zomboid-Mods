@@ -1,5 +1,20 @@
 QuickRestartValidate = QuickRestartValidate or {}
 
+local modOwnedModDataKeys = {}
+
+function QuickRestartValidate.registerModOwnedModDataKey(key)
+    if type(key) ~= "string" or key == "" then
+        return false
+    end
+
+    modOwnedModDataKeys[key] = true
+    return true
+end
+
+function QuickRestartValidate.getModOwnedModDataKeys()
+    return modOwnedModDataKeys
+end
+
 local captureGuards = {}
 
 function QuickRestartValidate.addCaptureGuard(guard)
@@ -148,6 +163,16 @@ local function copySerializableTable(value, visited)
     return copied
 end
 
+local function stripModOwnedRootKeys(target)
+    if type(target) ~= "table" then
+        return
+    end
+
+    for key in pairs(modOwnedModDataKeys) do
+        target[key] = nil
+    end
+end
+
 function QuickRestartValidate.validateSnapshotData(data)
     if type(data) ~= "table" then
         return false, "snapshot_not_table"
@@ -248,6 +273,10 @@ function QuickRestartValidate.validateSnapshotData(data)
 
     if data.options ~= nil and type(data.options) ~= "table" then
         return false, "invalid_options"
+    end
+
+    if data.compat ~= nil and type(data.compat) ~= "table" then
+        return false, "invalid_compat"
     end
 
     if data.seed ~= nil and (not isNonEmptyString(data.seed) or #data.seed > 16) then
@@ -391,10 +420,16 @@ function QuickRestartValidate.normalizeSnapshotData(data)
     if type(data.modData) == "table" then
         if type(data.modData.player) == "table" then
             normalized.modData.player = copySerializableTable(data.modData.player, {})
+            stripModOwnedRootKeys(normalized.modData.player)
         end
         if type(data.modData.descriptor) == "table" then
             normalized.modData.descriptor = copySerializableTable(data.modData.descriptor, {})
+            stripModOwnedRootKeys(normalized.modData.descriptor)
         end
+    end
+
+    if type(data.compat) == "table" then
+        normalized.compat = copySerializableTable(data.compat, {})
     end
 
     if type(data.restoreDomains) == "table" then

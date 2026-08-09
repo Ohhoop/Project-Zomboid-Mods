@@ -1,4 +1,69 @@
 QuickRestartClientFlow = QuickRestartClientFlow or {}
+QuickRestartClientFlow._spawnRegionPreparers = QuickRestartClientFlow._spawnRegionPreparers or {}
+
+function QuickRestartClientFlow.registerSpawnRegionPreparer(fn)
+    if type(fn) ~= "function" then
+        return false
+    end
+
+    for _, existing in ipairs(QuickRestartClientFlow._spawnRegionPreparers) do
+        if existing == fn then
+            return true
+        end
+    end
+
+    QuickRestartClientFlow._spawnRegionPreparers[#QuickRestartClientFlow._spawnRegionPreparers + 1] = fn
+    return true
+end
+
+function QuickRestartClientFlow.runSpawnRegionPreparers(context)
+    for _, preparer in ipairs(QuickRestartClientFlow._spawnRegionPreparers) do
+        local ok, result = pcall(preparer, context)
+        if not ok then
+            QuickRestartLog.warn("spawn region preparer failed error=" .. tostring(result))
+        elseif type(result) == "string" and result ~= "" then
+            return result
+        end
+    end
+
+    return nil
+end
+
+function QuickRestartClientFlow.prepareSpawnRegion(context, availableRegions)
+    local preparedRegionName = QuickRestartClientFlow.runSpawnRegionPreparers(context)
+    if type(preparedRegionName) ~= "string" or preparedRegionName == "" then
+        return nil, nil
+    end
+
+    local mapSpawnSelect = context.mapSpawnSelect
+    local replacement = nil
+
+    if mapSpawnSelect and mapSpawnSelect.listbox and type(mapSpawnSelect.listbox.items) == "table" then
+        for index, entry in ipairs(mapSpawnSelect.listbox.items) do
+            local region = entry.item and entry.item.region or nil
+            if region and region.name == preparedRegionName then
+                mapSpawnSelect.listbox.selected = index
+                replacement = region
+                break
+            end
+        end
+    end
+
+    if not replacement and type(availableRegions) == "table" then
+        for _, region in ipairs(availableRegions) do
+            if region and region.name == preparedRegionName then
+                replacement = region
+                break
+            end
+        end
+    end
+
+    if replacement and mapSpawnSelect then
+        mapSpawnSelect.selectedRegion = replacement
+    end
+
+    return preparedRegionName, replacement
+end
 
 local function summarizeSnapshot(snapshot)
     if type(snapshot) ~= "table" then
@@ -301,6 +366,20 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
             .. " finalSelectedRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil)
             .. " usedDefault=" .. tostring(usedDefault)
             .. " listboxSelectedIndex=" .. tostring(mapSel.listbox and mapSel.listbox.selected or nil))
+
+        local preparedRegionName, preparedRegion = QuickRestartClientFlow.prepareSpawnRegion({
+            data = data,
+            mapSpawnSelect = mapSel,
+            sameWorld = true,
+            regionName = mapSel.selectedRegion and mapSel.selectedRegion.name or nil,
+        }, availableRegions)
+
+        if preparedRegionName then
+            QuickRestartLog.info("mp client sameWorld spawn region preparer override"
+                .. " requestedRegion=" .. tostring(preparedRegionName)
+                .. " applied=" .. tostring(preparedRegion ~= nil)
+                .. " finalSelectedRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil))
+        end
 
         if isMultiplayer() and data.traits and #data.traits > 0 and coop.charCreationProfession then
             for _, traitStr in ipairs(data.traits) do
