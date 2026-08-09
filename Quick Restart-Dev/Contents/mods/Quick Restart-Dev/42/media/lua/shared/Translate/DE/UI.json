@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Behalten: verwendet die gespeicherten Zombie-Einstellungen erneut.\nZufällig: randomisiert die Zombie-Einstellungen innerhalb gültiger Werte. Nur Neue Welt. Diese Wahl hat bei Zombies immer Vorrang vor der Sandbox-Option.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Behalten: verwendet die gespeicherten Sandbox-Einstellungen erneut.\nZufällig: randomisiert alle Sandbox-Einstellungen außer den Zombies, die der Zombies-Option folgen. Nur Neue Welt.",
     "UI_QuickRestart_Options_Zombies_Warning": "Dies randomisiert die Zombie-Einstellungen komplett.\nDas Ergebnis kann extrem ausfallen, von harmlos\nbis albtraumhaft. Auf eigene Gefahr.\n\nFortfahren?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Dies randomisiert die Sandbox-Einstellungen komplett.\nEs ist wirklich zufällig: Die Welt kann extrem\noder kaum spielbar werden. Auf eigene Gefahr.\n\nFortfahren?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Dies randomisiert die Sandbox-Einstellungen komplett.\nEs ist wirklich zufällig: Die Welt kann extrem\noder kaum spielbar werden. Auf eigene Gefahr.\n\nFortfahren?",
+    "UI_QuickRestart_Options_SandboxMods": "Mod-Sandbox-Einstellungen",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Behalten: verwendet die gespeicherten Sandbox-Einstellungen von Mods erneut.\nZufällig: randomisiert die von Mods hinzugefügten Sandbox-Einstellungen. Nur Neue Welt.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Dies randomisiert die von Mods hinzugefügten\nSandbox-Einstellungen komplett. Es ist wirklich zufällig:\nDas Ergebnis kann extrem oder kaum spielbar ausfallen. Auf eigene Gefahr.\n\nFortfahren?"
 }

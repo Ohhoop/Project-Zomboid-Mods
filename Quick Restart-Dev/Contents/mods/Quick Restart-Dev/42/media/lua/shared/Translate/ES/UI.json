@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Mantener: reutiliza los ajustes de zombis guardados.\nAleatorio: aleatoriza los ajustes de zombis dentro de valores válidos. Solo Mundo nuevo. Esta elección siempre tiene prioridad sobre la opción Sandbox para los zombis.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Mantener: reutiliza los ajustes sandbox guardados.\nAleatorio: aleatoriza todos los ajustes sandbox excepto los zombis, que siguen la opción Zombis. Solo Mundo nuevo.",
     "UI_QuickRestart_Options_Zombies_Warning": "Esto aleatorizará por completo los ajustes de zombis.\nEl resultado puede ser extremo, desde inofensivo\nhasta pesadillesco. Bajo tu responsabilidad.\n\n¿Continuar?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Esto aleatorizará por completo los ajustes sandbox.\nEs realmente aleatorio: el mundo puede resultar\nextremo o apenas jugable. Bajo tu responsabilidad.\n\n¿Continuar?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Esto aleatorizará por completo los ajustes sandbox.\nEs realmente aleatorio: el mundo puede resultar\nextremo o apenas jugable. Bajo tu responsabilidad.\n\n¿Continuar?",
+    "UI_QuickRestart_Options_SandboxMods": "Ajustes sandbox de mods",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Mantener: reutiliza los ajustes sandbox guardados de los mods.\nAleatorio: aleatoriza los ajustes sandbox añadidos por los mods. Solo Mundo nuevo.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Esto aleatorizará por completo los ajustes sandbox\nañadidos por los mods. Es realmente aleatorio: el resultado\npuede ser extremo o apenas jugable. Bajo tu responsabilidad.\n\n¿Continuar?"
 }

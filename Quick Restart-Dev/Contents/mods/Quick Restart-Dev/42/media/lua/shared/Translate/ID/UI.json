@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Pertahankan: menggunakan kembali pengaturan zombi yang tersimpan.\nAcak: mengacak pengaturan zombi dalam nilai yang valid. Hanya untuk Dunia Baru. Pilihan ini selalu diutamakan daripada opsi Sandbox untuk zombi.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Pertahankan: menggunakan kembali pengaturan sandbox yang tersimpan.\nAcak: mengacak semua pengaturan sandbox kecuali zombi, yang mengikuti opsi Zombi. Hanya untuk Dunia Baru.",
     "UI_QuickRestart_Options_Zombies_Warning": "Ini akan mengacak pengaturan zombi sepenuhnya.\nHasilnya bisa ekstrem, dari tidak berbahaya\nsampai mimpi buruk. Tanggung risikonya sendiri.\n\nLanjutkan?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Ini akan mengacak pengaturan sandbox sepenuhnya.\nBenar-benar acak: dunia bisa menjadi ekstrem atau\nnyaris tak bisa dimainkan. Tanggung risikonya sendiri.\n\nLanjutkan?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Ini akan mengacak pengaturan sandbox sepenuhnya.\nBenar-benar acak: dunia bisa menjadi ekstrem atau\nnyaris tak bisa dimainkan. Tanggung risikonya sendiri.\n\nLanjutkan?",
+    "UI_QuickRestart_Options_SandboxMods": "Pengaturan sandbox mod",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Pertahankan: menggunakan kembali pengaturan sandbox mod yang tersimpan.\nAcak: mengacak pengaturan sandbox yang ditambahkan oleh mod. Hanya untuk Dunia Baru.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Ini akan mengacak sepenuhnya pengaturan sandbox\nyang ditambahkan oleh mod. Benar-benar acak: hasilnya bisa\nekstrem atau nyaris tak bisa dimainkan. Tanggung risikonya sendiri.\n\nLanjutkan?"
 }

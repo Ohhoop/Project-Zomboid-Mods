@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Mantieni: riutilizza le impostazioni degli zombie salvate.\nCasuale: rende casuali le impostazioni degli zombie entro valori validi. Solo Nuovo mondo. Questa scelta ha sempre priorità sull'opzione Sandbox per gli zombie.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Mantieni: riutilizza le impostazioni sandbox salvate.\nCasuale: rende casuali tutte le impostazioni sandbox tranne gli zombie, che seguono l'opzione Zombie. Solo Nuovo mondo.",
     "UI_QuickRestart_Options_Zombies_Warning": "Le impostazioni degli zombie saranno del tutto casuali.\nIl risultato può essere estremo, dall'innocuo\nfino all'incubo. A tuo rischio e pericolo.\n\nContinuare?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Le impostazioni sandbox saranno del tutto casuali.\nÈ davvero casuale: il mondo può risultare estremo\no a malapena giocabile. A tuo rischio e pericolo.\n\nContinuare?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Le impostazioni sandbox saranno del tutto casuali.\nÈ davvero casuale: il mondo può risultare estremo\no a malapena giocabile. A tuo rischio e pericolo.\n\nContinuare?",
+    "UI_QuickRestart_Options_SandboxMods": "Impostazioni sandbox delle mod",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Mantieni: riutilizza le impostazioni sandbox salvate delle mod.\nCasuale: rende casuali le impostazioni sandbox aggiunte dalle mod. Solo Nuovo mondo.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Le impostazioni sandbox aggiunte dalle mod\nsaranno del tutto casuali. È davvero casuale: il risultato\npuò essere estremo o a malapena giocabile. A tuo rischio e pericolo.\n\nContinuare?"
 }

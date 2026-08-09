@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Koru: kaydedilen zombi ayarlarını yeniden kullanır.\nRastgele: zombi ayarlarını geçerli değerler dahilinde rastgele belirler. Yalnızca Yeni Dünya için. Bu seçim, zombiler konusunda her zaman Sandbox seçeneğine üstün gelir.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Koru: kaydedilen sandbox ayarlarını yeniden kullanır.\nRastgele: zombiler hariç tüm sandbox ayarlarını rastgele belirler; zombiler Zombiler seçeneğini izler. Yalnızca Yeni Dünya için.",
     "UI_QuickRestart_Options_Zombies_Warning": "Bu, zombi ayarlarını tamamen rastgele belirleyecek.\nSonuç zararsızdan kabus gibisine kadar\nuç noktalarda olabilir. Risk sana ait.\n\nDevam edilsin mi?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Bu, sandbox ayarlarını tamamen rastgele belirleyecek.\nGerçekten rastgele: dünya uç noktalara kaçabilir\nya da zar zor oynanabilir olabilir. Risk sana ait.\n\nDevam edilsin mi?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Bu, sandbox ayarlarını tamamen rastgele belirleyecek.\nGerçekten rastgele: dünya uç noktalara kaçabilir\nya da zar zor oynanabilir olabilir. Risk sana ait.\n\nDevam edilsin mi?",
+    "UI_QuickRestart_Options_SandboxMods": "Mod sandbox ayarları",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Koru: kaydedilen mod sandbox ayarlarını yeniden kullanır.\nRastgele: modların eklediği sandbox ayarlarını rastgele belirler. Yalnızca Yeni Dünya için.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Bu, modların eklediği sandbox ayarlarını tamamen\nrastgele belirleyecek. Gerçekten rastgele: sonuç uç noktalara\nkaçabilir ya da zar zor oynanabilir olabilir. Risk sana ait.\n\nDevam edilsin mi?"
 }

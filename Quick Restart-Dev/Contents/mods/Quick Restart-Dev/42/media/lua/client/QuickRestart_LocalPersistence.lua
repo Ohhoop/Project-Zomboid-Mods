@@ -286,6 +286,7 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
     if data.sandbox then
         local sandboxRollOptions = QuickRestartRestartOptions.sanitize(data.options)
         if sandboxRollOptions.sandbox == QuickRestartRestartOptions.RANDOM
+            or sandboxRollOptions.sandboxMods == QuickRestartRestartOptions.RANDOM
             or sandboxRollOptions.zombies == QuickRestartRestartOptions.RANDOM then
             local ok, rolledSandbox = pcall(QuickRestartRandomizer.rollSandbox, data.sandbox, sandboxRollOptions)
             if ok and type(rolledSandbox) == "table" then

@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Zachowaj: ponownie używa zapisanych ustawień zombie.\nLosowo: losuje ustawienia zombie w ramach prawidłowych wartości. Tylko Nowy świat. Ten wybór ma zawsze pierwszeństwo przed opcją \"Ustawienia piaskownicy\" w kwestii zombie.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Zachowaj: ponownie używa zapisanych ustawień piaskownicy.\nLosowo: losuje wszystkie ustawienia piaskownicy z wyjątkiem zombie, które podlegają opcji \"Zombie\". Tylko Nowy świat.",
     "UI_QuickRestart_Options_Zombies_Warning": "To całkowicie wylosuje ustawienia zombie.\nWynik może być skrajny, od niegroźnego\npo koszmarny. Na własne ryzyko.\n\nKontynuować?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "To całkowicie wylosuje ustawienia piaskownicy.\nTo naprawdę losowe: świat może okazać się skrajnym\nlub ledwo grywalnym. Na własne ryzyko.\n\nKontynuować?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "To całkowicie wylosuje ustawienia piaskownicy.\nTo naprawdę losowe: świat może okazać się skrajnym\nlub ledwo grywalnym. Na własne ryzyko.\n\nKontynuować?",
+    "UI_QuickRestart_Options_SandboxMods": "Ustawienia piaskownicy modów",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Zachowaj: ponownie używa zapisanych ustawień piaskownicy z modów.\nLosowo: losuje ustawienia piaskownicy dodane przez mody. Tylko Nowy świat.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "To całkowicie wylosuje ustawienia piaskownicy\ndodane przez mody. To naprawdę losowe: wynik może\nokazać się skrajny lub ledwo grywalny. Na własne ryzyko.\n\nKontynuować?"
 }

@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Keep: reuse the saved zombie settings.\nRandom: randomizes the zombie settings within valid values. Fresh World only. This choice always wins over the Sandbox option for zombies.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Keep: reuse the saved sandbox settings.\nRandom: randomizes all sandbox settings except zombies, which follow the Zombies option. Fresh World only.",
     "UI_QuickRestart_Options_Zombies_Warning": "This will fully randomize the zombie settings.\nThe result can be extreme, from harmless\nto nightmare. At your own risk.\n\nContinue?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "This will fully randomize the sandbox settings.\nIt is really random: the world can turn out\nextreme or barely playable. At your own risk.\n\nContinue?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "This will fully randomize the sandbox settings.\nIt is really random: the world can turn out\nextreme or barely playable. At your own risk.\n\nContinue?",
+    "UI_QuickRestart_Options_SandboxMods": "Mod sandbox settings",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Keep: reuse the saved sandbox settings from mods.\nRandom: randomizes the sandbox settings added by mods. Fresh World only.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "This will fully randomize the sandbox settings\nadded by mods. It is really random: the result\ncan turn out extreme or barely playable. At your own risk.\n\nContinue?"
 }

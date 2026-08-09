@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Garder : réutilise les réglages zombies sauvegardés.\nAléatoire : randomise les réglages zombies avec des valeurs valides. Nouveau monde seulement. Ce choix a toujours priorité sur l'option Sandbox pour les zombies.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Garder : réutilise les réglages sandbox sauvegardés.\nAléatoire : randomise tous les réglages sandbox sauf les zombies, qui suivent l'option Zombies. Nouveau monde seulement.",
     "UI_QuickRestart_Options_Zombies_Warning": "Ceci randomise complètement les réglages zombies.\nLe résultat peut être extrême, d'inoffensif\nà cauchemardesque. À vos risques et périls.\n\nContinuer ?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Ceci randomise complètement les réglages sandbox.\nC'est vraiment aléatoire : le monde peut devenir\nextrême ou à peine jouable. À vos risques et périls.\n\nContinuer ?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Ceci randomise complètement les réglages sandbox.\nC'est vraiment aléatoire : le monde peut devenir\nextrême ou à peine jouable. À vos risques et périls.\n\nContinuer ?",
+    "UI_QuickRestart_Options_SandboxMods": "Réglages sandbox des mods",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Garder : réutilise les réglages sandbox sauvegardés des mods.\nAléatoire : randomise les réglages sandbox ajoutés par les mods. Nouveau monde seulement.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Ceci randomise complètement les réglages sandbox\najoutés par les mods. C'est vraiment aléatoire : le résultat\npeut être extrême ou à peine jouable. À vos risques et périls.\n\nContinuer ?"
 }

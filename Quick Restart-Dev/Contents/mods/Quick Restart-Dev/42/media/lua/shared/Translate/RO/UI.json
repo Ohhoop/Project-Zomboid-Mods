@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Păstrează: refolosește setările pentru zombi salvate.\nAleatoriu: randomizează setările pentru zombi în limitele valorilor valide. Doar pentru Lume Nouă. Această alegere are întotdeauna prioritate față de opțiunea Sandbox pentru zombi.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Păstrează: refolosește setările sandbox salvate.\nAleatoriu: randomizează toate setările sandbox în afară de zombi, care urmează opțiunea Zombi. Doar pentru Lume Nouă.",
     "UI_QuickRestart_Options_Zombies_Warning": "Aceasta va randomiza complet setările pentru zombi.\nRezultatul poate fi extrem, de la inofensiv\npână la coșmar. Pe propria ta răspundere.\n\nContinui?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Aceasta va randomiza complet setările sandbox.\nEste cu adevărat aleatoriu: lumea poate ieși\nextremă sau abia jucabilă. Pe propria ta răspundere.\n\nContinui?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Aceasta va randomiza complet setările sandbox.\nEste cu adevărat aleatoriu: lumea poate ieși\nextremă sau abia jucabilă. Pe propria ta răspundere.\n\nContinui?",
+    "UI_QuickRestart_Options_SandboxMods": "Setări sandbox din moduri",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Păstrează: refolosește setările sandbox salvate din moduri.\nAleatoriu: randomizează setările sandbox adăugate de moduri. Doar pentru Lume Nouă.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Aceasta va randomiza complet setările sandbox\nadăugate de moduri. Este cu adevărat aleatoriu: rezultatul\npoate ieși extrem sau abia jucabil. Pe propria ta răspundere.\n\nContinui?"
 }

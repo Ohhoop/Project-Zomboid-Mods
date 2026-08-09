@@ -443,7 +443,7 @@ function QuickRestartValidate.normalizeSnapshotData(data)
 
     if type(data.options) == "table" then
         normalized.options = {}
-        for _, optionKey in ipairs({"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}) do
+        for _, optionKey in ipairs({"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}) do
             if data.options[optionKey] == "random" then
                 normalized.options[optionKey] = "random"
             else

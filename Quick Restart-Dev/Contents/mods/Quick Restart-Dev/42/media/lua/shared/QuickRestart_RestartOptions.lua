@@ -2,7 +2,7 @@ QuickRestartRestartOptions = QuickRestartRestartOptions or {}
 
 QuickRestartRestartOptions.KEEP = "keep"
 QuickRestartRestartOptions.RANDOM = "random"
-QuickRestartRestartOptions.CATEGORIES = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}
+QuickRestartRestartOptions.CATEGORIES = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}
 
 local KEEP = QuickRestartRestartOptions.KEEP
 local RANDOM = QuickRestartRestartOptions.RANDOM

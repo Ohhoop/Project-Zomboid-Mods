@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Mantenir: reutilitza els paràmetres de zombis desats.\nAleatori: aleatoritza els paràmetres de zombis dins de valors vàlids. Només Món nou. Aquesta tria sempre té prioritat sobre l'opció Sandbox per als zombis.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Mantenir: reutilitza els paràmetres sandbox desats.\nAleatori: aleatoritza tots els paràmetres sandbox excepte els zombis, que segueixen l'opció Zombis. Només Món nou.",
     "UI_QuickRestart_Options_Zombies_Warning": "Això aleatoritzarà del tot els paràmetres de zombis.\nEl resultat pot ser extrem, des d'inofensiu\nfins a un malson. Sota la teva responsabilitat.\n\nContinuar?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Això aleatoritzarà del tot els paràmetres sandbox.\nÉs realment aleatori: el món pot acabar sent\nextrem o quasi injugable. Sota la teva responsabilitat.\n\nContinuar?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Això aleatoritzarà del tot els paràmetres sandbox.\nÉs realment aleatori: el món pot acabar sent\nextrem o quasi injugable. Sota la teva responsabilitat.\n\nContinuar?",
+    "UI_QuickRestart_Options_SandboxMods": "Paràmetres sandbox dels mods",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Mantenir: reutilitza els paràmetres sandbox desats dels mods.\nAleatori: aleatoritza els paràmetres sandbox afegits pels mods. Només Món nou.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Això aleatoritzarà del tot els paràmetres sandbox\nafegits pels mods. És realment aleatori: el resultat\npot acabar sent extrem o quasi injugable. Sota la teva responsabilitat.\n\nContinuar?"
 }

@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "유지: 저장된 좀비 설정을 재사용합니다.\n무작위: 좀비 설정을 유효한 값 범위 내에서 무작위로 설정합니다. 새로운 세계 전용. 좀비에 관해서는 이 선택이 항상 샌드박스 옵션보다 우선합니다.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "유지: 저장된 샌드박스 설정을 재사용합니다.\n무작위: 좀비를 제외한 모든 샌드박스 설정을 무작위로 설정하며, 좀비는 좀비 옵션을 따릅니다. 새로운 세계 전용.",
     "UI_QuickRestart_Options_Zombies_Warning": "좀비 설정을 완전히 무작위로 설정합니다.\n결과는 무해한 수준부터 악몽 같은 수준까지\n극단적일 수 있습니다. 위험은 본인 부담입니다.\n\n계속하시겠습니까?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "샌드박스 설정을 완전히 무작위로 설정합니다.\n정말 무작위라서 세계가 극단적이거나 거의\n플레이 불가능할 수도 있습니다. 위험은 본인 부담입니다.\n\n계속하시겠습니까?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "샌드박스 설정을 완전히 무작위로 설정합니다.\n정말 무작위라서 세계가 극단적이거나 거의\n플레이 불가능할 수도 있습니다. 위험은 본인 부담입니다.\n\n계속하시겠습니까?",
+    "UI_QuickRestart_Options_SandboxMods": "모드 샌드박스 설정",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "유지: 모드의 저장된 샌드박스 설정을 재사용합니다.\n무작위: 모드가 추가한 샌드박스 설정을 무작위로 설정합니다. 새로운 세계 전용.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "모드가 추가한 샌드박스 설정을 완전히 무작위로\n설정합니다. 정말 무작위라서 결과가 극단적이거나 거의\n플레이 불가능할 수도 있습니다. 위험은 본인 부담입니다.\n\n계속하시겠습니까?"
 }

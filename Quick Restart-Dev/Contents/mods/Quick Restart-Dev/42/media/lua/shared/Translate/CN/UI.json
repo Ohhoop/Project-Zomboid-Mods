@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "保留：重新使用已保存的丧尸设置。\n随机：在有效值范围内随机化丧尸设置。仅限新世界。此选项在丧尸设置上始终优先于沙盒选项。",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "保留：重新使用已保存的沙盒设置。\n随机：随机化除丧尸外的所有沙盒设置，丧尸设置遵循丧尸选项。仅限新世界。",
     "UI_QuickRestart_Options_Zombies_Warning": "此操作将完全随机化丧尸设置。\n随机结果可能非常极端，从毫无威胁\n到噩梦难度都有可能。风险自负。\n\n是否继续？",
-    "UI_QuickRestart_Options_Sandbox_Warning": "此操作将完全随机化沙盒设置。\n这是真正的随机：世界可能变得非常极端，\n或几乎无法游玩。风险自负。\n\n是否继续？"
+    "UI_QuickRestart_Options_Sandbox_Warning": "此操作将完全随机化沙盒设置。\n这是真正的随机：世界可能变得非常极端，\n或几乎无法游玩。风险自负。\n\n是否继续？",
+    "UI_QuickRestart_Options_SandboxMods": "模组沙盒设置",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "保留：重新使用已保存的模组沙盒设置。\n随机：随机化模组新增的沙盒设置。仅限新世界。",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "此操作将完全随机化模组新增的沙盒设置。\n这是真正的随机：结果可能变得非常极端，\n或几乎无法游玩。风险自负。\n\n是否继续？"
 }

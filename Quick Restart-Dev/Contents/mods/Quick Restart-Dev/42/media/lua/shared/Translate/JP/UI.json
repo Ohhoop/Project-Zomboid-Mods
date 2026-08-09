@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "維持：保存されたゾンビ設定を再利用します。\nランダム：ゾンビ設定を有効な値の範囲内でランダム化します。新しい世界のみ。ゾンビに関しては、この選択が常にサンドボックスオプションより優先されます。",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "維持：保存されたサンドボックス設定を再利用します。\nランダム：ゾンビ以外のすべてのサンドボックス設定をランダム化します。ゾンビはゾンビオプションに従います。新しい世界のみ。",
     "UI_QuickRestart_Options_Zombies_Warning": "ゾンビ設定を完全にランダム化します。\n結果は無害から悪夢まで極端になる\n可能性があります。自己責任でどうぞ。\n\n続けますか？",
-    "UI_QuickRestart_Options_Sandbox_Warning": "サンドボックス設定を完全にランダム化します。\n本当にランダムです。極端な世界や、ほぼ\n遊べない世界になることも。自己責任でどうぞ。\n\n続けますか？"
+    "UI_QuickRestart_Options_Sandbox_Warning": "サンドボックス設定を完全にランダム化します。\n本当にランダムです。極端な世界や、ほぼ\n遊べない世界になることも。自己責任でどうぞ。\n\n続けますか？",
+    "UI_QuickRestart_Options_SandboxMods": "Modのサンドボックス設定",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "維持：Modの保存されたサンドボックス設定を再利用します。\nランダム：Modが追加したサンドボックス設定をランダム化します。新しい世界のみ。",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Modが追加したサンドボックス設定を完全に\nランダム化します。本当にランダムです。極端な結果や、\nほぼ遊べない結果になることも。自己責任でどうぞ。\n\n続けますか？"
 }

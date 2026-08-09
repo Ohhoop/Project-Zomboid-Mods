@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Manter: reutiliza as definições de zombies guardadas.\nAleatório: aleatoriza as definições de zombies dentro de valores válidos. Apenas Mundo novo. Esta escolha tem sempre prioridade sobre a opção Sandbox para os zombies.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Manter: reutiliza as definições sandbox guardadas.\nAleatório: aleatoriza todas as definições sandbox exceto os zombies, que seguem a opção Zombies. Apenas Mundo novo.",
     "UI_QuickRestart_Options_Zombies_Warning": "Isto aleatoriza por completo as definições de zombies.\nO resultado pode ser extremo, desde inofensivo\naté um verdadeiro pesadelo. Por tua conta e risco.\n\nContinuar?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Isto aleatoriza por completo as definições sandbox.\nÉ mesmo aleatório: o mundo pode ficar extremo\nou quase injogável. Por tua conta e risco.\n\nContinuar?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Isto aleatoriza por completo as definições sandbox.\nÉ mesmo aleatório: o mundo pode ficar extremo\nou quase injogável. Por tua conta e risco.\n\nContinuar?",
+    "UI_QuickRestart_Options_SandboxMods": "Definições sandbox de mods",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Manter: reutiliza as definições sandbox de mods guardadas.\nAleatório: aleatoriza as definições sandbox adicionadas por mods. Apenas Mundo novo.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Isto aleatoriza por completo as definições sandbox\nadicionadas por mods. É mesmo aleatório: o resultado\npode ficar extremo ou quase injogável. Por tua conta e risco.\n\nContinuar?"
 }

@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Säilytä: käyttää uudelleen tallennettuja zombiasetuksia.\nSatunnainen: satunnaistaa zombiasetukset kelvollisten arvojen rajoissa. Vain Uusi Maailma. Tämä valinta ohittaa aina Hiekkalaatikko-valinnan zombien osalta.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Säilytä: käyttää uudelleen tallennettuja hiekkalaatikkoasetuksia.\nSatunnainen: satunnaistaa kaikki hiekkalaatikkoasetukset paitsi zombit, jotka noudattavat Zombit-valintaa. Vain Uusi Maailma.",
     "UI_QuickRestart_Options_Zombies_Warning": "Tämä satunnaistaa zombiasetukset täysin.\nTulos voi olla äärimmäinen, harmittomasta\npainajaismaiseen. Omalla vastuulla.\n\nJatketaanko?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Tämä satunnaistaa hiekkalaatikkoasetukset täysin.\nSe on todella satunnaista: maailmasta voi tulla\näärimmäinen tai tuskin pelattava. Omalla vastuulla.\n\nJatketaanko?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Tämä satunnaistaa hiekkalaatikkoasetukset täysin.\nSe on todella satunnaista: maailmasta voi tulla\näärimmäinen tai tuskin pelattava. Omalla vastuulla.\n\nJatketaanko?",
+    "UI_QuickRestart_Options_SandboxMods": "Modien hiekkalaatikkoasetukset",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Säilytä: käyttää uudelleen modien tallennettuja hiekkalaatikkoasetuksia.\nSatunnainen: satunnaistaa modien lisäämät hiekkalaatikkoasetukset. Vain Uusi Maailma.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Tämä satunnaistaa modien lisäämät hiekkalaatikkoasetukset\ntäysin. Se on todella satunnaista: tulos voi olla\näärimmäinen tai tuskin pelattava. Omalla vastuulla.\n\nJatketaanko?"
 }

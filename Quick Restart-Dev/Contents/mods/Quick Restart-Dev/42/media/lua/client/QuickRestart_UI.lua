@@ -100,7 +100,25 @@ local OPTION_ROWS = {
     {category = "seed", labelKey = "UI_QuickRestart_Options_Seed", tooltipKey = "UI_QuickRestart_Options_Seed_Tooltip", freshWorldOnly = true},
     {category = "zombies", labelKey = "UI_QuickRestart_Options_Zombies", tooltipKey = "UI_QuickRestart_Options_Zombies_Tooltip", freshWorldOnly = true, confirmKey = "UI_QuickRestart_Options_Zombies_Warning"},
     {category = "sandbox", labelKey = "UI_QuickRestart_Options_Sandbox", tooltipKey = "UI_QuickRestart_Options_Sandbox_Tooltip", freshWorldOnly = true, confirmKey = "UI_QuickRestart_Options_Sandbox_Warning"},
+    {category = "sandboxMods", labelKey = "UI_QuickRestart_Options_SandboxMods", tooltipKey = "UI_QuickRestart_Options_SandboxMods_Tooltip", freshWorldOnly = true, confirmKey = "UI_QuickRestart_Options_SandboxMods_Warning", requiresModSandboxOptions = true},
 }
+
+local function getEffectiveOptionRows()
+    local rows = {}
+    for _, row in ipairs(OPTION_ROWS) do
+        local included = true
+        if row.requiresModSandboxOptions then
+            included = false
+            pcall(function()
+                included = QuickRestartRandomizer.hasModSandboxOptions() == true
+            end)
+        end
+        if included then
+            rows[#rows + 1] = row
+        end
+    end
+    return rows
+end
 
 local function computeLayout()
     local textManager = getTextManager()
@@ -516,7 +534,7 @@ function QuickRestartOptionsWindow:createChildren()
     local rowY = layout.marginY + layout.hgtMedium + layout.spacing
     self.optionRowButtons = {}
 
-    for _, row in ipairs(OPTION_ROWS) do
+    for _, row in ipairs(self.optionRows or OPTION_ROWS) do
         local category = row.category
         local valueLabel = self.restartOptions[category] == "random" and randomLabel or keepLabel
         local rowEnabled = not row.freshWorldOnly or self.freshWorldAllowed
@@ -547,7 +565,7 @@ function QuickRestartOptionsWindow:onOptionRowClick(category)
 
     if newValue == "random" then
         local row = nil
-        for _, candidate in ipairs(OPTION_ROWS) do
+        for _, candidate in ipairs(self.optionRows or OPTION_ROWS) do
             if candidate.category == category then
                 row = candidate
                 break
@@ -614,7 +632,7 @@ function QuickRestartOptionsWindow:render()
     self:drawText(title, titleX, titleY, 1, 1, 1, 1, layout.fontMedium)
 
     local tooltipText = nil
-    for _, row in ipairs(OPTION_ROWS) do
+    for _, row in ipairs(self.optionRows or OPTION_ROWS) do
         local button = self.optionRowButtons and self.optionRowButtons[row.category] or nil
         if button then
             local label = getText(row.labelKey)
@@ -653,8 +671,10 @@ function QuickRestartUI.openOptionsWindow(ownerPanel)
     local screenWidth = core:getScreenWidth()
     local screenHeight = core:getScreenHeight()
 
+    local optionRows = getEffectiveOptionRows()
+
     local labelWidth = 0
-    for _, row in ipairs(OPTION_ROWS) do
+    for _, row in ipairs(optionRows) do
         local rowLabelWidth = textManager:MeasureStringX(layout.fontSmall, getText(row.labelKey))
         if rowLabelWidth > labelWidth then
             labelWidth = rowLabelWidth
@@ -679,7 +699,7 @@ function QuickRestartUI.openOptionsWindow(ownerPanel)
         end
     end
     local windowHeight = layout.marginY + layout.hgtMedium + layout.spacing
-        + #OPTION_ROWS * layout.buttonHeight + (#OPTION_ROWS - 1) * layout.gapTiny
+        + #optionRows * layout.buttonHeight + (#optionRows - 1) * layout.gapTiny
         + layout.marginY
 
     local x = (screenWidth - windowWidth) / 2
@@ -698,6 +718,7 @@ function QuickRestartUI.openOptionsWindow(ownerPanel)
     local window = QuickRestartOptionsWindow:new(x, y, windowWidth, windowHeight)
     window.layout = layout
     window.valueWidth = valueWidth
+    window.optionRows = optionRows
     window.freshWorldAllowed = (ownerPanel and ownerPanel.canUseFreshWorld and ownerPanel.canUseFreshWorld()) == true
     window.restartOptions = (ownerPanel and ownerPanel.onGetRestartOptions and ownerPanel.onGetRestartOptions()) or {}
     window.onRestartOptionChanged = ownerPanel and ownerPanel.onRestartOptionChanged or nil

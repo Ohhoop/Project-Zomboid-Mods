@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Behouden: hergebruikt de opgeslagen zombie-instellingen.\nWillekeurig: randomiseert de zombie-instellingen binnen geldige waarden. Alleen Nieuwe Wereld. Deze keuze gaat voor zombies altijd boven de Sandbox-optie.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Behouden: hergebruikt de opgeslagen sandbox-instellingen.\nWillekeurig: randomiseert alle sandbox-instellingen behalve de zombies, die de Zombies-optie volgen. Alleen Nieuwe Wereld.",
     "UI_QuickRestart_Options_Zombies_Warning": "Dit randomiseert de zombie-instellingen volledig.\nHet resultaat kan extreem zijn, van onschuldig\ntot nachtmerrie. Op eigen risico.\n\nDoorgaan?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Dit randomiseert de sandbox-instellingen volledig.\nHet is echt willekeurig: de wereld kan extreem\nof nauwelijks speelbaar worden. Op eigen risico.\n\nDoorgaan?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Dit randomiseert de sandbox-instellingen volledig.\nHet is echt willekeurig: de wereld kan extreem\nof nauwelijks speelbaar worden. Op eigen risico.\n\nDoorgaan?",
+    "UI_QuickRestart_Options_SandboxMods": "Mod-sandbox-instellingen",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Behouden: hergebruikt de opgeslagen sandbox-instellingen van mods.\nWillekeurig: randomiseert de sandbox-instellingen die door mods zijn toegevoegd. Alleen Nieuwe Wereld.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Dit randomiseert de door mods toegevoegde\nsandbox-instellingen volledig. Het is echt willekeurig: het resultaat\nkan extreem of nauwelijks speelbaar worden. Op eigen risico.\n\nDoorgaan?"
 }

@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Manter: reutiliza as configurações de zumbis salvas.\nAleatório: aleatoriza as configurações de zumbis dentro de valores válidos. Apenas Mundo novo. Esta escolha sempre tem prioridade sobre a opção Sandbox para os zumbis.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Manter: reutiliza as configurações sandbox salvas.\nAleatório: aleatoriza todas as configurações sandbox exceto os zumbis, que seguem a opção Zumbis. Apenas Mundo novo.",
     "UI_QuickRestart_Options_Zombies_Warning": "As configurações de zumbis serão totalmente aleatórias.\nO resultado pode ser extremo, desde inofensivo\naté um verdadeiro pesadelo. Por sua conta e risco.\n\nContinuar?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "As configurações sandbox serão totalmente aleatórias.\nÉ realmente aleatório: o mundo pode ficar extremo\nou quase injogável. Por sua conta e risco.\n\nContinuar?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "As configurações sandbox serão totalmente aleatórias.\nÉ realmente aleatório: o mundo pode ficar extremo\nou quase injogável. Por sua conta e risco.\n\nContinuar?",
+    "UI_QuickRestart_Options_SandboxMods": "Configurações sandbox de mods",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Manter: reutiliza as configurações sandbox de mods salvas.\nAleatório: aleatoriza as configurações sandbox adicionadas por mods. Apenas Mundo novo.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "As configurações sandbox adicionadas por mods serão\ntotalmente aleatórias. É realmente aleatório: o resultado\npode ficar extremo ou quase injogável. Por sua conta e risco.\n\nContinuar?"
 }

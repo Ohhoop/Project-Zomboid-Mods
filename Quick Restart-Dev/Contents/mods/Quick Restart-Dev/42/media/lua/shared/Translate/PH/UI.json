@@ -34,5 +34,8 @@
     "UI_QuickRestart_Options_Zombies_Tooltip": "Panatilihin: gagamitin muli ang mga naka-save na setting ng zombie.\nRandom: ira-random ang mga setting ng zombie sa loob ng mga valid na value. Para sa Bagong Mundo lamang. Laging nananaig ang opsyong ito sa opsyong Sandbox para sa mga zombie.",
     "UI_QuickRestart_Options_Sandbox_Tooltip": "Panatilihin: gagamitin muli ang mga naka-save na setting ng sandbox.\nRandom: ira-random ang lahat ng setting ng sandbox maliban sa mga zombie, na susunod sa opsyong Mga zombie. Para sa Bagong Mundo lamang.",
     "UI_QuickRestart_Options_Zombies_Warning": "Ganap nitong ira-random ang mga setting ng zombie.\nMaaaring maging sukdulan ang resulta, mula sa\nhindi mapanganib hanggang bangungot. Ikaw ang bahala.\n\nMagpatuloy?",
-    "UI_QuickRestart_Options_Sandbox_Warning": "Ganap nitong ira-random ang mga setting ng sandbox.\nTalagang random ito: maaaring maging sukdulan\nang mundo o halos hindi malaro. Ikaw ang bahala.\n\nMagpatuloy?"
+    "UI_QuickRestart_Options_Sandbox_Warning": "Ganap nitong ira-random ang mga setting ng sandbox.\nTalagang random ito: maaaring maging sukdulan\nang mundo o halos hindi malaro. Ikaw ang bahala.\n\nMagpatuloy?",
+    "UI_QuickRestart_Options_SandboxMods": "Mga setting ng sandbox ng mga mod",
+    "UI_QuickRestart_Options_SandboxMods_Tooltip": "Panatilihin: gagamitin muli ang mga naka-save na setting ng sandbox ng mga mod.\nRandom: ira-random ang mga setting ng sandbox na idinagdag ng mga mod. Para sa Bagong Mundo lamang.",
+    "UI_QuickRestart_Options_SandboxMods_Warning": "Ganap nitong ira-random ang mga setting ng sandbox\nna idinagdag ng mga mod. Talagang random ito: maaaring\nmaging sukdulan ang resulta o halos hindi malaro. Ikaw ang bahala.\n\nMagpatuloy?"
 }
