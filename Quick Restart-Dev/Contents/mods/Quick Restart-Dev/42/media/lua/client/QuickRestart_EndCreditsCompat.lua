@@ -1,14 +1,10 @@
-local CREDITS_PANEL_GLOBALS = {
-    "TEC_CreditsUI",
-    "TLG_CreditsRoll",
-}
-
 local PANEL_GAP = 12
+local SUPPORTED_API_VERSION = 1
 
 local installed = false
-local ghostPlayerNum = nil
+local apiLogged = false
 local trackedPanel = nil
-local lastVanillaVisible = nil
+local lastCreditsVisible = nil
 
 local function logCompat(message)
     if QuickRestartLog and QuickRestartLog.info then
@@ -16,18 +12,56 @@ local function logCompat(message)
     end
 end
 
-local function getCreditsPanel(playerNum)
-    for _, name in ipairs(CREDITS_PANEL_GLOBALS) do
-        local holder = _G[name]
-        if type(holder) == "table" and type(holder.instance) == "table" then
-            local panel = holder.instance[playerNum]
-            if panel then
-                return panel, holder
-            end
-        end
+local function getApi()
+    local api = TheEndCredits
+    if type(api) ~= "table" or type(api.getPanel) ~= "function" then
+        return nil
     end
 
-    return nil, nil
+    if not apiLogged then
+        apiLogged = true
+        logCompat("api detected variant=" .. tostring(api.VARIANT)
+            .. " apiVersion=" .. tostring(api.API_VERSION)
+            .. " supportedApiVersion=" .. tostring(SUPPORTED_API_VERSION))
+    end
+
+    return api
+end
+
+local function callApi(name, playerNum)
+    local api = getApi()
+    if not api or type(api[name]) ~= "function" then
+        return nil
+    end
+
+    local ok, value = pcall(api[name], playerNum)
+    if not ok then
+        return nil
+    end
+
+    return value
+end
+
+local function hasCredits(playerNum)
+    return callApi("getPanel", playerNum) ~= nil
+end
+
+local function creditsHandedControlsBack(playerNum)
+    return callApi("areButtonsShowing", playerNum) == true
+        or callApi("isOver", playerNum) == true
+end
+
+local function creditsVisible(playerNum)
+    return callApi("isPlaying", playerNum) == true
+end
+
+local function creditsButtonsTop(playerNum)
+    local top = callApi("getButtonsTop", playerNum)
+    if type(top) ~= "number" then
+        return nil
+    end
+
+    return top
 end
 
 local function isPanelRemoved(panel)
@@ -42,83 +76,8 @@ local function isPanelRemoved(panel)
     return ok and removed == true
 end
 
-local function getVanillaPanel(playerNum)
-    if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
-        return nil
-    end
-
-    local panel = ISPostDeathUI.instance[playerNum]
-    if not panel or isPanelRemoved(panel) then
-        return nil
-    end
-
-    return panel
-end
-
-local function buildVanillaLines(playerObj)
-    local lines = {}
-
-    pcall(function()
-        local gameTime = getGameTime()
-        lines[#lines + 1] = gameTime:getDeathString(playerObj)
-
-        local kills = gameTime:getZombieKilledText(playerObj)
-        if kills then
-            lines[#lines + 1] = kills
-        end
-
-        local mode = gameTime:getGameModeText()
-        if mode then
-            lines[#lines + 1] = mode
-        end
-    end)
-
-    return lines
-end
-
-local function createHiddenVanillaPanel(playerObj, playerNum)
-    if getVanillaPanel(playerNum) then
-        return false
-    end
-
-    local ok, panel = pcall(function()
-        return ISPostDeathUI:new(playerNum)
-    end)
-    if not ok or not panel then
-        logCompat("failed to rebuild the vanilla death screen")
-        return false
-    end
-
-    panel.timeOfDeath = getTimestamp()
-    panel.lines = buildVanillaLines(playerObj)
-    panel:addToUIManager()
-    panel:setVisible(false)
-    ghostPlayerNum = playerNum
-
-    logCompat("rebuilt the vanilla death screen for player " .. tostring(playerNum))
-    return true
-end
-
-local function creditsButtonsShowing(creditsPanel)
-    local alpha = creditsPanel and creditsPanel.btnAlpha or nil
-    return type(alpha) == "number" and alpha > 0
-end
-
-local function creditsButtonsTop(creditsPanel)
-    if not creditsPanel or type(creditsPanel.manualButtons) ~= "table" then
-        return nil
-    end
-
-    local first = creditsPanel.manualButtons[1]
-    if type(first) ~= "table" or type(first.y) ~= "number" then
-        return nil
-    end
-
-    return first.y
-end
-
-local function liftPanelAboveCredits(panel, creditsPanel)
-    local top = creditsButtonsTop(creditsPanel)
+local function liftPanelAboveCredits(panel, playerNum)
+    local top = creditsButtonsTop(playerNum)
     if not top then
         return
     end
@@ -141,6 +100,29 @@ local function resolveLocalPlayerNum()
     return player:getPlayerNum()
 end
 
+local function beginFade(playerNum)
+    if QuickRestartUI.beginDeathScreenFade then
+        QuickRestartUI.beginDeathScreenFade(playerNum)
+    end
+end
+
+local function installDeathUiHook()
+    local baseIsDeathUiReady = QuickRestartClientFlow.isDeathUiReady
+
+    QuickRestartClientFlow.isDeathUiReady = function(player)
+        if not baseIsDeathUiReady(player) then
+            return false
+        end
+
+        local playerNum = player:getPlayerNum()
+        if not hasCredits(playerNum) then
+            return true
+        end
+
+        return creditsHandedControlsBack(playerNum)
+    end
+end
+
 local function installPanelHook()
     local baseCreateRestartPanel = QuickRestartUI.createRestartPanel
 
@@ -152,11 +134,14 @@ local function installPanelHook()
 
         trackedPanel = panel
 
-        local creditsPanel = getCreditsPanel(resolveLocalPlayerNum())
-        if creditsPanel then
-            liftPanelAboveCredits(panel, creditsPanel)
+        local playerNum = resolveLocalPlayerNum()
+        if hasCredits(playerNum) then
+            liftPanelAboveCredits(panel, playerNum)
             panel:setAlwaysOnTop(true)
             panel:bringToTop()
+            lastCreditsVisible = creditsVisible(playerNum)
+            beginFade(playerNum)
+            logCompat("restart panel anchored above the credits buttons for player " .. tostring(playerNum))
         end
 
         return panel
@@ -166,7 +151,7 @@ local function installPanelHook()
 
     QuickRestartUI.openOptionsWindow = function(ownerPanel)
         local window = baseOpenOptionsWindow(ownerPanel)
-        if window and getCreditsPanel(resolveLocalPlayerNum()) then
+        if window and hasCredits(resolveLocalPlayerNum()) then
             window:setAlwaysOnTop(true)
             window:bringToTop()
         end
@@ -175,42 +160,17 @@ local function installPanelHook()
     end
 end
 
-local function releaseGhostPanel()
-    if ghostPlayerNum ~= nil then
-        local panel = getVanillaPanel(ghostPlayerNum)
-        if panel then
-            pcall(function()
-                panel:removeFromUIManager()
-            end)
-        end
-        ghostPlayerNum = nil
-    end
-
-    trackedPanel = nil
-    lastVanillaVisible = nil
-end
-
-local function mirrorVanillaVisibility(playerNum, vanillaPanel)
-    if not trackedPanel or isPanelRemoved(trackedPanel) then
+local function mirrorCreditsVisibility(playerNum)
+    local visible = creditsVisible(playerNum)
+    if visible == lastCreditsVisible then
         return
     end
 
-    local ok, visible = pcall(function()
-        return vanillaPanel:isVisible()
-    end)
-    if not ok then
-        return
-    end
-
-    if visible == lastVanillaVisible then
-        return
-    end
-
-    lastVanillaVisible = visible
+    lastCreditsVisible = visible
     trackedPanel:setVisible(visible)
 
-    if visible and QuickRestartUI.beginDeathScreenFade then
-        QuickRestartUI.beginDeathScreenFade(playerNum)
+    if visible then
+        beginFade(playerNum)
     end
 end
 
@@ -220,48 +180,29 @@ local function updateCompat()
         return
     end
 
+    if not trackedPanel or isPanelRemoved(trackedPanel) then
+        return
+    end
+
     local playerNum = player:getPlayerNum()
-    local creditsPanel = getCreditsPanel(playerNum)
-    if not creditsPanel then
+    if not hasCredits(playerNum) then
         return
     end
 
-    if isPanelRemoved(creditsPanel) then
-        releaseGhostPanel()
-        return
-    end
-
-    local vanillaPanel = getVanillaPanel(playerNum)
-
-    if vanillaPanel then
-        if ghostPlayerNum == nil then
-            mirrorVanillaVisibility(playerNum, vanillaPanel)
-        end
-        return
-    end
-
-    if not creditsButtonsShowing(creditsPanel) then
-        return
-    end
-
-    if createHiddenVanillaPanel(player, playerNum) and QuickRestartUI.beginDeathScreenFade then
-        QuickRestartUI.beginDeathScreenFade(playerNum)
-    end
+    liftPanelAboveCredits(trackedPanel, playerNum)
+    mirrorCreditsVisibility(playerNum)
 end
 
-if not installed and QuickRestartUI and QuickRestartUI.createRestartPanel then
+if not installed
+    and QuickRestartUI and QuickRestartUI.createRestartPanel
+    and QuickRestartClientFlow and QuickRestartClientFlow.isDeathUiReady then
     installed = true
+    installDeathUiHook()
     installPanelHook()
     Events.OnPostUIDraw.Add(updateCompat)
 end
 
-Events.OnCreatePlayer.Add(function(playerNum)
-    releaseGhostPanel()
-
-    local creditsPanel = getCreditsPanel(playerNum)
-    if creditsPanel and creditsPanel.removeFromUIManager then
-        pcall(function()
-            creditsPanel:removeFromUIManager()
-        end)
-    end
+Events.OnCreatePlayer.Add(function()
+    trackedPanel = nil
+    lastCreditsVisible = nil
 end)
