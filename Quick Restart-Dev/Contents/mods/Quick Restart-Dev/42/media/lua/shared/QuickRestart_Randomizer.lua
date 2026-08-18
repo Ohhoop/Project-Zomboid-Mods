@@ -747,6 +747,7 @@ end
 local EXCLUDED_SANDBOX_OPTIONS = {
     CharacterFreePoints = true,
     NegativeTraitsPenalty = true,
+    RollsMultiplier = true,
 }
 
 local sandboxRollExclusions = {}

@@ -27,36 +27,11 @@ local function currentFadeProgress()
 end
 
 local function captureButtonBaseAlpha(button)
-    if not button or button.baseAlpha then
-        return
-    end
-
-    button.baseAlpha = {
-        background = button.backgroundColor and button.backgroundColor.a or 1,
-        border = button.borderColor and button.borderColor.a or 1,
-        text = button.textColor and button.textColor.a or 1,
-        mouseOver = button.backgroundColorMouseOver and button.backgroundColorMouseOver.a or 1,
-    }
+    return QuickRestartUIKit.captureButtonBaseAlpha(button)
 end
 
 local function applyAlphaToButton(button, progress)
-    if not button or not button.baseAlpha then
-        return
-    end
-
-    local base = button.baseAlpha
-    if button.backgroundColor then
-        button.backgroundColor.a = base.background * progress
-    end
-    if button.borderColor then
-        button.borderColor.a = base.border * progress
-    end
-    if button.textColor then
-        button.textColor.a = base.text * progress
-    end
-    if button.backgroundColorMouseOver then
-        button.backgroundColorMouseOver.a = base.mouseOver * progress
-    end
+    return QuickRestartUIKit.applyAlphaToButton(button, progress)
 end
 
 local function applyFadeToDeathScreen(progress)
@@ -121,24 +96,7 @@ local function getEffectiveOptionRows()
 end
 
 local function computeLayout()
-    local textManager = getTextManager()
-    local hgtSmall = textManager:getFontHeight(UIFont.Small)
-    local hgtMedium = textManager:getFontHeight(UIFont.Medium)
-    local gapTiny = math.ceil(hgtSmall * 0.25)
-    return {
-        fontSmall = UIFont.Small,
-        fontMedium = UIFont.Medium,
-        hgtSmall = hgtSmall,
-        hgtMedium = hgtMedium,
-        buttonHeight = hgtSmall + 3 * 2,
-        spacing = math.ceil(hgtSmall * 0.5),
-        marginX = hgtSmall,
-        marginY = math.ceil(hgtSmall * 0.75),
-        buttonTextPad = hgtSmall * 2,
-        gapTiny = gapTiny,
-        gapSmall = gapTiny * 2,
-        maxPanelWidth = getCore():getScreenWidth() * 0.35,
-    }
+    return QuickRestartUIKit.computeLayout()
 end
 
 local function resolveDeathButtonWidth()
@@ -211,11 +169,8 @@ function QuickRestartUI.updateDeathScreenFade()
 end
 
 function QuickRestartPanel:new(x, y, width, height)
-    local o = ISPanel:new(x, y, width, height)
-    setmetatable(o, self)
-    self.__index = self
-    o.backgroundColor = {r=0, g=0, b=0, a=0.3}
-    o.borderColor = {r=0, g=0, b=0, a=0}
+    local o = QuickRestartUIKit.newPanel(self, x, y, width, height,
+        {r=0, g=0, b=0, a=0.3}, QuickRestartUIKit.COLOR_TRANSPARENT)
     o.baseBackgroundAlpha = 0.3
     o.fadeAlpha = 1
     return o
@@ -232,11 +187,8 @@ function QuickRestartPanel:applyFadeAlpha(progress)
 end
 
 function QuickRestartTransitionOverlay:new(x, y, width, height)
-    local o = ISPanel:new(x, y, width, height)
-    setmetatable(o, self)
-    self.__index = self
-    o.backgroundColor = {r=0, g=0, b=0, a=0}
-    o.borderColor = {r=0, g=0, b=0, a=0}
+    local o = QuickRestartUIKit.newPanel(self, x, y, width, height,
+        QuickRestartUIKit.COLOR_TRANSPARENT, QuickRestartUIKit.COLOR_TRANSPARENT)
     o.message = getText("UI_QuickRestart_Title") .. "..."
     o.currentAlpha = 1
     o.targetAlpha = 1
@@ -504,12 +456,7 @@ end
 QuickRestartOptionsWindow = ISPanel:derive("QuickRestartOptionsWindow")
 
 function QuickRestartOptionsWindow:new(x, y, width, height)
-    local o = ISPanel:new(x, y, width, height)
-    setmetatable(o, self)
-    self.__index = self
-    o.backgroundColor = {r=0, g=0, b=0, a=0.6}
-    o.borderColor = {r=0.7, g=0.7, b=0.7, a=0.5}
-    return o
+    return QuickRestartUIKit.newWindowPanel(self, x, y, width, height)
 end
 
 function QuickRestartOptionsWindow:createChildren()
@@ -517,16 +464,9 @@ function QuickRestartOptionsWindow:createChildren()
 
     local layout = self.layout
 
-    local closeSize = layout.hgtSmall
-    self.closeButton = ISButton:new(self.width - closeSize - layout.gapTiny, layout.gapTiny, closeSize, closeSize, "X", self, function()
+    self.closeButton = QuickRestartUIKit.addCloseButton(self, layout, function()
         QuickRestartUI.closeOptionsWindow()
     end)
-    self.closeButton:initialise()
-    self.closeButton:instantiate()
-    self.closeButton.backgroundColor = {r=0, g=0, b=0, a=0}
-    self.closeButton.backgroundColorMouseOver = {r=0.6, g=0.15, b=0.15, a=0.8}
-    self.closeButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
-    self:addChild(self.closeButton)
 
     local keepLabel = getText("UI_QuickRestart_Options_Keep")
     local randomLabel = getText("UI_QuickRestart_Options_Random")
@@ -791,22 +731,7 @@ function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVars
 
     local subtitle = getText("UI_QuickRestart_SandboxConflict_Subtitle")
     local wrapWidth = self.width - layout.marginX * 2
-    local subtitleLines = {}
-    local line = ""
-    for word in subtitle:gmatch("%S+") do
-        local test = line == "" and word or (line .. " " .. word)
-        if textManager:MeasureStringX(layout.fontSmall, test) > wrapWidth then
-            if line ~= "" then
-                subtitleLines[#subtitleLines + 1] = line
-                line = word
-            else
-                subtitleLines[#subtitleLines + 1] = word
-            end
-        else
-            line = test
-        end
-    end
-    if line ~= "" then subtitleLines[#subtitleLines + 1] = line end
+    local subtitleLines = QuickRestartUIKit.wrapText(subtitle, layout.fontSmall, wrapWidth)
     self.subtitleLines = subtitleLines
 
     local buttonWidth = self.width - layout.marginX * 2

@@ -135,7 +135,12 @@ function QuickRestartClientFlow.isRestartSnapshotAvailable(data)
         return false
     end
 
-    local valid = QuickRestartValidate.validateSnapshotData(data)
+    local valid, reason = QuickRestartValidate.validateSnapshotData(data)
+    if not valid then
+        QuickRestartLog.warn("restart snapshot rejected reason=" .. tostring(reason)
+            .. " name=" .. tostring(data.name)
+            .. " profession=" .. tostring(data.profession))
+    end
     return valid == true
 end
 

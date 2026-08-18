@@ -261,8 +261,14 @@ function QuickRestartLocalPersistence.loadDataFromSaveFolder(playerIdentifier)
 end
 
 function QuickRestartLocalPersistence.doRestartNewWorld(data, playerIdentifier, sandboxVars)
+    if QuickRestartDevTools and QuickRestartDevTools.probeHeap then
+        QuickRestartDevTools.probeHeap("freshworld")
+    end
+
     QuickRestartSandbox.logSnapshot("doRestartNewWorld player=" .. tostring(playerIdentifier), sandboxVars)
+    QuickRestartHeapMargin.setRandomSignature(QuickRestartRestartOptions.worldRandomSignature(data.options))
     QuickRestartLocalPersistence.writeDataToFile(data, nil, sandboxVars)
+    QuickRestartPrimedClock.stamp()
 
     local oldFileName = QuickRestartLocalPersistence.getSaveFileNameForPlayer(playerIdentifier)
     local writer = getFileWriter(oldFileName, true, false)
@@ -271,7 +277,88 @@ function QuickRestartLocalPersistence.doRestartNewWorld(data, playerIdentifier, 
         writer:close()
     end
 
+    if QuickRestartLocalPersistence.offerMemoryRestart() then
+        return
+    end
+
     getCore():exitToMenu()
+end
+
+function QuickRestartLocalPersistence.offerMemoryRestart()
+    if not QuickRestartHeapGuard or not QuickRestartHeapGuard.shouldWarnPlayer() then
+        return false
+    end
+
+    if not QuickRestartMemoryWarningUI or not QuickRestartMemoryWarningUI.show then
+        return false
+    end
+
+    local level = QuickRestartHeapGuard.getDisplayLevel()
+    if not QuickRestartMemoryPrefs.shouldShowLevel(level) then
+        QuickRestartLog.info("doRestartNewWorld memory warning muted level=" .. tostring(level))
+        return false
+    end
+
+    local state = QuickRestartHeapGuard.getState()
+    QuickRestartHeapMargin.recordAnnouncement(state.restartsLeft, state.costKb,
+        (state.ceilingKb or 0) - (state.floorKb or 0))
+    QuickRestartLog.info("doRestartNewWorld memory warning"
+        .. " level=" .. tostring(level)
+        .. " measured=" .. tostring(QuickRestartHeapGuard.getLevel())
+        .. " restartsLeft=" .. string.format("%.2f", state.restartsLeft or -1)
+        .. " floorKb=" .. tostring(math.floor(state.floorKb or 0))
+        .. " costKb=" .. tostring(math.floor(state.costKb or 0))
+        .. " engineRestarts=" .. tostring(state.engineRestarts))
+
+    local shown = QuickRestartMemoryWarningUI.show(level, function()
+        QuickRestartLocalPersistence.quitGame()
+    end, function()
+        QuickRestartLog.info("memory warning declined, returning to the menu")
+        getCore():exitToMenu()
+    end)
+
+    if shown ~= nil then
+        QuickRestartMemoryPrefs.markShown(level)
+    end
+
+    return shown ~= nil
+end
+
+function QuickRestartLocalPersistence.quitGame()
+    local cooldown = false
+    pcall(function() cooldown = isQuitCooldown() end)
+    if cooldown then
+        QuickRestartLog.warn("quitGame ignored, quit cooldown is active")
+        return false
+    end
+
+    QuickRestartLog.info("memory warning accepted, quitting the game")
+    QuickRestartSeriesLearning.markCleanExit()
+
+    pcall(function() setGameSpeed(1) end)
+    pcall(function() pauseSoundAndMusic() end)
+    pcall(function() setShowPausedMessage(true) end)
+
+    local ok = pcall(function() getCore():quitToDesktop() end)
+    if not ok then
+        QuickRestartLog.warn("quitGame failed, falling back to the main menu")
+        getCore():exitToMenu()
+        return false
+    end
+
+    return true
+end
+
+function QuickRestartLocalPersistence.discardPendingRestart()
+    local writer = getFileWriter(QuickRestartLocalPersistence.getSaveFileName(), true, false)
+    if writer then
+        writer:write("")
+        writer:close()
+    end
+
+    QuickRestartPrimedClock.clear()
+    QuickRestartLog.info("checkPendingRestart discarded by the player")
+    return true
 end
 
 function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
@@ -281,6 +368,29 @@ function QuickRestartLocalPersistence.checkPendingRestart(saveDataTable)
         return nil
     end
 
+    local elapsedMs = QuickRestartPrimedClock.getElapsedMs()
+    if not QuickRestartPrimedClock.isFresh() then
+        QuickRestartLog.info("checkPendingRestart stale, asking the player"
+            .. " elapsedMs=" .. tostring(elapsedMs))
+
+        local asked = QuickRestartPrimedPromptUI.show(elapsedMs, function()
+            QuickRestartLocalPersistence.applyPendingRestart(data, saveDataTable)
+        end, function()
+            QuickRestartLocalPersistence.discardPendingRestart()
+        end)
+
+        if asked then
+            return data
+        end
+
+        QuickRestartLog.warn("checkPendingRestart prompt unavailable, applying the snapshot")
+    end
+
+    return QuickRestartLocalPersistence.applyPendingRestart(data, saveDataTable)
+end
+
+function QuickRestartLocalPersistence.applyPendingRestart(data, saveDataTable)
+    QuickRestartPrimedClock.clear()
     QuickRestartSandbox.logSnapshot("checkPendingRestart loaded", data.sandbox)
 
     if data.sandbox then
