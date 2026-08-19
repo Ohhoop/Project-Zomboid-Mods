@@ -546,6 +546,7 @@ local function buildOnNewGameOptions()
         persistAppliedData = function(data, saveFilePath)
             writeDataToFile(data, saveFilePath, data.sandbox)
             deleteDataFile()
+            QuickRestartModListGuard.restoreDefaultIfNeeded({requestReset = false})
         end,
     }
 end

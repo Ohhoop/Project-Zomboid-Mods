@@ -105,11 +105,21 @@ local function applyWorldSeed(data)
     end
 end
 
+local function abandonPendingRestart(saveDataTable, reason)
+    QuickRestartLocalPersistence.deletePendingDataFile()
+    if saveDataTable then
+        saveDataTable.saveData = nil
+    end
+    QuickRestartModListGuard.restoreDefaultIfNeeded({requestReset = true})
+    QuickRestartLog.warn("checkPendingRestart abandoned pending restart reason=" .. tostring(reason))
+end
+
 function QuickRestartRestartLaunch.doRestartNewWorld(data, playerIdentifier, sandboxVars)
     triggerEvent("OnQuickRestartFreshWorld")
 
     QuickRestartSandbox.logSnapshot("doRestartNewWorld player=" .. tostring(playerIdentifier), sandboxVars)
     QuickRestartHeapMargin.setRandomSignature(QuickRestartRestartOptions.worldRandomSignature(data.options))
+    QuickRestartModListGuard.prepareForFreshWorld()
     QuickRestartLocalPersistence.writeDataToFile(data, nil, sandboxVars)
     QuickRestartPrimedClock.stamp()
 
@@ -130,6 +140,7 @@ end
 function QuickRestartRestartLaunch.discardPendingRestart()
     QuickRestartLocalPersistence.deletePendingDataFile()
     QuickRestartPrimedClock.clear()
+    QuickRestartModListGuard.restoreDefaultIfNeeded({requestReset = true})
     QuickRestartLog.info("checkPendingRestart discarded by the player")
     return true
 end
@@ -137,6 +148,7 @@ end
 function QuickRestartRestartLaunch.checkPendingRestart(saveDataTable)
     local data = QuickRestartLocalPersistence.readDataFromFile()
     if not data or not data.name then
+        QuickRestartModListGuard.restoreDefaultIfNeeded({requestReset = true})
         QuickRestartLog.info("checkPendingRestart no pending data")
         return nil
     end
@@ -150,7 +162,10 @@ function QuickRestartRestartLaunch.checkPendingRestart(saveDataTable)
                 .. " elapsedMs=" .. tostring(elapsedMs))
 
             local asked = QuickRestartPrimedPromptUI.show(elapsedMs, function()
-                QuickRestartRestartLaunch.applyPendingRestart(data, saveDataTable)
+                local applied, applyError = pcall(QuickRestartRestartLaunch.applyPendingRestart, data, saveDataTable)
+                if not applied then
+                    abandonPendingRestart(saveDataTable, "applyPendingRestart error: " .. tostring(applyError))
+                end
             end, function()
                 QuickRestartRestartLaunch.discardPendingRestart()
             end)
@@ -163,7 +178,12 @@ function QuickRestartRestartLaunch.checkPendingRestart(saveDataTable)
         end
     end
 
-    return QuickRestartRestartLaunch.applyPendingRestart(data, saveDataTable)
+    local applied, result = pcall(QuickRestartRestartLaunch.applyPendingRestart, data, saveDataTable)
+    if not applied then
+        abandonPendingRestart(saveDataTable, "applyPendingRestart error: " .. tostring(result))
+        return nil
+    end
+    return result
 end
 
 function QuickRestartRestartLaunch.applyPendingRestart(data, saveDataTable)
@@ -205,7 +225,8 @@ function QuickRestartRestartLaunch.applyPendingRestart(data, saveDataTable)
     end
 
     if not MainScreen or not MainScreen.instance or not MainScreen.instance.desc then
-        return data
+        abandonPendingRestart(saveDataTable, "MainScreen descriptor unavailable")
+        return nil
     end
 
     local desc = MainScreen.instance.desc
@@ -260,7 +281,7 @@ function QuickRestartRestartLaunch.applyPendingRestart(data, saveDataTable)
         GameWindow.doRenderEvent(false)
         forceChangeState(LoadingQueueState.new())
     else
-        QuickRestartLog.warn("checkPendingRestart missing targetMap"
+        abandonPendingRestart(saveDataTable, "missing targetMap"
             .. " region=" .. tostring(data.region)
             .. " worldMap=" .. tostring(data.worldMap))
     end
