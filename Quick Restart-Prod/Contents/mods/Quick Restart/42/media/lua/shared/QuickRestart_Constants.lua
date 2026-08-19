@@ -1,8 +1,15 @@
 QuickRestartConstants = QuickRestartConstants or {}
 
 QuickRestartConstants.SCHEMA_VERSION = 2
-QuickRestartConstants.MOD_ID = "QuickRestart-DEV"
+QuickRestartConstants.MOD_ID = "QuickRestart"
 QuickRestartConstants.MODULE = "QuickRestart"
+QuickRestartConstants.SPAWN_CLEAR = {
+    RADIUS = 15,
+    WINDOW_MS = 3000,
+    SWEEP_INTERVAL_TICKS = 10,
+    MIN_SWEEPS_BEFORE_EXPIRY = 5,
+    QUIET_SWEEPS_TO_CLOSE = 3,
+}
 
 QuickRestartConstants.COMMANDS = {
     APPLY_AUTHORITATIVE_SNAPSHOT = "applyAuthoritativeSnapshot",

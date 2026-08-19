@@ -12,9 +12,18 @@ local function hasTasks()
 end
 
 local function tick()
+    local now = getTimestampMs()
+
     for key, task in pairs(QuickRestartScheduler.tasks) do
-        task.remaining = task.remaining - 1
-        if task.remaining <= 0 then
+        local due
+        if task.dueAt then
+            due = now >= task.dueAt
+        else
+            task.remaining = task.remaining - 1
+            due = task.remaining <= 0
+        end
+
+        if due then
             QuickRestartScheduler.tasks[key] = nil
             pcall(task.fn)
         end
@@ -51,6 +60,29 @@ function QuickRestartScheduler.scheduleAfterTicks(key, ticks, fn)
 
     QuickRestartScheduler.tasks[key] = {
         remaining = delay,
+        fn = fn,
+    }
+
+    ensureRegistered()
+    return true
+end
+
+function QuickRestartScheduler.scheduleAfterMs(key, milliseconds, fn)
+    if type(key) ~= "string" or key == "" then
+        return false
+    end
+
+    if type(fn) ~= "function" then
+        return false
+    end
+
+    local delay = tonumber(milliseconds) or 0
+    if delay < 0 then
+        delay = 0
+    end
+
+    QuickRestartScheduler.tasks[key] = {
+        dueAt = getTimestampMs() + delay,
         fn = fn,
     }
 

@@ -496,6 +496,7 @@ local function onClientCommand(module, command, player, args)
         end
 
         QuickRestartRestore.scheduleBaseClothingRestore(player, effectiveSnapshot, 2)
+        QuickRestartRestore.startSpawnZombiePurge(player)
 
         if pendingMerged then
             if persistSnapshot(profileKey, pendingMerged.snapshot) then

@@ -1,5 +1,42 @@
 QuickRestartValidate = QuickRestartValidate or {}
 
+local modOwnedModDataKeys = {}
+
+function QuickRestartValidate.registerModOwnedModDataKey(key)
+    if type(key) ~= "string" or key == "" then
+        return false
+    end
+
+    modOwnedModDataKeys[key] = true
+    return true
+end
+
+function QuickRestartValidate.getModOwnedModDataKeys()
+    return modOwnedModDataKeys
+end
+
+local captureGuards = {}
+
+function QuickRestartValidate.addCaptureGuard(guard)
+    if type(guard) ~= "function" then
+        return false
+    end
+
+    captureGuards[#captureGuards + 1] = guard
+    return true
+end
+
+function QuickRestartValidate.runCaptureGuards(capturedData, existingSnapshot)
+    for _, guard in ipairs(captureGuards) do
+        local ok, reject, reason = pcall(guard, capturedData, existingSnapshot)
+        if ok and reject == true then
+            return true, reason
+        end
+    end
+
+    return false, nil
+end
+
 local function isNonEmptyString(value)
     return type(value) == "string" and value ~= ""
 end
@@ -126,6 +163,16 @@ local function copySerializableTable(value, visited)
     return copied
 end
 
+local function stripModOwnedRootKeys(target)
+    if type(target) ~= "table" then
+        return
+    end
+
+    for key in pairs(modOwnedModDataKeys) do
+        target[key] = nil
+    end
+end
+
 function QuickRestartValidate.validateSnapshotData(data)
     if type(data) ~= "table" then
         return false, "snapshot_not_table"
@@ -226,6 +273,10 @@ function QuickRestartValidate.validateSnapshotData(data)
 
     if data.options ~= nil and type(data.options) ~= "table" then
         return false, "invalid_options"
+    end
+
+    if data.compat ~= nil and type(data.compat) ~= "table" then
+        return false, "invalid_compat"
     end
 
     if data.seed ~= nil and (not isNonEmptyString(data.seed) or #data.seed > 16) then
@@ -369,10 +420,16 @@ function QuickRestartValidate.normalizeSnapshotData(data)
     if type(data.modData) == "table" then
         if type(data.modData.player) == "table" then
             normalized.modData.player = copySerializableTable(data.modData.player, {})
+            stripModOwnedRootKeys(normalized.modData.player)
         end
         if type(data.modData.descriptor) == "table" then
             normalized.modData.descriptor = copySerializableTable(data.modData.descriptor, {})
+            stripModOwnedRootKeys(normalized.modData.descriptor)
         end
+    end
+
+    if type(data.compat) == "table" then
+        normalized.compat = copySerializableTable(data.compat, {})
     end
 
     if type(data.restoreDomains) == "table" then
@@ -386,7 +443,7 @@ function QuickRestartValidate.normalizeSnapshotData(data)
 
     if type(data.options) == "table" then
         normalized.options = {}
-        for _, optionKey in ipairs({"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}) do
+        for _, optionKey in ipairs({"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}) do
             if data.options[optionKey] == "random" then
                 normalized.options[optionKey] = "random"
             else

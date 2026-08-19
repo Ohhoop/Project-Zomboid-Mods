@@ -80,8 +80,30 @@ local function unequipWornItem(player, item)
     end)
 end
 
-local function isSPNCCBodyLocationRaw(bodyLoc)
-    return type(bodyLoc) == "string" and bodyLoc ~= "" and string.find(string.lower(bodyLoc), "spncc", 1, true) ~= nil
+QuickRestartApply.externalBodyLocationMarkers = QuickRestartApply.externalBodyLocationMarkers or {}
+
+function QuickRestartApply.registerExternalBodyLocationMarker(marker)
+    if type(marker) ~= "string" or marker == "" then
+        return false
+    end
+
+    QuickRestartApply.externalBodyLocationMarkers[string.lower(marker)] = true
+    return true
+end
+
+local function isExternalBodyLocation(bodyLoc)
+    if type(bodyLoc) ~= "string" or bodyLoc == "" then
+        return false
+    end
+
+    local lowered = string.lower(bodyLoc)
+    for marker in pairs(QuickRestartApply.externalBodyLocationMarkers) do
+        if string.find(lowered, marker, 1, true) ~= nil then
+            return true
+        end
+    end
+
+    return false
 end
 
 local function clearNonBaseWornItems(player)
@@ -104,7 +126,7 @@ local function clearNonBaseWornItems(player)
             pcall(function()
                 bodyLoc = item:getBodyLocation()
             end)
-            if not isBaseBodyLocation(bodyLoc) and not isSPNCCBodyLocationRaw(bodyLoc) then
+            if not isBaseBodyLocation(bodyLoc) and not isExternalBodyLocation(bodyLoc) then
                 itemsToRemove[#itemsToRemove + 1] = item
             end
         end
@@ -130,10 +152,22 @@ local function resetPlayerModel(player)
     end
 end
 
+function QuickRestartApply.registerClothingUpdatedNotifier(notifier)
+    if type(notifier) ~= "function" then
+        return false
+    end
+
+    QuickRestartApply.clothingUpdatedNotifier = notifier
+    return true
+end
+
 local function triggerPlayerClothingUpdated(player)
-    if QuickRestartSpongiesCompat and QuickRestartSpongiesCompat.triggerClothingUpdated then
-        QuickRestartSpongiesCompat.triggerClothingUpdated(player)
-        return
+    local notifier = QuickRestartApply.clothingUpdatedNotifier
+    if type(notifier) == "function" then
+        local ok, handled = pcall(notifier, player)
+        if ok and handled then
+            return
+        end
     end
 
     triggerEvent("OnClothingUpdated", player)
@@ -279,26 +313,44 @@ local function deepCopySupportedValue(value, visited)
     return copy
 end
 
-local function clearTable(tbl)
+local function clearTable(tbl, ignoredKeys)
     if type(tbl) ~= "table" then
         return
     end
 
     for key in pairs(tbl) do
-        tbl[key] = nil
+        if not (ignoredKeys and ignoredKeys[key]) then
+            tbl[key] = nil
+        end
     end
 end
 
-local function applyTableData(target, source)
+local function resolveModOwnedModDataKeys()
+    local keys = {}
+
+    pcall(function()
+        if QuickRestartValidate and QuickRestartValidate.getModOwnedModDataKeys then
+            for key in pairs(QuickRestartValidate.getModOwnedModDataKeys()) do
+                keys[key] = true
+            end
+        end
+    end)
+
+    return keys
+end
+
+local function applyTableData(target, source, ignoredKeys)
     if type(target) ~= "table" or type(source) ~= "table" then
         return false
     end
 
-    clearTable(target)
+    clearTable(target, ignoredKeys)
 
     local copy = deepCopySupportedValue(source, {})
     for key, value in pairs(copy or {}) do
-        target[key] = value
+        if not (ignoredKeys and ignoredKeys[key]) then
+            target[key] = value
+        end
     end
 
     return true
@@ -311,18 +363,6 @@ local function countTableEntries(tbl)
 
     local count = 0
     for _ in pairs(tbl) do
-        count = count + 1
-    end
-    return count
-end
-
-local function countNestedEntries(tbl, key)
-    if type(tbl) ~= "table" or type(tbl[key]) ~= "table" then
-        return 0
-    end
-
-    local count = 0
-    for _ in pairs(tbl[key]) do
         count = count + 1
     end
     return count
@@ -350,24 +390,25 @@ local function applyModDataPhase(player, data)
     end
 
     local applied = false
+    local modOwnedKeys = resolveModOwnedModDataKeys()
 
     logRestore("applyModDataPhase begin"
         .. " snapshotHasPlayerModData=" .. tostring(type(data.modData.player) == "table")
         .. " snapshotPlayerEntries=" .. tostring(countTableEntries(data.modData.player))
-        .. " snapshotPlayerSPNCharCustomEntries=" .. tostring(countNestedEntries(data.modData.player or {}, "SPNCharCustom"))
+        .. QuickRestartLog.describeWatchedKeys("snapshotPlayer", data.modData.player)
         .. " snapshotHasDescriptorModData=" .. tostring(type(data.modData.descriptor) == "table")
         .. " snapshotDescriptorEntries=" .. tostring(countTableEntries(data.modData.descriptor))
-        .. " snapshotDescriptorSPNCharCustomEntries=" .. tostring(countNestedEntries(data.modData.descriptor or {}, "SPNCharCustom")))
+        .. QuickRestartLog.describeWatchedKeys("snapshotDescriptor", data.modData.descriptor))
 
     if type(data.modData.player) == "table" and player.getModData then
         local ok, playerModData = pcall(function()
             return player:getModData()
         end)
         if ok and type(playerModData) == "table" then
-            applyTableData(playerModData, data.modData.player)
+            applyTableData(playerModData, data.modData.player, modOwnedKeys)
             applied = true
-            logRestore("applyModDataPhase player entries=" .. tostring(countTableEntries(playerModData)))
-            logRestore("applyModDataPhase player SPNCharCustom entries=" .. tostring(countNestedEntries(playerModData, "SPNCharCustom")))
+            logRestore("applyModDataPhase player entries=" .. tostring(countTableEntries(playerModData))
+                .. QuickRestartLog.describeWatchedKeys("player", playerModData))
         end
     end
 
@@ -380,10 +421,10 @@ local function applyModDataPhase(player, data)
                 return descriptor:getModData()
             end)
             if okModData and type(descriptorModData) == "table" then
-                applyTableData(descriptorModData, data.modData.descriptor)
+                applyTableData(descriptorModData, data.modData.descriptor, modOwnedKeys)
                 applied = true
-                logRestore("applyModDataPhase descriptor entries=" .. tostring(countTableEntries(descriptorModData)))
-                logRestore("applyModDataPhase descriptor SPNCharCustom entries=" .. tostring(countNestedEntries(descriptorModData, "SPNCharCustom")))
+                logRestore("applyModDataPhase descriptor entries=" .. tostring(countTableEntries(descriptorModData))
+                    .. QuickRestartLog.describeWatchedKeys("descriptor", descriptorModData))
             end
         end
     end
@@ -619,15 +660,15 @@ local function restoreClothingItem(player, inventory, clothingData, options)
     return equipClothingItem(player, item)
 end
 
-local function shouldSkipSPNCCOwnedEntry(clothingData)
+local function shouldSkipExternalOwnedEntry(clothingData)
     if type(clothingData) ~= "table" then
         return false
     end
 
-    return isSPNCCBodyLocationRaw(clothingData.bodyLocation)
+    return isExternalBodyLocation(clothingData.bodyLocation)
 end
 
-local function clearNonSPNCCWornItems(player)
+local function clearNonExternalWornItems(player)
     if not player then
         return
     end
@@ -647,7 +688,7 @@ local function clearNonSPNCCWornItems(player)
             pcall(function()
                 bodyLoc = item:getBodyLocation()
             end)
-            if not isSPNCCBodyLocationRaw(bodyLoc) then
+            if not isExternalBodyLocation(bodyLoc) then
                 itemsToRemove[#itemsToRemove + 1] = item
             end
         end
@@ -668,13 +709,13 @@ local function restoreClothing(player, clothing, options)
     local clothingToRestore = {}
     if isMultiplayer() then
         for _, clothingData in ipairs(clothing) do
-            if not shouldRestoreBaseClothingEntry(clothingData) and not shouldSkipSPNCCOwnedEntry(clothingData) then
+            if not shouldRestoreBaseClothingEntry(clothingData) and not shouldSkipExternalOwnedEntry(clothingData) then
                 clothingToRestore[#clothingToRestore + 1] = clothingData
             end
         end
     else
         for _, clothingData in ipairs(clothing) do
-            if not shouldSkipSPNCCOwnedEntry(clothingData) then
+            if not shouldSkipExternalOwnedEntry(clothingData) then
                 clothingToRestore[#clothingToRestore + 1] = clothingData
             end
         end
@@ -689,7 +730,7 @@ local function restoreClothing(player, clothing, options)
     if isMultiplayer() then
         clearNonBaseWornItems(player)
     else
-        clearNonSPNCCWornItems(player)
+        clearNonExternalWornItems(player)
     end
 
     if isMultiplayer() then
@@ -765,19 +806,23 @@ function QuickRestartApply.refreshVisualAfterServerClothing(player, options)
     return true
 end
 
-function QuickRestartApply.refreshPlayerLighting(player, options)
-    if not player then
+function QuickRestartApply.runWhenPlayerSquareReady(player, action)
+    if not player or type(action) ~= "function" then
         return false
     end
 
-    options = options or {}
-    local scheduler = options.scheduler or QuickRestartScheduler
-    local delayTicks = tonumber(options.delayTicks) or 15
-    local playerNum = player.getPlayerNum and player:getPlayerNum() or 0
-    local taskKey = "refresh_player_lighting_" .. tostring(playerNum)
+    local handler
+    handler = function(updatedPlayer)
+        if updatedPlayer ~= player then
+            return
+        end
 
-    scheduler.scheduleAfterTicks(taskKey, delayTicks, function()
-        if not player then
+        local isDead = false
+        pcall(function()
+            isDead = player:isDead()
+        end)
+        if isDead then
+            Events.OnPlayerUpdate.Remove(handler)
             return
         end
 
@@ -785,8 +830,33 @@ function QuickRestartApply.refreshPlayerLighting(player, options)
         pcall(function()
             square = player:getCurrentSquare()
         end)
+        if not square then
+            return
+        end
 
-        if square and square.RecalcAllWithNeighbours then
+        Events.OnPlayerUpdate.Remove(handler)
+        action(player, square)
+    end
+
+    Events.OnPlayerUpdate.Add(handler)
+    return true
+end
+
+function QuickRestartApply.clearZombiesAroundPlayer(player, options)
+    if not player or isMultiplayer() then
+        return false
+    end
+
+    return QuickRestartRestore.startSpawnZombiePurge(player, options)
+end
+
+function QuickRestartApply.refreshPlayerLighting(player, options)
+    if not player then
+        return false
+    end
+
+    return QuickRestartApply.runWhenPlayerSquareReady(player, function(_, square)
+        if square.RecalcAllWithNeighbours then
             pcall(function()
                 square:RecalcAllWithNeighbours(true)
             end)
@@ -804,8 +874,6 @@ function QuickRestartApply.refreshPlayerLighting(player, options)
 
         triggerPlayerClothingUpdated(player)
     end)
-
-    return true
 end
 
 function QuickRestartApply.applyLoadedCharacter(player, data, options)
@@ -824,13 +892,10 @@ function QuickRestartApply.applyLoadedCharacter(player, data, options)
 
     local restoreDomains = resolveRestoreDomains(data)
     local appliedModData = applyModDataPhase(player, data)
-    local compatVisualOptions = (QuickRestartSpongiesCompat
-        and QuickRestartSpongiesCompat.resolveBaseVisualOptions
-        and QuickRestartSpongiesCompat.resolveBaseVisualOptions(data)) or {}
 
     if restoreDomains.visualOwnedByMod then
         logRestore("applyLoadedCharacter applying base visual only due to mod-owned domain")
-        applyBaseVisualToPlayer(player, data, compatVisualOptions)
+        applyBaseVisualToPlayer(player, data)
     else
         applyVisualToPlayer(player, data, options.visualItemTypes or {}, options)
     end

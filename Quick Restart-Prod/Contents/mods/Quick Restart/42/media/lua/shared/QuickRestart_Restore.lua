@@ -1,6 +1,18 @@
 QuickRestartRestore = QuickRestartRestore or {}
 QuickRestartRestore._serverClothingTasks = QuickRestartRestore._serverClothingTasks or {}
 QuickRestartRestore._serverClothingTickRegistered = QuickRestartRestore._serverClothingTickRegistered == true
+QuickRestartRestore._spawnPurgeWindows = QuickRestartRestore._spawnPurgeWindows or {}
+QuickRestartRestore._spawnPurgeTickRegistered = QuickRestartRestore._spawnPurgeTickRegistered == true
+QuickRestartRestore._spawnPurgeExemptModDataKeys = QuickRestartRestore._spawnPurgeExemptModDataKeys or {}
+
+function QuickRestartRestore.registerSpawnPurgeExemptModDataKey(key)
+    if type(key) ~= "string" or key == "" then
+        return false
+    end
+
+    QuickRestartRestore._spawnPurgeExemptModDataKeys[key] = true
+    return true
+end
 
 local function applyKnownRecipes(player, recipes)
     if not player or type(recipes) ~= "table" then
@@ -261,19 +273,37 @@ local function deepCopySupportedValue(value, visited)
     return copy
 end
 
+local function resolveModOwnedModDataKeys()
+    local keys = {}
+
+    pcall(function()
+        if QuickRestartValidate and QuickRestartValidate.getModOwnedModDataKeys then
+            for key in pairs(QuickRestartValidate.getModOwnedModDataKeys()) do
+                keys[key] = true
+            end
+        end
+    end)
+
+    return keys
+end
+
 local function applySnapshotTableIntoTarget(target, source)
     if type(target) ~= "table" or type(source) ~= "table" then
         return false
     end
 
+    local modOwnedKeys = resolveModOwnedModDataKeys()
+
     for key, value in pairs(source) do
-        local valueType = type(value)
-        if valueType == "string" or valueType == "number" or valueType == "boolean" then
-            target[key] = value
-        elseif valueType == "table" then
-            local copy = deepCopySupportedValue(value, {})
-            if copy ~= nil then
-                target[key] = copy
+        if not modOwnedKeys[key] then
+            local valueType = type(value)
+            if valueType == "string" or valueType == "number" or valueType == "boolean" then
+                target[key] = value
+            elseif valueType == "table" then
+                local copy = deepCopySupportedValue(value, {})
+                if copy ~= nil then
+                    target[key] = copy
+                end
             end
         end
     end
@@ -395,6 +425,269 @@ function QuickRestartRestore.scheduleBaseClothingRestore(player, snapshot, delay
     }
 
     ensureServerClothingTickRegistered()
+    return true
+end
+
+local function logSpawnPurge(message)
+    if QuickRestartLog and QuickRestartLog.info then
+        QuickRestartLog.info("spawn purge " .. tostring(message))
+    end
+end
+
+local function resolveSpawnPurgeKey(player)
+    if not player then
+        return nil
+    end
+
+    local identifier = nil
+
+    if isServer() and player.getOnlineID then
+        pcall(function()
+            identifier = "online_" .. tostring(player:getOnlineID())
+        end)
+    elseif player.getPlayerNum then
+        pcall(function()
+            identifier = "local_" .. tostring(player:getPlayerNum())
+        end)
+    end
+
+    return identifier or "player"
+end
+
+local function isSpawnPurgePlayerActive(player)
+    if not player then
+        return false
+    end
+
+    local dead = true
+    local ok = pcall(function()
+        dead = player:isDead()
+    end)
+
+    return ok and not dead
+end
+
+local function resolveSpawnPurgeOrigin(window)
+    local square = nil
+    local okSquare = pcall(function()
+        square = window.player:getCurrentSquare()
+    end)
+    if not okSquare or not square then
+        return false
+    end
+
+    local x, y, z
+    local okPosition = pcall(function()
+        x = window.player:getX()
+        y = window.player:getY()
+        z = window.player:getZ()
+    end)
+    if not okPosition or not x or not y or not z then
+        return false
+    end
+
+    window.x = x
+    window.y = y
+    window.z = z
+    window.expiresAt = getTimestampMs() + window.windowMs
+
+    logSpawnPurge("origin key=" .. window.key
+        .. " x=" .. tostring(math.floor(x))
+        .. " y=" .. tostring(math.floor(y))
+        .. " z=" .. tostring(z)
+        .. " radius=" .. tostring(window.radius)
+        .. " windowMs=" .. tostring(window.windowMs))
+
+    return true
+end
+
+local function hasSpawnPurgeExemptModData(zombie)
+    local exemptKeys = QuickRestartRestore._spawnPurgeExemptModDataKeys
+
+    local hasKeys = false
+    for _ in pairs(exemptKeys) do
+        hasKeys = true
+        break
+    end
+    if not hasKeys then
+        return false
+    end
+
+    local exempt = false
+    pcall(function()
+        local modData = zombie:getModData()
+        if type(modData) == "table" then
+            for key in pairs(exemptKeys) do
+                if modData[key] ~= nil then
+                    exempt = true
+                    return
+                end
+            end
+        end
+    end)
+
+    return exempt
+end
+
+local function sweepSpawnPurgeWindow(window)
+    local okCell, cell = pcall(getCell)
+    if not okCell or not cell or not cell.getZombieList then
+        return
+    end
+
+    local okList, zombies = pcall(function()
+        return cell:getZombieList()
+    end)
+    if not okList or not zombies then
+        return
+    end
+
+    local squaredRadius = window.radius * window.radius
+    local removed = 0
+
+    for i = zombies:size() - 1, 0, -1 do
+        local zombie = zombies:get(i)
+        if zombie then
+            local zombieX, zombieY, zombieZ
+            local okZombie = pcall(function()
+                zombieX = zombie:getX()
+                zombieY = zombie:getY()
+                zombieZ = zombie:getZ()
+            end)
+
+            if okZombie and zombieX and zombieY and zombieZ == window.z then
+                local deltaX = zombieX - window.x
+                local deltaY = zombieY - window.y
+                if (deltaX * deltaX) + (deltaY * deltaY) <= squaredRadius then
+                    local isReanimated = false
+                    pcall(function()
+                        isReanimated = zombie:isReanimatedPlayer() == true
+                    end)
+
+                    if not isReanimated and not hasSpawnPurgeExemptModData(zombie) then
+                        local okRemove = pcall(function()
+                            zombie:removeFromWorld()
+                            zombie:removeFromSquare()
+                        end)
+                        if okRemove then
+                            removed = removed + 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    window.sweeps = window.sweeps + 1
+
+    if removed > 0 then
+        window.totalRemoved = window.totalRemoved + removed
+        window.quietSweeps = 0
+        logSpawnPurge("sweep key=" .. window.key
+            .. " removed=" .. tostring(removed)
+            .. " total=" .. tostring(window.totalRemoved))
+    else
+        window.quietSweeps = window.quietSweeps + 1
+    end
+end
+
+local function hasSpawnPurgeWindows()
+    for _ in pairs(QuickRestartRestore._spawnPurgeWindows) do
+        return true
+    end
+    return false
+end
+
+local function closeSpawnPurgeWindow(key, reason)
+    local window = QuickRestartRestore._spawnPurgeWindows[key]
+    if not window then
+        return
+    end
+
+    QuickRestartRestore._spawnPurgeWindows[key] = nil
+    logSpawnPurge("closed key=" .. tostring(key)
+        .. " reason=" .. tostring(reason)
+        .. " sweeps=" .. tostring(window.sweeps)
+        .. " removed=" .. tostring(window.totalRemoved))
+end
+
+local function spawnPurgeTick()
+    local settings = QuickRestartConstants.SPAWN_CLEAR
+    local now = getTimestampMs()
+
+    for key, window in pairs(QuickRestartRestore._spawnPurgeWindows) do
+        if not isSpawnPurgePlayerActive(window.player) then
+            closeSpawnPurgeWindow(key, "player_inactive")
+        elseif not window.expiresAt then
+            if not resolveSpawnPurgeOrigin(window) and now - window.openedAt >= window.windowMs then
+                closeSpawnPurgeWindow(key, "origin_unavailable")
+            end
+        else
+            window.sweepCountdown = window.sweepCountdown - 1
+            if window.sweepCountdown <= 0 then
+                window.sweepCountdown = settings.SWEEP_INTERVAL_TICKS
+                sweepSpawnPurgeWindow(window)
+            end
+
+            if now >= window.expiresAt and window.sweeps >= settings.MIN_SWEEPS_BEFORE_EXPIRY then
+                closeSpawnPurgeWindow(key, "expired")
+            elseif window.totalRemoved > 0 and window.quietSweeps >= settings.QUIET_SWEEPS_TO_CLOSE then
+                closeSpawnPurgeWindow(key, "quiet")
+            end
+        end
+    end
+
+    if QuickRestartRestore._spawnPurgeTickRegistered and not hasSpawnPurgeWindows() then
+        Events.OnTick.Remove(spawnPurgeTick)
+        QuickRestartRestore._spawnPurgeTickRegistered = false
+    end
+end
+
+local function ensureSpawnPurgeTickRegistered()
+    if QuickRestartRestore._spawnPurgeTickRegistered then
+        return
+    end
+
+    Events.OnTick.Add(spawnPurgeTick)
+    QuickRestartRestore._spawnPurgeTickRegistered = true
+end
+
+function QuickRestartRestore.startSpawnZombiePurge(player, options)
+    options = options or {}
+
+    local settings = QuickRestartConstants.SPAWN_CLEAR
+    local radius = tonumber(options.radius) or settings.RADIUS
+    local windowMs = tonumber(options.windowMs) or settings.WINDOW_MS
+    if not player or radius <= 0 or windowMs <= 0 then
+        return false
+    end
+
+    local key = resolveSpawnPurgeKey(player)
+    QuickRestartRestore._spawnPurgeWindows[key] = {
+        key = key,
+        player = player,
+        radius = radius,
+        windowMs = windowMs,
+        openedAt = getTimestampMs(),
+        expiresAt = nil,
+        sweepCountdown = 1,
+        sweeps = 0,
+        quietSweeps = 0,
+        totalRemoved = 0,
+    }
+
+    logSpawnPurge("opened key=" .. key .. " radius=" .. tostring(radius))
+    ensureSpawnPurgeTickRegistered()
+    return true
+end
+
+function QuickRestartRestore.stopSpawnZombiePurge(player)
+    local key = resolveSpawnPurgeKey(player)
+    if not key or not QuickRestartRestore._spawnPurgeWindows[key] then
+        return false
+    end
+
+    closeSpawnPurgeWindow(key, "stopped")
     return true
 end
 

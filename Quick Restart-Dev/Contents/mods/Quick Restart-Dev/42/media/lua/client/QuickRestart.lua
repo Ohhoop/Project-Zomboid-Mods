@@ -8,6 +8,11 @@ QuickRestart.pendingSameWorld = nil
 QuickRestart.sameWorldData = nil
 QuickRestart.pendingMPRestore = nil
 
+local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
+local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
+local M_BEARD_STUBBLE = QuickRestartConstants.VISUAL.M_BEARD_STUBBLE
+local INVENTORY_CONTAINER = QuickRestartConstants.VISUAL.INVENTORY_CONTAINER
+
 local function getPlayerIdentifier(player)
     if not player then return nil end
     if isMultiplayer() then
@@ -24,6 +29,7 @@ end
 
 local writeDataToFile
 local loadDataFromFile
+local saveSandboxData
 local loadDataFromSaveFolder
 local restartPanel
 local captureCharacterData
@@ -132,29 +138,6 @@ local function summarizeFaceEntry(faceEntry)
         .. " faceBodyLocation=" .. tostring(faceEntry.bodyLocation)
 end
 
-local function countTableEntries(tbl)
-    if type(tbl) ~= "table" then
-        return 0
-    end
-
-    local count = 0
-    for _ in pairs(tbl) do
-        count = count + 1
-    end
-    return count
-end
-
-local function getPlayerSPNCharCustom(data)
-    if type(data) ~= "table"
-        or type(data.modData) ~= "table"
-        or type(data.modData.player) ~= "table"
-        or type(data.modData.player.SPNCharCustom) ~= "table" then
-        return nil
-    end
-
-    return data.modData.player.SPNCharCustom
-end
-
 local function shouldRejectRegressiveSnapshot(capturedData, existingSnapshot)
     if type(capturedData) ~= "table" or type(existingSnapshot) ~= "table" then
         return false, nil
@@ -166,19 +149,7 @@ local function shouldRejectRegressiveSnapshot(capturedData, existingSnapshot)
         return true, "missing_face_layer"
     end
 
-    local existingSPN = getPlayerSPNCharCustom(existingSnapshot)
-    local capturedSPN = getPlayerSPNCharCustom(capturedData)
-    if existingSPN and not capturedSPN then
-        return true, "missing_player_SPNCharCustom"
-    end
-
-    local existingSPNCount = countTableEntries(existingSPN)
-    local capturedSPNCount = countTableEntries(capturedSPN)
-    if existingSPNCount > 0 and capturedSPNCount == 0 then
-        return true, "empty_player_SPNCharCustom"
-    end
-
-    return false, nil
+    return QuickRestartValidate.runCaptureGuards(capturedData, existingSnapshot)
 end
 
 local function shouldReplaceSnapshotForFace(capturedData, existingSnapshot)
@@ -210,6 +181,7 @@ local function saveCharacterData(player, saveFilePath)
 
     if saveFilePath and not isMultiplayer() then
         writeDataToFile(data, saveFilePath)
+        saveSandboxData(saveFilePath)
     end
 
     if isMultiplayer() then
@@ -241,11 +213,7 @@ local function saveCharacterData(player, saveFilePath)
 end
 
 local characterDataSaved = false
-
-local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
-local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
-local M_BEARD_STUBBLE = QuickRestartConstants.VISUAL.M_BEARD_STUBBLE
-local INVENTORY_CONTAINER = QuickRestartConstants.VISUAL.INVENTORY_CONTAINER
+local lastDelayedSaveContext = nil
 
 local function getSaveFileNameForPlayer(playerIdentifier)
     return QuickRestartLocalPersistence.getSaveFileNameForPlayer(playerIdentifier)
@@ -259,7 +227,6 @@ local function deleteDataFile()
     return QuickRestartLocalPersistence.deletePendingDataFile()
 end
 
-local saveSandboxData
 saveSandboxData = function(saveFilePath)
     return QuickRestartLocalPersistence.saveSandboxData(saveFilePath)
 end
@@ -277,7 +244,7 @@ local function sandboxDiffers(sandboxVarsCreation, sandboxVarsCurrent)
 end
 
 local function doRestartNewWorld(data, playerIdentifier, sandboxVars)
-    return QuickRestartLocalPersistence.doRestartNewWorld(data, playerIdentifier, sandboxVars)
+    return QuickRestartRestartLaunch.doRestartNewWorld(data, playerIdentifier, sandboxVars)
 end
 
 function QuickRestart.RestartNewWorld()
@@ -382,7 +349,7 @@ local function checkPendingRestart()
     if pendingRestartChecked then return end
     pendingRestartChecked = true
 
-    QuickRestartLocalPersistence.checkPendingRestart(QuickRestart)
+    QuickRestartRestartLaunch.checkPendingRestart(QuickRestart)
 end
 
 Events.OnMainMenuEnter.Add(checkPendingRestart)
@@ -395,6 +362,9 @@ local function closeRestartPanel()
         restartPanel = nil
     end
 end
+
+Events.OnMainMenuEnter.Add(closeRestartPanel)
+Events.OnCreatePlayer.Add(closeRestartPanel)
 
 local function consumePendingSameWorldData()
     if QuickRestart.pendingSameWorld and QuickRestart.sameWorldData then
@@ -469,6 +439,15 @@ local function buildFlowOptions(extra)
         onRestartOptionChanged = function(category, value)
             QuickRestartRestartOptions.set(getPlayerIdentifier(getPlayer()), category, value)
         end,
+        createRestartPanel = function(config)
+            return QuickRestartUI.createRestartPanel(config)
+        end,
+        removeDeathScreenDelay = function(playerNum)
+            return QuickRestartUI.removeDeathScreenDelay(playerNum)
+        end,
+        beginDeathScreenFade = function(playerNum)
+            return QuickRestartUI.beginDeathScreenFade(playerNum)
+        end,
     }
 
     if type(extra) == "table" then
@@ -495,6 +474,9 @@ local function buildOnNewGameOptions()
         consumePendingSameWorldData = consumePendingSameWorldData,
         consumeSavedData = consumeSavedData,
         loadDataFromFile = loadDataFromFile,
+        runWhenPlayerSquareReady = function(playerObj, fn)
+            return QuickRestartApply.runWhenPlayerSquareReady(playerObj, fn)
+        end,
         scheduleDelayedSave = function(playerObj, saveFilePath)
             if characterDataSaved then
                 if isMultiplayer() then
@@ -502,6 +484,11 @@ local function buildOnNewGameOptions()
                 end
                 return
             end
+
+            lastDelayedSaveContext = {
+                player = playerObj,
+                saveFilePath = saveFilePath,
+            }
 
             if isMultiplayer() then
                 QuickRestartLog.info("mp client scheduleDelayedSave queued delayTicks=60 saveFilePath=" .. tostring(saveFilePath))
@@ -547,24 +534,18 @@ local function buildOnNewGameOptions()
             triggerEvent("OnQuickRestartAfterApply", data, sameWorldRestart, playerObj)
         end,
         onSameWorldRestartApplied = function(playerObj)
+            QuickRestartApply.clearZombiesAroundPlayer(playerObj)
             QuickRestartApply.refreshPlayerLighting(playerObj, {
                 scheduler = QuickRestartScheduler,
                 delayTicks = isMultiplayer() and 4 or 20,
             })
-            QuickRestartScheduler.scheduleAfterTicks("hide_same_world_transition_overlay", 30, function()
+            QuickRestartScheduler.scheduleAfterMs("hide_same_world_transition_overlay", 500, function()
                 QuickRestartUI.hideTransitionOverlay()
             end)
         end,
         persistAppliedData = function(data, saveFilePath)
             writeDataToFile(data, saveFilePath, data.sandbox)
             deleteDataFile()
-        end,
-        scheduleSandboxCapture = function(saveFilePath)
-            QuickRestartScheduler.scheduleAfterTicks("sandbox_capture_" .. tostring(saveFilePath or "default"), 60, function()
-                if saveFilePath then
-                    saveSandboxData(saveFilePath)
-                end
-            end)
         end,
     }
 end
@@ -583,6 +564,7 @@ Events.OnPlayerDeath.Add(function(player)
 end)
 
 Events.OnPostUIDraw.Add(function()
+    QuickRestartUI.updateDeathScreenFade()
     tryShowRestartPanel()
 end)
 
@@ -590,6 +572,33 @@ end)
 Events.OnNewGame.Add(function(player, square)
     QuickRestartClientFlow.onNewGame(player, buildOnNewGameOptions())
 end)
+
+QuickRestart.updateSavedSnapshot = function(mutate)
+    if type(mutate) ~= "function" then
+        return false
+    end
+
+    local context = lastDelayedSaveContext
+    if type(context) ~= "table" then
+        return false
+    end
+
+    local saveFilePath = context.saveFilePath
+    local data = loadDataFromFile(saveFilePath)
+    if type(data) ~= "table" then
+        QuickRestartLog.warn("updateSavedSnapshot skipped: no snapshot on disk file=" .. tostring(saveFilePath))
+        return false
+    end
+
+    local ok, changed = pcall(mutate, data)
+    if not ok or not changed then
+        return false
+    end
+
+    writeDataToFile(data, saveFilePath, data.sandbox)
+    QuickRestartLog.info("updateSavedSnapshot wrote partial update file=" .. tostring(saveFilePath))
+    return true
+end
 
 Events.OnGameTimeLoaded.Add(function()
     QuickRestartClientFlow.onGameTimeLoaded({
@@ -599,7 +608,7 @@ Events.OnGameTimeLoaded.Add(function()
 end)
 
 Events.OnServerCommand.Add(function(module, command, args)
-    QuickRestartClientFlow.onServerCommand(module, command, args, buildFlowOptions({
+    QuickRestartClientNetwork.onServerCommand(module, command, args, buildFlowOptions({
         retryPendingSnapshot = retryPendingSnapshot,
         startSameWorldRestartFromSnapshot = startSameWorldRestartFromSnapshot,
         retryApplySkills = flushPendingMPRestore,
@@ -610,6 +619,17 @@ Events.OnServerCommand.Add(function(module, command, args)
         onApplySkillsDenied = function(reason)
             QuickRestartClientState.pendingRestartGrantId = nil
             QuickRestart.pendingMPRestore = nil
+        end,
+        isSnapshotValid = function(snapshot)
+            return QuickRestartClientFlow.isRestartSnapshotAvailable(snapshot)
+        end,
+        tryShowRestartPanel = function()
+            return tryShowRestartPanel()
+        end,
+        onServerClothingRestored = function(player)
+            if QuickRestartApply and QuickRestartApply.refreshVisualAfterServerClothing then
+                QuickRestartApply.refreshVisualAfterServerClothing(player)
+            end
         end,
     }))
 end)

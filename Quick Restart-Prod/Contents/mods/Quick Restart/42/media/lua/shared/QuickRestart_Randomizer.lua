@@ -722,87 +722,13 @@ function QuickRestartRandomizer.rollClothing(professionType, gender, traitString
             return entries
         end
 
-        local function buildNamedOutfit(outfitName)
-            if not SurvivorFactory or not SurvivorFactory.CreateSurvivor then
-                return nil
-            end
-
-            local tempDesc = SurvivorFactory.CreateSurvivor(SurvivorType.Neutral, female)
-            if not tempDesc then
-                return nil
-            end
-
-            tempDesc:getWornItems():clear()
-            tempDesc:dressInNamedOutfit(outfitName)
-
-            local entries = {}
-            local wornItems = tempDesc:getWornItems()
-            for i = 0, wornItems:size() - 1 do
-                local item = wornItems:getItemByIndex(i)
-                if item and #entries < MAX_CLOTHING_ENTRIES then
-                    local okType, fullType = pcall(function() return item:getFullType() end)
-                    if okType and type(fullType) == "string" and fullType ~= "" then
-                        local entry = {type = fullType}
-
-                        local okLoc, bodyLoc = pcall(function() return item:getBodyLocation() end)
-                        if okLoc and bodyLoc ~= nil and tostring(bodyLoc) ~= "" then
-                            entry.bodyLocation = tostring(bodyLoc)
-                        end
-
-                        if not (isOptionalHeadwearLocation(entry.bodyLocation) and ZombRand(2) == 0) then
-                            entries[#entries + 1] = entry
-                        end
-                    end
-                end
-            end
-
-            if #entries == 0 then
-                return nil
-            end
+        local entries = buildProfessionOutfit()
+        if entries and #entries > 0 then
+            logInfo("rollClothing character creation outfit items=" .. tostring(#entries))
             return entries
         end
 
-        local outfitNames = {}
-        if getAllOutfits then
-            pcall(function()
-                local outfits = getAllOutfits(female)
-                if outfits then
-                    for i = 0, outfits:size() - 1 do
-                        local name = outfits:get(i)
-                        if type(name) == "string" and name ~= "" then
-                            outfitNames[#outfitNames + 1] = name
-                        end
-                    end
-                end
-            end)
-        end
-
-        local candidates = {}
-        for index = 0, #outfitNames do
-            candidates[#candidates + 1] = index
-        end
-
-        while #candidates > 0 do
-            local pickIndex = ZombRand(#candidates) + 1
-            local candidate = candidates[pickIndex]
-            table.remove(candidates, pickIndex)
-
-            if candidate == 0 then
-                local entries = buildProfessionOutfit()
-                if entries and #entries > 0 then
-                    logInfo("rollClothing profession outfit items=" .. tostring(#entries))
-                    return entries
-                end
-            else
-                local entries = buildNamedOutfit(outfitNames[candidate])
-                if entries then
-                    logInfo("rollClothing named outfit=" .. tostring(outfitNames[candidate]) .. " items=" .. tostring(#entries))
-                    return entries
-                end
-            end
-        end
-
-        logWarn("rollClothing no valid outfit available in pool")
+        logWarn("rollClothing no valid outfit available")
         return nil
     end)
     if not ok or type(clothing) ~= "table" then
@@ -821,7 +747,100 @@ end
 local EXCLUDED_SANDBOX_OPTIONS = {
     CharacterFreePoints = true,
     NegativeTraitsPenalty = true,
+    RollsMultiplier = true,
 }
+
+local sandboxRollExclusions = {}
+
+function QuickRestartRandomizer.registerSandboxRollExclusion(prefix)
+    if type(prefix) ~= "string" or prefix == "" then
+        return false
+    end
+
+    sandboxRollExclusions[prefix] = true
+    return true
+end
+
+local function isExcludedSandboxOption(name)
+    if EXCLUDED_SANDBOX_OPTIONS[name] then
+        return true
+    end
+
+    for prefix in pairs(sandboxRollExclusions) do
+        if string.find(name, prefix, 1, true) == 1 then
+            return true
+        end
+    end
+
+    return false
+end
+
+local activatedModIdSetCache = nil
+
+local function getActivatedModIdSet()
+    if activatedModIdSetCache then
+        return activatedModIdSetCache
+    end
+
+    local ids = nil
+    local ok = pcall(function()
+        local mods = getActivatedMods()
+        if mods and mods.size then
+            ids = {}
+            for i = 0, mods:size() - 1 do
+                local id = mods:get(i)
+                if id ~= nil and tostring(id) ~= "" then
+                    ids[tostring(id)] = true
+                end
+            end
+        end
+    end)
+
+    if ok and ids then
+        activatedModIdSetCache = ids
+        return ids
+    end
+
+    return {}
+end
+
+function QuickRestartRandomizer.isModSandboxOptionName(name)
+    if type(name) ~= "string" or name == "" then
+        return false
+    end
+
+    local prefix = string.match(name, "^([^%.]+)%.")
+    if not prefix then
+        return false
+    end
+
+    return getActivatedModIdSet()[prefix] == true
+end
+
+function QuickRestartRandomizer.hasModSandboxOptions()
+    local found = false
+
+    pcall(function()
+        local sandboxOptions = getSandboxOptions()
+        if not sandboxOptions then
+            return
+        end
+
+        for i = 1, sandboxOptions:getNumOptions() do
+            local option = sandboxOptions:getOptionByIndex(i - 1)
+            if option then
+                local name = nil
+                pcall(function() name = option:getName() end)
+                if QuickRestartRandomizer.isModSandboxOptionName(name) then
+                    found = true
+                    return
+                end
+            end
+        end
+    end)
+
+    return found
+end
 
 local ZOMBIE_RESPAWN_HOURS = {16.0, 72.0, 216.0, 0.0}
 local ZOMBIE_RESPAWN_UNSEEN_HOURS = {6.0, 16.0, 48.0, 0.0}
@@ -923,8 +942,9 @@ function QuickRestartRandomizer.rollSandbox(sandboxTable, options)
     local RANDOM = QuickRestartRestartOptions.RANDOM
     local randomizeSandbox = sanitized.sandbox == RANDOM
     local randomizeZombies = sanitized.zombies == RANDOM
+    local randomizeSandboxMods = sanitized.sandboxMods == RANDOM
 
-    if not randomizeSandbox and not randomizeZombies then
+    if not randomizeSandbox and not randomizeZombies and not randomizeSandboxMods then
         return nil
     end
 
@@ -942,9 +962,17 @@ function QuickRestartRandomizer.rollSandbox(sandboxTable, options)
             if option then
                 local name = nil
                 pcall(function() name = option:getName() end)
-                if type(name) == "string" and name ~= "" and not EXCLUDED_SANDBOX_OPTIONS[name] then
+                if type(name) == "string" and name ~= "" and not isExcludedSandboxOption(name) then
                     local zombieOption = isZombieOptionName(name)
-                    local shouldRoll = (zombieOption and randomizeZombies) or (not zombieOption and randomizeSandbox)
+                    local modOption = not zombieOption and QuickRestartRandomizer.isModSandboxOptionName(name)
+                    local shouldRoll
+                    if zombieOption then
+                        shouldRoll = randomizeZombies
+                    elseif modOption then
+                        shouldRoll = randomizeSandboxMods
+                    else
+                        shouldRoll = randomizeSandbox
+                    end
                     if shouldRoll then
                         local value = rollSandboxOptionValue(option)
                         if value ~= nil then
@@ -961,7 +989,8 @@ function QuickRestartRandomizer.rollSandbox(sandboxTable, options)
 
         logInfo("rollSandbox randomized options=" .. tostring(rolledCount)
             .. " sandbox=" .. tostring(randomizeSandbox)
-            .. " zombies=" .. tostring(randomizeZombies))
+            .. " zombies=" .. tostring(randomizeZombies)
+            .. " sandboxMods=" .. tostring(randomizeSandboxMods))
 
         return rolled
     end)

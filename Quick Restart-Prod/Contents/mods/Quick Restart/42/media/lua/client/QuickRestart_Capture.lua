@@ -108,6 +108,20 @@ local function detectVisualOwnership(value, depth, visited)
     return false
 end
 
+local function stripModOwnedRootKeys(copy)
+    if type(copy) ~= "table" then
+        return
+    end
+
+    pcall(function()
+        if QuickRestartValidate and QuickRestartValidate.getModOwnedModDataKeys then
+            for key in pairs(QuickRestartValidate.getModOwnedModDataKeys()) do
+                copy[key] = nil
+            end
+        end
+    end)
+end
+
 local function captureModDataSnapshot(target)
     if not target or not target.getModData then
         return nil
@@ -121,6 +135,7 @@ local function captureModDataSnapshot(target)
     end
 
     local copy = deepCopySupportedValue(modData, {})
+    stripModOwnedRootKeys(copy)
     if not tableHasEntries(copy) then
         return nil
     end
@@ -147,28 +162,10 @@ local function logCapturedModData(playerModData, descriptorModData, restoreDomai
         end
     end
 
-    local hasSPNPlayer = type(playerModData) == "table" and type(playerModData.SPNCharCustom) == "table"
-    local hasSPNDescriptor = type(descriptorModData) == "table" and type(descriptorModData.SPNCharCustom) == "table"
-    local playerSPNCount = 0
-    local descriptorSPNCount = 0
-
-    if hasSPNPlayer then
-        for _ in pairs(playerModData.SPNCharCustom) do
-            playerSPNCount = playerSPNCount + 1
-        end
-    end
-    if hasSPNDescriptor then
-        for _ in pairs(descriptorModData.SPNCharCustom) do
-            descriptorSPNCount = descriptorSPNCount + 1
-        end
-    end
-
     QuickRestartLog.info("capture modData playerEntries=" .. tostring(playerEntries)
         .. " descriptorEntries=" .. tostring(descriptorEntries)
-        .. " hasPlayerSPNCharCustom=" .. tostring(hasSPNPlayer)
-        .. " playerSPNCharCustomEntries=" .. tostring(playerSPNCount)
-        .. " hasDescriptorSPNCharCustom=" .. tostring(hasSPNDescriptor)
-        .. " descriptorSPNCharCustomEntries=" .. tostring(descriptorSPNCount)
+        .. QuickRestartLog.describeWatchedKeys("player", playerModData)
+        .. QuickRestartLog.describeWatchedKeys("descriptor", descriptorModData)
         .. " visualOwnedByMod=" .. tostring(restoreDomains and restoreDomains.visualOwnedByMod == true)
         .. " clothingOwnedByMod=" .. tostring(restoreDomains and restoreDomains.clothingOwnedByMod == true))
 end
@@ -549,6 +546,10 @@ function QuickRestartCapture.captureCharacterData(player, options)
     }
 
     logCapturedModData(playerModData, descriptorModData, data.restoreDomains)
+
+    pcall(function()
+        triggerEvent("OnQuickRestartSnapshotCaptured", data, player)
+    end)
 
     return data
 end

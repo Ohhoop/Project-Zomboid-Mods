@@ -2,7 +2,8 @@ QuickRestartRestartOptions = QuickRestartRestartOptions or {}
 
 QuickRestartRestartOptions.KEEP = "keep"
 QuickRestartRestartOptions.RANDOM = "random"
-QuickRestartRestartOptions.CATEGORIES = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}
+QuickRestartRestartOptions.CATEGORIES = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}
+QuickRestartRestartOptions.WORLD_CATEGORIES = {"sandbox", "sandboxMods", "zombies"}
 
 local KEEP = QuickRestartRestartOptions.KEEP
 local RANDOM = QuickRestartRestartOptions.RANDOM
@@ -54,6 +55,15 @@ function QuickRestartRestartOptions.sanitizeOrNil(options)
         return nil
     end
     return QuickRestartRestartOptions.sanitize(options)
+end
+
+function QuickRestartRestartOptions.worldRandomSignature(options)
+    local parts = {}
+    for _, category in ipairs(QuickRestartRestartOptions.WORLD_CATEGORIES) do
+        local isRandom = type(options) == "table" and options[category] == RANDOM
+        parts[#parts + 1] = isRandom and "1" or "0"
+    end
+    return table.concat(parts)
 end
 
 function QuickRestartRestartOptions.isAnyRandom(options)

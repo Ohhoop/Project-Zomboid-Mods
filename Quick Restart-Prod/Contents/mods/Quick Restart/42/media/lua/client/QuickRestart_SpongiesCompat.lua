@@ -67,22 +67,6 @@ local function applyTableData(target, source)
     return true
 end
 
-local function snapshotHasSPNCharCustom(snapshot)
-    if type(snapshot) ~= "table" or type(snapshot.modData) ~= "table" then
-        return false
-    end
-
-    if type(snapshot.modData.player) == "table" and type(snapshot.modData.player.SPNCharCustom) == "table" then
-        return true
-    end
-
-    if type(snapshot.modData.descriptor) == "table" and type(snapshot.modData.descriptor.SPNCharCustom) == "table" then
-        return true
-    end
-
-    return false
-end
-
 local function getProtectedSPNCharCustom(sourceKey)
     local protection = QuickRestartSpongiesCompat.protection
     if type(protection) ~= "table" then
@@ -104,6 +88,10 @@ local function getProtectedSPNCharCustom(sourceKey)
     return protection.modData[sourceKey].SPNCharCustom
 end
 
+local function hasCapturedFace(spnCharCustom)
+    return type(spnCharCustom) == "table" and type(spnCharCustom.face) == "table"
+end
+
 local function clearProtection()
     if QuickRestartSpongiesCompat.protection then
         logCompat("clear protection")
@@ -111,24 +99,146 @@ local function clearProtection()
     QuickRestartSpongiesCompat.protection = nil
 end
 
+local function buildSetCustomisationNewCharacterPayload(sourceData)
+    if type(sourceData) ~= "table" then
+        return nil
+    end
+
+    local copy = deepCopySupportedValue(sourceData, {})
+    if type(copy) ~= "table" then
+        return nil
+    end
+
+    local payload = {
+        face = type(copy.face) == "table" and copy.face or { name = "DefaultFace", id = "DefaultFace", texture = 0 },
+        bodyDetails = type(copy.bodyDetails) == "table" and copy.bodyDetails or {},
+        bodyHair = copy.bodyHair == true,
+        stubbleHead = copy.stubbleHead == true,
+        stubbleBeard = copy.stubbleBeard == true,
+        muscleVisuals = copy.muscleVisuals ~= false,
+        bodyHairGrowth = copy.bodyHairGrowthEnabled == true,
+    }
+
+    return payload
+end
+
 local spongiesHookInstalled = false
+
+local FACE_MANAGER_MODULE_PATHS = {
+    "CharacterCustomisation/FaceManager_Local",
+    "CharacterCustomisation/FaceManager/Main",
+}
+
+local faceManagerModule = nil
+local faceManagerResolveAttempted = false
+
+local function resolveFaceManager()
+    if faceManagerModule then
+        return faceManagerModule
+    end
+
+    if faceManagerResolveAttempted then
+        return nil
+    end
+
+    faceManagerResolveAttempted = true
+
+    for _, modulePath in ipairs(FACE_MANAGER_MODULE_PATHS) do
+        local ok, module = pcall(require, modulePath)
+        if ok and type(module) == "table" and type(module.SetCustomisationNewCharacter) == "function" then
+            faceManagerModule = module
+            logCompat("resolved face manager module path=" .. modulePath)
+            return faceManagerModule
+        end
+    end
+
+    logCompat("no face manager module available")
+    return nil
+end
+
+local function collectLiveSPNCharCustom(target)
+    if not target or not target.getModData then
+        return nil
+    end
+
+    local ok, modData = pcall(function()
+        return target:getModData()
+    end)
+    if not ok or type(modData) ~= "table" or type(modData.SPNCharCustom) ~= "table" then
+        return nil
+    end
+
+    return deepCopySupportedValue(modData.SPNCharCustom, {})
+end
+
+local function notifyCustomisationApplied(player)
+    if QuickRestartSpongiesCompat.isProtectionActive and QuickRestartSpongiesCompat.isProtectionActive() then
+        return
+    end
+
+    if type(QuickRestart) ~= "table" or type(QuickRestart.updateSavedSnapshot) ~= "function" then
+        return
+    end
+
+    local playerSPNCharCustom = collectLiveSPNCharCustom(player)
+
+    local descriptorSPNCharCustom = nil
+    if player and player.getDescriptor then
+        local okDescriptor, descriptor = pcall(function()
+            return player:getDescriptor()
+        end)
+        if okDescriptor and descriptor then
+            descriptorSPNCharCustom = collectLiveSPNCharCustom(descriptor)
+        end
+    end
+
+    if type(playerSPNCharCustom) ~= "table" and type(descriptorSPNCharCustom) ~= "table" then
+        return
+    end
+
+    logCompat("customisation applied outside protection, storing SPNCharCustom into saved snapshot"
+        .. " player=" .. tostring(type(playerSPNCharCustom) == "table")
+        .. " descriptor=" .. tostring(type(descriptorSPNCharCustom) == "table"))
+
+    QuickRestart.updateSavedSnapshot(function(data)
+        if type(data.modData) ~= "table" then
+            data.modData = {}
+        end
+
+        if type(playerSPNCharCustom) == "table" then
+            if type(data.modData.player) ~= "table" then
+                data.modData.player = {}
+            end
+            data.modData.player.SPNCharCustom = playerSPNCharCustom
+        end
+
+        if type(descriptorSPNCharCustom) == "table" then
+            if type(data.modData.descriptor) ~= "table" then
+                data.modData.descriptor = {}
+            end
+            data.modData.descriptor.SPNCharCustom = descriptorSPNCharCustom
+        end
+
+        return true
+    end)
+end
 
 local function ensureSCCHookInstalled()
     if spongiesHookInstalled then
         return true
     end
 
-    local ok, FaceManager_Local = pcall(require, "CharacterCustomisation/FaceManager_Local")
-    if not ok or type(FaceManager_Local) ~= "table" or type(FaceManager_Local.SetCustomisationNewCharacter) ~= "function" then
+    local faceManager = resolveFaceManager()
+    if not faceManager then
         return false
     end
 
-    local original = FaceManager_Local.SetCustomisationNewCharacter
-    FaceManager_Local.SetCustomisationNewCharacter = function(player, clientData)
+    local original = faceManager.SetCustomisationNewCharacter
+    faceManager.SetCustomisationNewCharacter = function(player, clientData)
         if QuickRestartSpongiesCompat.isProtectionActive and QuickRestartSpongiesCompat.isProtectionActive() then
             local protected = getProtectedSPNCharCustom("player")
-            if type(protected) == "table" then
-                local substitute = deepCopySupportedValue(protected, {})
+            if hasCapturedFace(protected) then
+                local substitute = buildSetCustomisationNewCharacterPayload(protected)
                 if type(substitute) == "table" then
                     logCompat("SetCustomisationNewCharacter intercepted: substituting clientData with protected snapshot faceId="
                         .. tostring(type(substitute.face) == "table" and substitute.face.id or nil))
@@ -136,11 +246,13 @@ local function ensureSCCHookInstalled()
                 end
             end
         end
-        return original(player, clientData)
+        local result = original(player, clientData)
+        notifyCustomisationApplied(player)
+        return result
     end
 
     spongiesHookInstalled = true
-    logCompat("installed hook on FaceManager_Local.SetCustomisationNewCharacter")
+    logCompat("installed hook on SetCustomisationNewCharacter")
     return true
 end
 
@@ -207,7 +319,7 @@ local function applyProtectedModData()
     pcall(function()
         player:resetModel()
     end)
-    QuickRestartSpongiesCompat.triggerClothingUpdated(player)
+    QuickRestartSpongiesCompat.notifyClothingUpdated(player)
 
     logCompat("reapplied protected SPNCharCustom"
         .. " player=" .. tostring(type(playerSPNCharCustom) == "table")
@@ -238,7 +350,7 @@ local function collectSPNCCFromClothing(snapshot)
 
     for _, entry in ipairs(snapshot.clothing) do
         if type(entry) == "table" and type(entry.bodyLocation) == "string" and type(entry.type) == "string" then
-            local loc = entry.bodyLocation
+            local loc = string.lower(entry.bodyLocation)
             if loc == "spncc:face" then
                 if not face then
                     face = {
@@ -269,22 +381,33 @@ local function mergeSPNCharCustomWithClothing(snapshot, baseSPNCharCustom)
         return baseSPNCharCustom, false
     end
 
+    if not hasCapturedFace(baseSPNCharCustom) and not hasClothingFace then
+        return baseSPNCharCustom, false
+    end
+
     local merged = deepCopySupportedValue(baseSPNCharCustom, {}) or {}
-    if hasClothingFace then
+    local didMerge = false
+
+    if hasClothingFace and not hasCapturedFace(merged) then
         merged.face = clothingFace
         merged.hasCustomised = true
+        didMerge = true
     end
-    if hasClothingBodyDetails then
+
+    if hasClothingBodyDetails and type(merged.bodyDetails) ~= "table" then
         merged.bodyDetails = clothingBodyDetails
         merged.hasCustomised = true
+        didMerge = true
+    end
+
+    if not didMerge then
+        return baseSPNCharCustom, false
     end
 
     return merged, true
 end
 
 function QuickRestartSpongiesCompat.beginSnapshotProtection(snapshot)
-    ensureSCCHookInstalled()
-
     local playerSPNCharCustom = type(snapshot) == "table"
         and type(snapshot.modData) == "table"
         and type(snapshot.modData.player) == "table"
@@ -312,6 +435,8 @@ function QuickRestartSpongiesCompat.beginSnapshotProtection(snapshot)
         return false
     end
 
+    ensureSCCHookInstalled()
+
     QuickRestartSpongiesCompat.protection = {
         modData = {
             player = type(playerSPNCharCustom) == "table" and {
@@ -337,53 +462,23 @@ function QuickRestartSpongiesCompat.isProtectionActive()
     return QuickRestartSpongiesCompat.protection ~= nil
 end
 
-function QuickRestartSpongiesCompat.resolveBaseVisualOptions(snapshot)
-    local hasSPNCharCustom = snapshotHasSPNCharCustom(snapshot)
-    return {
-        hasSPNCharCustom = hasSPNCharCustom,
-        skipSkinTextureIndex = false,
-        skipBodyHairIndex = false,
-    }
-end
-
-function QuickRestartSpongiesCompat.beforeRestoreClothing(player)
-    return false
-end
-
-function QuickRestartSpongiesCompat.triggerClothingUpdated(player)
+function QuickRestartSpongiesCompat.notifyClothingUpdated(player)
     if not originalTriggerEvent then
-        return
+        return false
     end
 
     originalTriggerEvent("OnClothingUpdated", player)
-end
-
-local function buildSetCustomisationNewCharacterPayload(sourceData)
-    if type(sourceData) ~= "table" then
-        return nil
-    end
-
-    local copy = deepCopySupportedValue(sourceData, {})
-    if type(copy) ~= "table" then
-        return nil
-    end
-
-    local payload = {
-        face = type(copy.face) == "table" and copy.face or { name = "DefaultFace", id = "DefaultFace", texture = 0 },
-        bodyDetails = type(copy.bodyDetails) == "table" and copy.bodyDetails or {},
-        bodyHair = copy.bodyHair == true,
-        stubbleHead = copy.stubbleHead == true,
-        stubbleBeard = copy.stubbleBeard == true,
-        muscleVisuals = copy.muscleVisuals ~= false,
-        bodyHairGrowth = copy.bodyHairGrowthEnabled == true,
-    }
-
-    return payload
+    return true
 end
 
 local function pushCustomisationToServer()
     local playerSPNCharCustom = getProtectedSPNCharCustom("player")
     if type(playerSPNCharCustom) ~= "table" then
+        return false
+    end
+
+    if not hasCapturedFace(playerSPNCharCustom) then
+        logCompat("pushCustomisationToServer skipped: protected snapshot has no captured face")
         return false
     end
 
@@ -415,14 +510,24 @@ local function refreshLocalCustomisation()
         return false
     end
 
-    local ok, FaceManager_Local = pcall(require, "CharacterCustomisation/FaceManager_Local")
-    if not ok or type(FaceManager_Local) ~= "table" or type(FaceManager_Local.RefreshCustomisation) ~= "function" then
-        logCompat("refreshLocalCustomisation skipped: FaceManager_Local unavailable")
+    local faceManager = resolveFaceManager()
+    if not faceManager or type(faceManager.RefreshCustomisation) ~= "function" then
+        logCompat("refreshLocalCustomisation skipped: face manager unavailable")
+        return false
+    end
+
+    local okModData, playerModData = pcall(function()
+        return player:getModData()
+    end)
+    if not okModData or type(playerModData) ~= "table"
+        or type(playerModData.SPNCharCustom) ~= "table"
+        or type(playerModData.SPNCharCustom.face) ~= "table" then
+        logCompat("refreshLocalCustomisation skipped: SPNCharCustom face missing")
         return false
     end
 
     local okRefresh, err = pcall(function()
-        FaceManager_Local.RefreshCustomisation(player)
+        faceManager.RefreshCustomisation(player)
     end)
     if not okRefresh then
         logCompat("refreshLocalCustomisation error: " .. tostring(err))
@@ -525,5 +630,60 @@ end
 
 Events.OnQuickRestartBeforeApply.Add(onQuickRestartBeforeApply)
 Events.OnQuickRestartAfterApply.Add(onQuickRestartAfterApply)
+
+Events.OnNewGame.Add(function()
+    ensureSCCHookInstalled()
+end)
+
+if QuickRestartApply and QuickRestartApply.registerExternalBodyLocationMarker then
+    QuickRestartApply.registerExternalBodyLocationMarker("spncc")
+end
+
+if QuickRestartApply and QuickRestartApply.registerClothingUpdatedNotifier then
+    QuickRestartApply.registerClothingUpdatedNotifier(QuickRestartSpongiesCompat.notifyClothingUpdated)
+end
+
+local SPN_MODDATA_KEY = "SPNCharCustom"
+
+local function countSnapshotSPNEntries(snapshot)
+    if type(snapshot) ~= "table"
+        or type(snapshot.modData) ~= "table"
+        or type(snapshot.modData.player) ~= "table"
+        or type(snapshot.modData.player[SPN_MODDATA_KEY]) ~= "table" then
+        return nil
+    end
+
+    local count = 0
+    for _ in pairs(snapshot.modData.player[SPN_MODDATA_KEY]) do
+        count = count + 1
+    end
+    return count
+end
+
+local function rejectRegressiveSPNCapture(capturedData, existingSnapshot)
+    local existingCount = countSnapshotSPNEntries(existingSnapshot)
+    if existingCount == nil then
+        return false, nil
+    end
+
+    local capturedCount = countSnapshotSPNEntries(capturedData)
+    if capturedCount == nil then
+        return true, "missing_player_" .. SPN_MODDATA_KEY
+    end
+
+    if existingCount > 0 and capturedCount == 0 then
+        return true, "empty_player_" .. SPN_MODDATA_KEY
+    end
+
+    return false, nil
+end
+
+if QuickRestartValidate and QuickRestartValidate.addCaptureGuard then
+    QuickRestartValidate.addCaptureGuard(rejectRegressiveSPNCapture)
+end
+
+if QuickRestartLog and QuickRestartLog.watchModDataKey then
+    QuickRestartLog.watchModDataKey(SPN_MODDATA_KEY)
+end
 
 return QuickRestartSpongiesCompat
