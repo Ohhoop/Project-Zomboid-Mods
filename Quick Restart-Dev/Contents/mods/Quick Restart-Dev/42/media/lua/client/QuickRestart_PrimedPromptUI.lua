@@ -4,11 +4,6 @@ QuickRestartPrimedPromptWindow = ISPanel:derive("QuickRestartPrimedPromptWindow"
 
 local promptWindow = nil
 
-local function computeLayout()
-    local hgtSmall = getTextManager():getFontHeight(UIFont.Small)
-    return QuickRestartUIKit.computeLayout({spacing = math.ceil(hgtSmall * 0.75)})
-end
-
 function QuickRestartPrimedPromptWindow:new(x, y, width, height)
     local o = QuickRestartUIKit.newPanel(self, x, y, width, height,
         {r = 0, g = 0, b = 0, a = 1},
@@ -31,9 +26,7 @@ function QuickRestartPrimedPromptWindow:createChildren()
         end)
     self.acceptButton:initialise()
     self.acceptButton:instantiate()
-    self.acceptButton.backgroundColor = {r = 0.08, g = 0.24, b = 0.1, a = 0.95}
-    self.acceptButton.backgroundColorMouseOver = {r = 0.16, g = 0.48, b = 0.2, a = 1}
-    self.acceptButton.borderColor = {r = 0.5, g = 0.8, b = 0.55, a = 0.6}
+    QuickRestartUIKit.styleAcceptButton(self.acceptButton)
     self:addChild(self.acceptButton)
 
     self.declineButton = ISButton:new(layout.marginX + buttonWidth + gap, buttonY,
@@ -43,8 +36,7 @@ function QuickRestartPrimedPromptWindow:createChildren()
         end)
     self.declineButton:initialise()
     self.declineButton:instantiate()
-    self.declineButton.backgroundColor = {r = 0, g = 0, b = 0, a = 0.9}
-    self.declineButton.borderColor = {r = 0.7, g = 0.7, b = 0.7, a = 0.35}
+    QuickRestartUIKit.styleNeutralButton(self.declineButton)
     self:addChild(self.declineButton)
 end
 
@@ -71,10 +63,6 @@ function QuickRestartPrimedPromptWindow:render()
     end
 end
 
-function QuickRestartPrimedPromptUI.isVisible()
-    return promptWindow ~= nil
-end
-
 function QuickRestartPrimedPromptUI.close(accepted)
     if not promptWindow then
         return false
@@ -95,7 +83,7 @@ end
 
 function QuickRestartPrimedPromptUI.show(elapsedMs, onAccept, onDecline)
     if promptWindow then
-        return false
+        return true
     end
 
     local core = getCore()
@@ -103,7 +91,7 @@ function QuickRestartPrimedPromptUI.show(elapsedMs, onAccept, onDecline)
         return false
     end
 
-    local layout = computeLayout()
+    local layout = QuickRestartUIKit.computeDialogLayout()
     local screenWidth = core:getScreenWidth()
     local screenHeight = core:getScreenHeight()
 

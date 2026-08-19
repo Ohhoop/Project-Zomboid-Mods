@@ -56,11 +56,8 @@ function QuickRestartPrimedClock.isFresh()
     return elapsed <= FRESH_WINDOW_MS
 end
 
-local function plural(value, singular, pluralForm)
-    if value == 1 then
-        return tostring(value) .. " " .. singular
-    end
-    return tostring(value) .. " " .. pluralForm
+local function countText(value, singularKey, pluralKey)
+    return getText(value == 1 and singularKey or pluralKey, tostring(value))
 end
 
 function QuickRestartPrimedClock.describeElapsed(elapsedMs)
@@ -74,24 +71,30 @@ function QuickRestartPrimedClock.describeElapsed(elapsedMs)
     end
 
     if elapsed < HOUR_MS then
-        return plural(math.floor(elapsed / MINUTE_MS), "minute", "minutes")
+        return countText(math.floor(elapsed / MINUTE_MS),
+            "UI_QuickRestart_Primed_Minute", "UI_QuickRestart_Primed_Minutes")
     end
 
     if elapsed < DAY_MS then
         local hours = math.floor(elapsed / HOUR_MS)
         local minutes = math.floor((elapsed - hours * HOUR_MS) / MINUTE_MS)
+        local hoursText = countText(hours,
+            "UI_QuickRestart_Primed_Hour", "UI_QuickRestart_Primed_Hours")
         if minutes == 0 then
-            return plural(hours, "hour", "hours")
+            return hoursText
         end
-        return plural(hours, "hour", "hours") .. " and " .. plural(minutes, "minute", "minutes")
+        return getText("UI_QuickRestart_Primed_Combined", hoursText,
+            countText(minutes, "UI_QuickRestart_Primed_Minute", "UI_QuickRestart_Primed_Minutes"))
     end
 
     local days = math.floor(elapsed / DAY_MS)
     local hours = math.floor((elapsed - days * DAY_MS) / HOUR_MS)
+    local daysText = countText(days, "UI_QuickRestart_Primed_Day", "UI_QuickRestart_Primed_Days")
     if hours == 0 then
-        return plural(days, "day", "days")
+        return daysText
     end
-    return plural(days, "day", "days") .. " and " .. plural(hours, "hour", "hours")
+    return getText("UI_QuickRestart_Primed_Combined", daysText,
+        countText(hours, "UI_QuickRestart_Primed_Hour", "UI_QuickRestart_Primed_Hours"))
 end
 
 return QuickRestartPrimedClock

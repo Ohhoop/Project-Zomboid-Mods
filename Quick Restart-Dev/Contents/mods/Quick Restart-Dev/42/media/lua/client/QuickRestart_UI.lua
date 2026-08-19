@@ -26,14 +26,6 @@ local function currentFadeProgress()
     return elapsed / FADE_IN_DURATION_MS
 end
 
-local function captureButtonBaseAlpha(button)
-    return QuickRestartUIKit.captureButtonBaseAlpha(button)
-end
-
-local function applyAlphaToButton(button, progress)
-    return QuickRestartUIKit.applyAlphaToButton(button, progress)
-end
-
 local function applyFadeToDeathScreen(progress)
     if not ISPostDeathUI or type(ISPostDeathUI.instance) ~= "table" then
         return
@@ -41,9 +33,9 @@ local function applyFadeToDeathScreen(progress)
 
     for _, deathUi in pairs(ISPostDeathUI.instance) do
         if deathUi then
-            applyAlphaToButton(deathUi.buttonRespawn, progress)
-            applyAlphaToButton(deathUi.buttonExit, progress)
-            applyAlphaToButton(deathUi.buttonQuit, progress)
+            QuickRestartUIKit.applyAlphaToButton(deathUi.buttonRespawn, progress)
+            QuickRestartUIKit.applyAlphaToButton(deathUi.buttonExit, progress)
+            QuickRestartUIKit.applyAlphaToButton(deathUi.buttonQuit, progress)
         end
     end
 end
@@ -149,9 +141,9 @@ function QuickRestartUI.beginDeathScreenFade(playerNum)
         return
     end
 
-    captureButtonBaseAlpha(deathUi.buttonRespawn)
-    captureButtonBaseAlpha(deathUi.buttonExit)
-    captureButtonBaseAlpha(deathUi.buttonQuit)
+    QuickRestartUIKit.captureButtonBaseAlpha(deathUi.buttonRespawn)
+    QuickRestartUIKit.captureButtonBaseAlpha(deathUi.buttonExit)
+    QuickRestartUIKit.captureButtonBaseAlpha(deathUi.buttonQuit)
     applyFadeToDeathScreen(0)
 end
 
@@ -179,11 +171,11 @@ end
 function QuickRestartPanel:applyFadeAlpha(progress)
     self.fadeAlpha = progress
     self.backgroundColor.a = (self.baseBackgroundAlpha or 0.3) * progress
-    applyAlphaToButton(self.freshButton, progress)
-    applyAlphaToButton(self.sameButton, progress)
-    applyAlphaToButton(self.optionsButton, progress)
-    applyAlphaToButton(self.savedButton, progress)
-    applyAlphaToButton(self.currentButton, progress)
+    QuickRestartUIKit.applyAlphaToButton(self.freshButton, progress)
+    QuickRestartUIKit.applyAlphaToButton(self.sameButton, progress)
+    QuickRestartUIKit.applyAlphaToButton(self.optionsButton, progress)
+    QuickRestartUIKit.applyAlphaToButton(self.savedButton, progress)
+    QuickRestartUIKit.applyAlphaToButton(self.currentButton, progress)
 end
 
 function QuickRestartTransitionOverlay:new(x, y, width, height)
@@ -336,9 +328,9 @@ function QuickRestartPanel:createChildren()
     end
     self:addChild(self.optionsButton)
 
-    captureButtonBaseAlpha(self.freshButton)
-    captureButtonBaseAlpha(self.sameButton)
-    captureButtonBaseAlpha(self.optionsButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.freshButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.sameButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.optionsButton)
 end
 
 function QuickRestartPanel:hasAnyRandomOption()
@@ -349,6 +341,21 @@ function QuickRestartPanel:hasAnyRandomOption()
 
     for _, value in pairs(options) do
         if value == "random" then
+            return true
+        end
+    end
+
+    return false
+end
+
+function QuickRestartPanel:hasSameWorldRandomOption()
+    local options = self.onGetRestartOptions and self.onGetRestartOptions() or nil
+    if type(options) ~= "table" then
+        return false
+    end
+
+    for _, row in ipairs(OPTION_ROWS) do
+        if not row.freshWorldOnly and options[row.category] == "random" then
             return true
         end
     end
@@ -411,24 +418,7 @@ local function drawTooltip(panel, tooltipText, mouseX, mouseY)
     local screenHeight = core:getScreenHeight()
     local maxWidth = math.min(400, screenWidth * 0.4)
 
-    local lines = {}
-    for segment in tooltipText:gmatch("[^\n]+") do
-        local line = ""
-        for word in segment:gmatch("%S+") do
-            local test = line == "" and word or (line .. " " .. word)
-            if textManager:MeasureStringX(font, test) > maxWidth then
-                if line ~= "" then
-                    lines[#lines + 1] = line
-                    line = word
-                else
-                    lines[#lines + 1] = word
-                end
-            else
-                line = test
-            end
-        end
-        if line ~= "" then lines[#lines + 1] = line end
-    end
+    local lines = QuickRestartUIKit.wrapText(tooltipText, font, maxWidth)
 
     local maxLineWidth = 0
     for _, l in ipairs(lines) do
@@ -771,8 +761,8 @@ function QuickRestartPanel:showSandboxChoice(data, playerIdentifier, sandboxVars
     self.currentButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
     self:addChild(self.currentButton)
 
-    captureButtonBaseAlpha(self.savedButton)
-    captureButtonBaseAlpha(self.currentButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.savedButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.currentButton)
 end
 
 function QuickRestartPanel:render()
@@ -852,12 +842,16 @@ function QuickRestartPanel:render()
                 tooltipText = getText("UI_QuickRestart_MP_Tooltip")
             elseif not self.charDataAvail then
                 tooltipText = getText("UI_QuickRestart_NoData_Tooltip")
+            elseif self:hasAnyRandomOption() then
+                tooltipText = getText("UI_QuickRestart_FreshWorld_Tooltip_Random")
             else
                 tooltipText = getText("UI_QuickRestart_FreshWorld_Tooltip")
             end
         elseif self.sameButton and self.sameButton:isMouseOver() then
             if not self.charDataAvail then
                 tooltipText = getText("UI_QuickRestart_NoData_Tooltip")
+            elseif self:hasSameWorldRandomOption() then
+                tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip_Random")
             else
                 tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip")
             end

@@ -33,28 +33,11 @@ local function fadeProgress(startMs, delayMs, durationMs)
     return elapsed / durationMs
 end
 
-local function captureButtonBaseAlpha(button)
-    return QuickRestartUIKit.captureButtonBaseAlpha(button)
-end
-
-local function applyAlphaToButton(button, progress)
-    return QuickRestartUIKit.applyAlphaToButton(button, progress)
-end
-
-local function computeLayout()
-    local hgtSmall = getTextManager():getFontHeight(UIFont.Small)
-    return QuickRestartUIKit.computeLayout({spacing = math.ceil(hgtSmall * 0.75)})
-end
-
 local function blockWidthFor(layout, screenWidth)
     local maxWidth = math.min(layout.hgtSmall * MAX_BLOCK_LINES, screenWidth)
     local minWidth = math.min(layout.hgtSmall * MIN_BLOCK_LINES, screenWidth)
     local width = math.floor(screenWidth * BLOCK_WIDTH_RATIO)
     return math.max(math.min(width, maxWidth), minWidth)
-end
-
-local function wrapText(text, font, width)
-    return QuickRestartUIKit.wrapText(text, font, width)
 end
 
 function QuickRestartMemoryInfoWindow:new(x, y, width, height)
@@ -83,8 +66,7 @@ function QuickRestartMemoryInfoWindow:createChildren()
         end)
     self.okButton:initialise()
     self.okButton:instantiate()
-    self.okButton.backgroundColor = {r = 0, g = 0, b = 0, a = 0.9}
-    self.okButton.borderColor = {r = 0.7, g = 0.7, b = 0.7, a = 0.35}
+    QuickRestartUIKit.styleNeutralButton(self.okButton)
     self:addChild(self.okButton)
 end
 
@@ -133,9 +115,7 @@ function QuickRestartMemoryConfirmWindow:createChildren()
         end)
     self.confirmButton:initialise()
     self.confirmButton:instantiate()
-    self.confirmButton.backgroundColor = {r = 0.32, g = 0.06, b = 0.06, a = 0.95}
-    self.confirmButton.backgroundColorMouseOver = {r = 0.6, g = 0.12, b = 0.12, a = 1}
-    self.confirmButton.borderColor = {r = 0.85, g = 0.45, b = 0.45, a = 0.65}
+    QuickRestartUIKit.styleConfirmButton(self.confirmButton)
     self:addChild(self.confirmButton)
 
     self.cancelButton = ISButton:new(layout.marginX + buttonWidth + gap, buttonY,
@@ -145,8 +125,7 @@ function QuickRestartMemoryConfirmWindow:createChildren()
         end)
     self.cancelButton:initialise()
     self.cancelButton:instantiate()
-    self.cancelButton.backgroundColor = {r = 0, g = 0, b = 0, a = 0.9}
-    self.cancelButton.borderColor = {r = 0.7, g = 0.7, b = 0.7, a = 0.35}
+    QuickRestartUIKit.styleNeutralButton(self.cancelButton)
     self:addChild(self.cancelButton)
 end
 
@@ -193,9 +172,9 @@ function QuickRestartMemoryPanel:prerender()
     self.contentAlpha = fadeProgress(self.shownAtMs, BACKDROP_FADE_MS, CONTENT_FADE_MS)
     self.backgroundColor.a = BACKDROP_ALPHA * self.backdropAlpha
 
-    applyAlphaToButton(self.restartButton, self.contentAlpha)
-    applyAlphaToButton(self.continueButton, self.contentAlpha)
-    applyAlphaToButton(self.infoButton, self.contentAlpha)
+    QuickRestartUIKit.applyAlphaToButton(self.restartButton, self.contentAlpha)
+    QuickRestartUIKit.applyAlphaToButton(self.continueButton, self.contentAlpha)
+    QuickRestartUIKit.applyAlphaToButton(self.infoButton, self.contentAlpha)
 
     if self.criticalOnlyTick then
         self.criticalOnlyTick.choicesColor.a = self.contentAlpha
@@ -247,9 +226,7 @@ function QuickRestartMemoryPanel:createChildren()
         end)
     self.restartButton:initialise()
     self.restartButton:instantiate()
-    self.restartButton.backgroundColor = {r = 0.32, g = 0.06, b = 0.06, a = 0.95}
-    self.restartButton.backgroundColorMouseOver = {r = 0.6, g = 0.12, b = 0.12, a = 1}
-    self.restartButton.borderColor = {r = 0.85, g = 0.45, b = 0.45, a = 0.65}
+    QuickRestartUIKit.styleConfirmButton(self.restartButton)
     self.restartButton:setTooltip(getText("UI_QuickRestart_Memory_Restart_Tooltip"))
     self:addChild(self.restartButton)
 
@@ -263,14 +240,13 @@ function QuickRestartMemoryPanel:createChildren()
         end)
     self.continueButton:initialise()
     self.continueButton:instantiate()
-    self.continueButton.backgroundColor = {r = 0, g = 0, b = 0, a = 0.9}
-    self.continueButton.borderColor = {r = 0.7, g = 0.7, b = 0.7, a = 0.35}
+    QuickRestartUIKit.styleNeutralButton(self.continueButton)
     self.continueButton:setTooltip(getText("UI_QuickRestart_Memory_Continue_Tooltip"))
     self:addChild(self.continueButton)
 
-    captureButtonBaseAlpha(self.restartButton)
-    captureButtonBaseAlpha(self.continueButton)
-    captureButtonBaseAlpha(self.infoButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.restartButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.continueButton)
+    QuickRestartUIKit.captureButtonBaseAlpha(self.infoButton)
 end
 
 function QuickRestartMemoryPanel:onCriticalOnlyChanged(index, selected)
@@ -331,36 +307,6 @@ function QuickRestartMemoryPanel:render()
     end
 end
 
-local function withRandomizedNotice(text)
-    if QuickRestartHeapMargin.getRandomSignature() ~= "000" then
-        text = text .. getText("UI_QuickRestart_Memory_RestartsRandomized")
-    end
-    return text .. getText("UI_QuickRestart_Memory_RestartsImproves")
-end
-
-function QuickRestartMemoryWarningUI.describeRestartsLeft()
-    local state = QuickRestartHeapGuard.getState()
-    local cap = tostring(QuickRestartHeapGuard.getRestartsCap())
-    if not state or type(state.costKb) ~= "number" or state.costKb <= 0 then
-        return withRandomizedNotice(getText("UI_QuickRestart_Memory_RestartsAtMost", cap))
-    end
-
-    local left = state.restartsLeft
-    if type(left) ~= "number" or left < 1 then
-        return getText("UI_QuickRestart_Memory_RestartsLast")
-    end
-
-    local rounded = math.floor(left + 0.5)
-    if rounded <= 1 then
-        return withRandomizedNotice(getText("UI_QuickRestart_Memory_RestartsOne"))
-    end
-    return withRandomizedNotice(getText("UI_QuickRestart_Memory_RestartsLeft", tostring(rounded)))
-end
-
-function QuickRestartMemoryWarningUI.isVisible()
-    return panel ~= nil
-end
-
 function QuickRestartMemoryWarningUI.closeInfo()
     if not infoWindow then
         return false
@@ -381,13 +327,13 @@ function QuickRestartMemoryWarningUI.openInfo()
         return nil
     end
 
-    local layout = computeLayout()
+    local layout = QuickRestartUIKit.computeDialogLayout()
     local screenWidth = core:getScreenWidth()
     local screenHeight = core:getScreenHeight()
 
     local width = blockWidthFor(layout, screenWidth) + layout.marginX * 2
-    local infoLines = wrapText(getText("UI_QuickRestart_Memory_Info"), layout.fontSmall,
-        width - layout.marginX * 2)
+    local infoLines = QuickRestartUIKit.wrapText(getText("UI_QuickRestart_Memory_Info"),
+        layout.fontSmall, width - layout.marginX * 2)
 
     local height = layout.marginY + layout.hgtMedium + layout.spacing
         + 1 + layout.spacing
@@ -439,12 +385,12 @@ function QuickRestartMemoryWarningUI.openConfirm()
         return nil
     end
 
-    local layout = computeLayout()
+    local layout = QuickRestartUIKit.computeDialogLayout()
     local screenWidth = core:getScreenWidth()
     local screenHeight = core:getScreenHeight()
 
     local width = blockWidthFor(layout, screenWidth) + layout.marginX * 2
-    local bodyLines = wrapText(getText("UI_QuickRestart_Memory_CriticalOnly_Confirm"),
+    local bodyLines = QuickRestartUIKit.wrapText(getText("UI_QuickRestart_Memory_CriticalOnly_Confirm"),
         layout.fontSmall, width - layout.marginX * 2)
 
     local height = layout.marginY + layout.hgtMedium + layout.spacing
@@ -496,7 +442,7 @@ function QuickRestartMemoryWarningUI.close()
     return true
 end
 
-function QuickRestartMemoryWarningUI.show(level, onRestart, onContinue)
+function QuickRestartMemoryWarningUI.show(level, bodyText, onRestart, onContinue)
     QuickRestartMemoryWarningUI.close()
 
     local core = getCore()
@@ -504,18 +450,16 @@ function QuickRestartMemoryWarningUI.show(level, onRestart, onContinue)
         return nil
     end
 
-    local layout = computeLayout()
+    local layout = QuickRestartUIKit.computeDialogLayout()
     local screenWidth = core:getScreenWidth()
     local screenHeight = core:getScreenHeight()
 
     local blockWidth = blockWidthFor(layout, screenWidth)
 
-    local critical = level == QuickRestartHeapGuard.LEVEL_CRITICAL
-    local bodyKey = critical and "UI_QuickRestart_Memory_Critical" or "UI_QuickRestart_Memory_Warn"
+    local critical = level == "critical"
     local labelKey = critical and "UI_QuickRestart_MemoryPanel_Label_Critical"
         or "UI_QuickRestart_MemoryPanel_Label"
-    local bodyLines = wrapText(getText(bodyKey, QuickRestartMemoryWarningUI.describeRestartsLeft()),
-        layout.fontSmall, blockWidth)
+    local bodyLines = QuickRestartUIKit.wrapText(bodyText, layout.fontSmall, blockWidth)
 
     local blockHeight = layout.hgtMedium + layout.gapTiny
         + layout.hgtSmall + layout.spacing

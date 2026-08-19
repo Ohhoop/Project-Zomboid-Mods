@@ -23,8 +23,7 @@ local function ensureLoaded()
     criticalOnly = QuickRestartState.getBoolean(KEY_CRITICAL_ONLY, false)
 
     local storedRestarts = QuickRestartState.getNumber(KEY_RESTARTS, nil)
-    local current = QuickRestartHeapGuard.getEngineRestartCount()
-    if storedRestarts ~= nil and current ~= nil and current > storedRestarts then
+    if QuickRestartProcessSession.isSameProcess(storedRestarts) then
         shownRank = QuickRestartState.getNumber(KEY_SHOWN, 0)
     else
         shownRank = 0
@@ -33,7 +32,7 @@ end
 
 local function persist()
     QuickRestartState.set(KEY_CRITICAL_ONLY, criticalOnly == true)
-    QuickRestartState.set(KEY_RESTARTS, QuickRestartHeapGuard.getEngineRestartCount() or -1)
+    QuickRestartState.set(KEY_RESTARTS, QuickRestartProcessSession.getEngineRestartCount() or -1)
     QuickRestartState.set(KEY_SHOWN, shownRank)
 end
 

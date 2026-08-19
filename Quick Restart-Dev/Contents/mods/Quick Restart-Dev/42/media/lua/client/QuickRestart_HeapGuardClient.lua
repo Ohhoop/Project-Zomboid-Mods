@@ -1,22 +1,22 @@
-require("QuickRestart_ClientBootstrap")
-
-local function readHeapKb()
-    local ok, used, free, total = pcall(collectgarbage, "count")
-    if not ok or type(used) ~= "number" then
-        return nil
-    end
-    return used, free, total
-end
+QuickRestartHeapGuard.setPriorStore({
+    get = QuickRestartHeapMargin.getPriorCostKb,
+    set = QuickRestartHeapMargin.setPriorCostKb,
+})
 
 local function onPreMapLoad()
-    local used, _, total = readHeapKb()
+    local used, _, total = QuickRestartHeapGuard.readHeapKb()
     if not used then
         QuickRestartLog.warn("heapguard cannot read the heap")
-        return
+    else
+        local ok, err = pcall(function()
+            QuickRestartHeapGuard.recordFloor(used, total, QuickRestartHeapMargin.get())
+        end)
+        if not ok then
+            QuickRestartLog.warn("heapguard recordFloor failed error=" .. tostring(err))
+        end
     end
 
-    QuickRestartHeapGuard.recordFloor(used, total, QuickRestartHeapMargin.get())
-    QuickRestartSeriesLearning.recordWorld()
+    QuickRestartSessionOutcome.recordWorld()
 end
 
 Events.OnPreMapLoad.Add(onPreMapLoad)

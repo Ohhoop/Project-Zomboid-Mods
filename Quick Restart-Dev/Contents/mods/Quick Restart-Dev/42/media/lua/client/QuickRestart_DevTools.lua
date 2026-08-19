@@ -1,5 +1,3 @@
-require("QuickRestart_ClientBootstrap")
-
 QuickRestartDevTools = QuickRestartDevTools or {}
 
 local DEV_MOD_ID_SUFFIX = "-dev"
@@ -105,14 +103,9 @@ local function readNumber(getter)
 end
 
 local function readHeapKb()
-    local ok, used, free, total = pcall(collectgarbage, "count")
-    if not ok or type(used) ~= "number" then
-        return nil
-    end
-    return used, free, total
+    return QuickRestartHeapGuard.readHeapKb()
 end
 
-local heapCollectedAtMs = nil
 local heapMinIntervalKb = nil
 local heapMinWorldKb = nil
 local heapMaxWorldKb = nil
@@ -163,22 +156,11 @@ local function resetHeapWorld()
     resetHeapInterval()
 end
 
-function QuickRestartDevTools.collectHeap(reason)
-    local startMs = readNumber(getTimestampMs)
-    local ok = pcall(collectgarbage, "collect")
-    local now = readNumber(getTimestampMs)
-    heapCollectedAtMs = now
-
-    local used = readHeapKb()
-    QuickRestartLog.info("heapcollect reason=" .. tostring(reason)
-        .. " ok=" .. tostring(ok)
-        .. " collectMs=" .. tostring(now - startMs)
-        .. " usedKb=" .. tostring(used and math.floor(used) or -1))
-    return ok
-end
-
 local KEY_PROBE_PREMAP = "probePreMapKb"
+local KEY_PROBE_PREMAP_RESTARTS = "probePreMapRestarts"
 local KEY_PROBE_CEILING = "probeCeilingKb"
+
+local premapWrittenThisCycle = false
 
 local function trackCeiling(total)
     if type(total) ~= "number" or total <= 0 then
@@ -197,14 +179,19 @@ local function heapDelta(reason, used)
     local previous = QuickRestartState.getNumber(KEY_PROBE_PREMAP, nil)
 
     if reason == "premapload" then
+        local previousRestarts = QuickRestartState.getNumber(KEY_PROBE_PREMAP_RESTARTS, nil)
+        local sameProcess = QuickRestartProcessSession.isSameProcess(previousRestarts)
         QuickRestartState.set(KEY_PROBE_PREMAP, math.floor(used))
-        if not previous then
+        QuickRestartState.set(KEY_PROBE_PREMAP_RESTARTS,
+            QuickRestartProcessSession.getEngineRestartCount() or -1)
+        premapWrittenThisCycle = true
+        if not previous or not sameProcess then
             return -1, -1
         end
         return math.floor(used - previous), -1
     end
 
-    if reason == "postmapload" and previous then
+    if reason == "postmapload" and previous and premapWrittenThisCycle then
         return -1, math.floor(used - previous)
     end
 
@@ -221,16 +208,10 @@ function QuickRestartDevTools.probeHeap(reason)
     local worldCostKb, loadCostKb = heapDelta(reason, used)
     local ceiling = trackCeiling(total)
 
-    local sinceCollect = -1
-    if heapCollectedAtMs then
-        sinceCollect = readNumber(getTimestampMs) - heapCollectedAtMs
-    end
-
     QuickRestartLog.info("heapprobe reason=" .. tostring(reason)
         .. " usedKb=" .. tostring(math.floor(used))
         .. " freeKb=" .. tostring(type(free) == "number" and math.floor(free) or -1)
         .. " totalKb=" .. tostring(type(total) == "number" and math.floor(total) or -1)
-        .. " sinceCollectMs=" .. tostring(sinceCollect)
         .. " minWorldKb=" .. tostring(heapMinWorldKb and math.floor(heapMinWorldKb) or -1)
         .. " maxWorldKb=" .. tostring(heapMaxWorldKb and math.floor(heapMaxWorldKb) or -1)
         .. " ceilingKb=" .. tostring(ceiling or -1)
@@ -239,9 +220,7 @@ function QuickRestartDevTools.probeHeap(reason)
         .. " marginKb=" .. tostring(ceiling and math.floor(ceiling - used) or -1)
         .. " learnedMarginKb=" .. tostring(math.floor(QuickRestartHeapMargin.get()))
         .. " config=" .. QuickRestartHeapMargin.getFingerprint()
-        .. " engineRestarts=" .. tostring(readNumber(function()
-            return IsoGridSquare.ignoreBlockingSprites:size()
-        end)))
+        .. " engineRestarts=" .. tostring(QuickRestartProcessSession.getEngineRestartCount() or -1))
 
     return true
 end
@@ -292,10 +271,10 @@ function QuickRestartDevTools.probeCellCounters(reason)
         .. table.concat(parts)
         .. " ignoreBlockingSprites=" .. tostring(readNumber(function() return IsoGridSquare.ignoreBlockingSprites:size() end))
         .. " netIdToItem=" .. tostring(readNumber(function() return Item.netIdToItem:size() end))
-        .. " loads=" .. tostring(guard.loads)
-        .. " loadMs=" .. tostring(guard.lastDurationMs)
-        .. " baselineMs=" .. tostring(guard.baselineMs)
-        .. " ratio=" .. tostring(guard.ratio)
+        .. " floors=" .. tostring(guard.floors)
+        .. " costKb=" .. tostring(guard.costKb and math.floor(guard.costKb) or -1)
+        .. " restartsLeft=" .. tostring(guard.restartsLeft)
+        .. " guardMarginKb=" .. tostring(guard.marginKb and math.floor(guard.marginKb) or -1)
         .. " level=" .. tostring(guard.level)
         .. " ticks=" .. tostring(lagCount)
         .. " tickAvgMs=" .. tostring(lagCount > 0 and math.floor(lagSumMs / lagCount * 10) / 10 or -1)
@@ -370,14 +349,15 @@ function QuickRestartDevTools.isDevBuild()
 end
 
 function QuickRestartDevTools.previewMemoryWarning(level)
-    if not QuickRestartMemoryWarningUI or not QuickRestartMemoryWarningUI.show then
+    if not QuickRestartMemoryWarningUI or not QuickRestartMemoryWarningUI.show
+        or not QuickRestartMemoryWarningFlow or not QuickRestartMemoryWarningFlow.composeBody then
         QuickRestartLog.warn("dev tools memory warning unavailable")
         return false
     end
 
     QuickRestartLog.info("dev tools memory warning preview level=" .. tostring(level))
 
-    QuickRestartMemoryWarningUI.show(level, function()
+    QuickRestartMemoryWarningUI.show(level, QuickRestartMemoryWarningFlow.composeBody(level), function()
         QuickRestartLog.info("dev tools memory warning preview: restart chosen, game left running")
     end, function()
         QuickRestartLog.info("dev tools memory warning preview: continue chosen, game left running")
@@ -569,6 +549,10 @@ end)
 
 Events.OnPreMapLoad.Add(function()
     QuickRestartDevTools.probeHeap("premapload")
+end)
+
+Events.OnQuickRestartFreshWorld.Add(function()
+    QuickRestartDevTools.probeHeap("freshworld")
 end)
 
 Events.OnPostMapLoad.Add(function()

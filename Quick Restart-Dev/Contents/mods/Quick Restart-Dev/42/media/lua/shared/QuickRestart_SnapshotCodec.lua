@@ -3,7 +3,6 @@ QuickRestartSnapshotCodec = QuickRestartSnapshotCodec or {}
 local ENCODE_KEY = "QuickRestart_B42_SecretKey_2026"
 local ENCODE_KEY_LEN = #ENCODE_KEY
 local CODEC_VERSION = "3"
-local OPTION_KEYS = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}
 
 function QuickRestartSnapshotCodec.encodeString(str)
     if not str or str == "" then return "" end
@@ -383,7 +382,7 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
     end
 
     if type(data.options) == "table" then
-        for _, optionKey in ipairs(OPTION_KEYS) do
+        for _, optionKey in ipairs(QuickRestartRestartOptions.CATEGORIES) do
             if type(data.options[optionKey]) == "string" then
                 appendScalarLine(content, "options_" .. optionKey, data.options[optionKey])
             end

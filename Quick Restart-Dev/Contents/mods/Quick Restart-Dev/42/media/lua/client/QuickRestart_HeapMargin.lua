@@ -16,6 +16,16 @@ local EXPIRY_SECONDS = 60 * 24 * 60 * 60
 local KEY_RANDOM_WORLD = "marginRandomWorld"
 local DEFAULT_SIGNATURE = "000"
 
+local KEY_ANNOUNCED = "marginAnnounced"
+local KEY_ANNOUNCED_COST = "marginCost"
+local KEY_ANNOUNCED_RESTARTS = "marginRestarts"
+local KEY_FIRST_ALERT = "marginFirstAlert"
+local KEY_ANNOUNCED_HEADROOM = "marginHeadroom"
+
+local LAST_SAFE_RESTARTS = 0.99
+local FIRST_SAFE_RESTARTS = 1.01
+local MIN_NOTICE_WORLDS = 2
+
 local fingerprint = nil
 local purged = false
 
@@ -125,14 +135,20 @@ local function touch()
     end
 end
 
-function QuickRestartHeapMargin.getBounds()
+local function getBounds()
     purgeExpired()
-    return QuickRestartState.getNumber(keyFor(KEY_LOW), 0),
-        QuickRestartState.getNumber(keyFor(KEY_HIGH), 0)
+
+    local low = QuickRestartState.getNumber(keyFor(KEY_LOW), 0)
+    local high = QuickRestartState.getNumber(keyFor(KEY_HIGH), 0)
+    if low > 0 and high > 0 and high <= low then
+        QuickRestartState.remove(keyFor(KEY_HIGH))
+        high = 0
+    end
+    return low, high
 end
 
 function QuickRestartHeapMargin.get()
-    local low, high = QuickRestartHeapMargin.getBounds()
+    local low, high = getBounds()
 
     local margin = DEFAULT_MARGIN_KB
     if low > 0 and high > low then
@@ -158,137 +174,7 @@ function QuickRestartHeapMargin.setPriorCostKb(costKb)
     return true
 end
 
-local LAST_SAFE_RESTARTS = 0.99
-local FIRST_SAFE_RESTARTS = 1.01
-
-function QuickRestartHeapMargin.correctAfterCrash(announcedRestarts, costKb)
-    if type(announcedRestarts) ~= "number" or type(costKb) ~= "number" or costKb <= 0 then
-        return false
-    end
-    if announcedRestarts <= LAST_SAFE_RESTARTS then
-        return false
-    end
-
-    local needed = (announcedRestarts - LAST_SAFE_RESTARTS) * costKb
-    return QuickRestartHeapMargin.raiseFloor(QuickRestartHeapMargin.get() + needed)
-end
-
-local KEY_ANNOUNCED = "marginAnnounced"
-local KEY_ANNOUNCED_COST = "marginCost"
-local KEY_ANNOUNCED_RESTARTS = "marginRestarts"
-local KEY_FIRST_ALERT = "marginFirstAlert"
-local KEY_ANNOUNCED_HEADROOM = "marginHeadroom"
-
-local MIN_NOTICE_WORLDS = 2
-
-function QuickRestartHeapMargin.recordAnnouncement(restartsLeft, costKb, headroomKb)
-    if type(restartsLeft) ~= "number" then
-        return false
-    end
-
-    local hasCost = type(costKb) == "number" and costKb > 0
-    local hasHeadroom = type(headroomKb) == "number" and headroomKb > 0
-    if not hasCost and not hasHeadroom then
-        return false
-    end
-
-    local current = QuickRestartHeapGuard.getEngineRestartCount() or -1
-    local first = QuickRestartState.getNumber(KEY_FIRST_ALERT, nil)
-    if first == nil or current < first then
-        QuickRestartState.set(KEY_FIRST_ALERT, current)
-    end
-
-    QuickRestartState.set(KEY_ANNOUNCED, math.floor(restartsLeft * 100))
-    QuickRestartState.set(KEY_ANNOUNCED_COST, hasCost and math.floor(costKb) or 0)
-    QuickRestartState.set(KEY_ANNOUNCED_HEADROOM, hasHeadroom and math.floor(headroomKb) or 0)
-    QuickRestartState.set(KEY_ANNOUNCED_RESTARTS, current)
-    return true
-end
-
-function QuickRestartHeapMargin.correctAfterHeadroomCrash(headroomKb)
-    if type(headroomKb) ~= "number" or headroomKb <= 0 then
-        return false
-    end
-
-    return QuickRestartHeapMargin.raiseFloor(headroomKb + MARGIN_STEP_KB)
-end
-
-function QuickRestartHeapMargin.correctAfterShortNotice(noticeWorlds, costKb)
-    if type(noticeWorlds) ~= "number" or type(costKb) ~= "number" or costKb <= 0 then
-        return false
-    end
-    if noticeWorlds >= MIN_NOTICE_WORLDS then
-        return false
-    end
-
-    local needed = (MIN_NOTICE_WORLDS - noticeWorlds) * costKb
-    return QuickRestartHeapMargin.raiseFloor(QuickRestartHeapMargin.get() + needed)
-end
-
-function QuickRestartHeapMargin.applyPreviousOutcome(crashed)
-    local announced = QuickRestartState.getNumber(KEY_ANNOUNCED, nil)
-    local costKb = QuickRestartState.getNumber(KEY_ANNOUNCED_COST, 0)
-    local headroomKb = QuickRestartState.getNumber(KEY_ANNOUNCED_HEADROOM, 0)
-
-    if announced == nil or (costKb <= 0 and headroomKb <= 0) then
-        return false
-    end
-
-    announced = announced / 100
-    QuickRestartState.remove(KEY_ANNOUNCED)
-
-    local firstAlert = QuickRestartState.getNumber(KEY_FIRST_ALERT, nil)
-    local lastAlert = QuickRestartState.getNumber(KEY_ANNOUNCED_RESTARTS, nil)
-    local noticeWorlds = -1
-    if firstAlert ~= nil and lastAlert ~= nil and lastAlert >= firstAlert then
-        noticeWorlds = lastAlert - firstAlert
-    end
-    QuickRestartState.remove(KEY_FIRST_ALERT)
-    QuickRestartState.remove(KEY_ANNOUNCED_COST)
-    QuickRestartState.remove(KEY_ANNOUNCED_HEADROOM)
-    QuickRestartState.remove(KEY_ANNOUNCED_RESTARTS)
-
-    local corrected
-    if crashed then
-        if costKb > 0 then
-            corrected = QuickRestartHeapMargin.correctAfterCrash(announced, costKb)
-            if noticeWorlds >= 0
-                and QuickRestartHeapMargin.correctAfterShortNotice(noticeWorlds, costKb) then
-                corrected = true
-            end
-        else
-            corrected = QuickRestartHeapMargin.correctAfterHeadroomCrash(headroomKb)
-        end
-    else
-        corrected = QuickRestartHeapMargin.correctAfterSurvival(announced, costKb)
-    end
-
-    QuickRestartLog.info("heap margin outcome"
-        .. " crashed=" .. tostring(crashed == true)
-        .. " announced=" .. string.format("%.2f", announced)
-        .. " noticeWorlds=" .. tostring(noticeWorlds)
-        .. " costKb=" .. tostring(math.floor(costKb))
-        .. " headroomKb=" .. tostring(math.floor(headroomKb))
-        .. " corrected=" .. tostring(corrected)
-        .. " marginKb=" .. tostring(math.floor(QuickRestartHeapMargin.get())))
-    return corrected
-end
-
-
-function QuickRestartHeapMargin.correctAfterSurvival(announcedRestarts, costKb)
-    if type(announcedRestarts) ~= "number" or type(costKb) ~= "number" or costKb <= 0 then
-        return false
-    end
-    if announcedRestarts >= FIRST_SAFE_RESTARTS then
-        return false
-    end
-
-    local excess = (FIRST_SAFE_RESTARTS - announcedRestarts) * costKb
-    return QuickRestartHeapMargin.lowerCeiling(math.max(MIN_MARGIN_KB,
-        QuickRestartHeapMargin.get() - excess))
-end
-
-function QuickRestartHeapMargin.raiseFloor(neededKb)
+local function raiseFloor(neededKb)
     if type(neededKb) ~= "number" or neededKb <= 0 then
         return false
     end
@@ -299,6 +185,10 @@ function QuickRestartHeapMargin.raiseFloor(neededKb)
     end
 
     QuickRestartState.set(keyFor(KEY_LOW), math.floor(neededKb))
+    local high = QuickRestartState.getNumber(keyFor(KEY_HIGH), 0)
+    if high > 0 and high <= neededKb then
+        QuickRestartState.remove(keyFor(KEY_HIGH))
+    end
     touch()
     QuickRestartLog.info("heap margin floor raised"
         .. " config=" .. QuickRestartHeapMargin.getFingerprint()
@@ -307,8 +197,13 @@ function QuickRestartHeapMargin.raiseFloor(neededKb)
     return true
 end
 
-function QuickRestartHeapMargin.lowerCeiling(unnecessaryKb)
+local function lowerCeiling(unnecessaryKb)
     if type(unnecessaryKb) ~= "number" or unnecessaryKb <= 0 then
+        return false
+    end
+
+    local low = QuickRestartState.getNumber(keyFor(KEY_LOW), 0)
+    if low > 0 and unnecessaryKb <= low then
         return false
     end
 
@@ -324,6 +219,128 @@ function QuickRestartHeapMargin.lowerCeiling(unnecessaryKb)
         .. " unnecessaryKb=" .. tostring(math.floor(unnecessaryKb))
         .. " marginKb=" .. tostring(math.floor(QuickRestartHeapMargin.get())))
     return true
+end
+
+local function correctAfterCrash(announcedRestarts, costKb)
+    if type(announcedRestarts) ~= "number" or type(costKb) ~= "number" or costKb <= 0 then
+        return false
+    end
+    if announcedRestarts <= LAST_SAFE_RESTARTS then
+        return false
+    end
+
+    local needed = (announcedRestarts - LAST_SAFE_RESTARTS) * costKb
+    return raiseFloor(QuickRestartHeapMargin.get() + needed)
+end
+
+local function correctAfterHeadroomCrash(headroomKb)
+    if type(headroomKb) ~= "number" or headroomKb <= 0 then
+        return false
+    end
+
+    return raiseFloor(headroomKb + MARGIN_STEP_KB)
+end
+
+local function correctAfterShortNotice(noticeWorlds, costKb)
+    if type(noticeWorlds) ~= "number" or type(costKb) ~= "number" or costKb <= 0 then
+        return false
+    end
+    if noticeWorlds >= MIN_NOTICE_WORLDS then
+        return false
+    end
+
+    local needed = (MIN_NOTICE_WORLDS - noticeWorlds) * costKb
+    return raiseFloor(QuickRestartHeapMargin.get() + needed)
+end
+
+local function correctAfterSurvival(announcedRestarts, costKb)
+    if type(announcedRestarts) ~= "number" or type(costKb) ~= "number" or costKb <= 0 then
+        return false
+    end
+    if announcedRestarts < 0 then
+        return false
+    end
+    if announcedRestarts >= FIRST_SAFE_RESTARTS then
+        return false
+    end
+
+    local excess = (FIRST_SAFE_RESTARTS - announcedRestarts) * costKb
+    return lowerCeiling(math.max(MIN_MARGIN_KB,
+        QuickRestartHeapMargin.get() - excess))
+end
+
+function QuickRestartHeapMargin.recordAnnouncement(restartsLeft, costKb, headroomKb)
+    if type(restartsLeft) ~= "number" then
+        return false
+    end
+
+    local hasCost = type(costKb) == "number" and costKb > 0
+    local hasHeadroom = type(headroomKb) == "number" and headroomKb > 0
+    if not hasCost and not hasHeadroom then
+        return false
+    end
+
+    local current = QuickRestartProcessSession.getEngineRestartCount() or -1
+    local first = QuickRestartState.getNumber(KEY_FIRST_ALERT, nil)
+    if first == nil or current < first then
+        QuickRestartState.set(KEY_FIRST_ALERT, current)
+    end
+
+    QuickRestartState.set(KEY_ANNOUNCED, math.floor(restartsLeft * 100))
+    QuickRestartState.set(KEY_ANNOUNCED_COST, hasCost and math.floor(costKb) or 0)
+    QuickRestartState.set(KEY_ANNOUNCED_HEADROOM, hasHeadroom and math.floor(headroomKb) or 0)
+    QuickRestartState.set(KEY_ANNOUNCED_RESTARTS, current)
+    return true
+end
+
+function QuickRestartHeapMargin.applyPreviousOutcome(crashed)
+    local announced = QuickRestartState.getNumber(KEY_ANNOUNCED, nil)
+    local costKb = QuickRestartState.getNumber(KEY_ANNOUNCED_COST, 0)
+    local headroomKb = QuickRestartState.getNumber(KEY_ANNOUNCED_HEADROOM, 0)
+    local firstAlert = QuickRestartState.getNumber(KEY_FIRST_ALERT, nil)
+    local lastAlert = QuickRestartState.getNumber(KEY_ANNOUNCED_RESTARTS, nil)
+
+    QuickRestartState.remove(KEY_ANNOUNCED)
+    QuickRestartState.remove(KEY_FIRST_ALERT)
+    QuickRestartState.remove(KEY_ANNOUNCED_COST)
+    QuickRestartState.remove(KEY_ANNOUNCED_HEADROOM)
+    QuickRestartState.remove(KEY_ANNOUNCED_RESTARTS)
+
+    if announced == nil or (costKb <= 0 and headroomKb <= 0) then
+        return false
+    end
+
+    announced = announced / 100
+
+    local noticeWorlds = -1
+    if firstAlert ~= nil and lastAlert ~= nil and lastAlert >= firstAlert then
+        noticeWorlds = lastAlert - firstAlert
+    end
+
+    local corrected
+    if crashed then
+        if costKb > 0 then
+            corrected = correctAfterCrash(announced, costKb)
+            if noticeWorlds >= 0
+                and correctAfterShortNotice(noticeWorlds, costKb) then
+                corrected = true
+            end
+        else
+            corrected = correctAfterHeadroomCrash(headroomKb)
+        end
+    else
+        corrected = correctAfterSurvival(announced, costKb)
+    end
+
+    QuickRestartLog.info("heap margin outcome"
+        .. " crashed=" .. tostring(crashed == true)
+        .. " announced=" .. string.format("%.2f", announced)
+        .. " noticeWorlds=" .. tostring(noticeWorlds)
+        .. " costKb=" .. tostring(math.floor(costKb))
+        .. " headroomKb=" .. tostring(math.floor(headroomKb))
+        .. " corrected=" .. tostring(corrected)
+        .. " marginKb=" .. tostring(math.floor(QuickRestartHeapMargin.get())))
+    return corrected
 end
 
 return QuickRestartHeapMargin

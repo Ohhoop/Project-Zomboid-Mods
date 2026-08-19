@@ -2,6 +2,7 @@ QuickRestartHeapGuard = QuickRestartHeapGuard or {}
 
 local STATE_VERSION = 2
 local MAX_FLOORS = 40
+local PRESSURE_RATIO = 0.7
 local WARN_RESTARTS = 10
 local CRITICAL_RESTARTS = 5
 local MIN_COST_KB = 4 * 1024
@@ -10,7 +11,7 @@ local SLOPE_WINDOW = 8
 local PRIOR_WEIGHT = 6
 local MIN_PRIOR_POINTS = 8
 local WARMUP_FLOORS = 2
-local THRESHOLD_RESTARTS = 2
+local DISPLAY_CAP_RESTARTS = 2
 local SWING_WINDOW = 12
 local SWING_RESERVE_KB = 128 * 1024
 
@@ -18,76 +19,156 @@ QuickRestartHeapGuard.LEVEL_OK = "ok"
 QuickRestartHeapGuard.LEVEL_WARN = "warn"
 QuickRestartHeapGuard.LEVEL_CRITICAL = "critical"
 
-local STATE_FILE = "QuickRestart" .. getFileSeparator() .. "HeapGuard.txt"
+local LEGACY_STATE_FILE = "QuickRestart" .. getFileSeparator() .. "HeapGuard.txt"
+
+local KEY_VERSION = "heapVersion"
+local KEY_RESTARTS = "heapRestarts"
+local KEY_CEILING = "heapCeiling"
+local KEY_FLOORS = "heapFloors"
+local KEY_PEAK = "heapPeak"
 
 local floors = {}
 local ceilingKb = 0
+local processPeakKb = 0
 local loaded = false
 local level = QuickRestartHeapGuard.LEVEL_OK
-local announcedLevel = QuickRestartHeapGuard.LEVEL_OK
 local lastFloorKb = 0
 local lastCostKb = 0
 local lastRestartsLeft = -1
 local lastMarginKb = 0
-local listeners = {}
+local ceilingUnknownLogged = false
+local priorStore = nil
 
-local function readNumber(getter)
-    local ok, value = pcall(getter)
-    if not ok or type(value) ~= "number" then
+function QuickRestartHeapGuard.readHeapKb()
+    local ok, used, free, total = pcall(collectgarbage, "count")
+    if not ok or type(used) ~= "number" then
         return nil
     end
-    return value
+    return used, free, total
 end
 
-function QuickRestartHeapGuard.getEngineRestartCount()
-    local size = readNumber(function() return IsoGridSquare.ignoreBlockingSprites:size() end)
-    if not size then
-        return nil
-    end
-    return math.floor(size / 2)
-end
-
-local function writeState()
-    local writer = getFileWriter(STATE_FILE, true, false)
-    if not writer then
+function QuickRestartHeapGuard.setPriorStore(store)
+    if type(store) ~= "table" or type(store.get) ~= "function" or type(store.set) ~= "function" then
+        QuickRestartLog.warn("heapguard rejected an invalid prior store")
         return false
     end
 
-    writer:write("version=" .. tostring(STATE_VERSION) .. "\n")
-    writer:write("restarts=" .. tostring(QuickRestartHeapGuard.getEngineRestartCount() or -1) .. "\n")
-    writer:write("ceiling=" .. tostring(math.floor(ceilingKb)) .. "\n")
-    for _, value in ipairs(floors) do
-        writer:write("floor=" .. tostring(math.floor(value)) .. "\n")
-    end
-    writer:close()
+    priorStore = store
     return true
 end
 
-local function readState()
-    local reader = getFileReader(STATE_FILE, false)
-    if not reader then
-        return nil, 0, 0, {}
+local function encodeFloors()
+    local parts = {}
+    for _, value in ipairs(floors) do
+        parts[#parts + 1] = tostring(math.floor(value))
+    end
+    return table.concat(parts, ",")
+end
+
+local function decodeFloors(encoded)
+    local out = {}
+    if type(encoded) ~= "string" then
+        return out
     end
 
-    local storedVersion, storedRestarts, storedCeiling = 0, nil, 0
-    local storedFloors = {}
+    for token in string.gmatch(encoded, "[^,]+") do
+        local value = tonumber(token)
+        if value and value > 0 and #out < MAX_FLOORS then
+            out[#out + 1] = value
+        end
+    end
+    return out
+end
+
+local function writeState()
+    QuickRestartState.set(KEY_VERSION, STATE_VERSION)
+    QuickRestartState.set(KEY_RESTARTS, QuickRestartProcessSession.getEngineRestartCount() or -1)
+    QuickRestartState.set(KEY_CEILING, math.floor(ceilingKb))
+    QuickRestartState.set(KEY_PEAK, math.floor(processPeakKb))
+
+    local encoded = encodeFloors()
+    if encoded == "" then
+        QuickRestartState.remove(KEY_FLOORS)
+    else
+        QuickRestartState.set(KEY_FLOORS, encoded)
+    end
+end
+
+local function readLegacyState()
+    local reader = getFileReader(LEGACY_STATE_FILE, false)
+    if not reader then
+        return nil
+    end
+
+    local legacy = {version = 0, restarts = nil, ceiling = 0, floors = {}}
     local line = reader:readLine()
     while line do
         local key, value = string.match(line, "^(%w+)=(-?%d+)$")
         value = tonumber(value)
         if key == "version" then
-            storedVersion = value or 0
+            legacy.version = value or 0
         elseif key == "restarts" then
-            storedRestarts = value
+            legacy.restarts = value
         elseif key == "ceiling" then
-            storedCeiling = value or 0
+            legacy.ceiling = value or 0
         elseif key == "floor" and value and value > 0 then
-            storedFloors[#storedFloors + 1] = value
+            legacy.floors[#legacy.floors + 1] = value
         end
         line = reader:readLine()
     end
     reader:close()
-    return storedRestarts, storedCeiling, storedVersion, storedFloors
+    return legacy
+end
+
+local function clearLegacyFile()
+    local writer = getFileWriter(LEGACY_STATE_FILE, true, false)
+    if writer then
+        writer:write("")
+        writer:close()
+    end
+end
+
+local function migrateLegacyState()
+    if QuickRestartState.getNumber(KEY_VERSION, nil) ~= nil then
+        return
+    end
+
+    local legacy = readLegacyState()
+
+    if legacy and legacy.version == STATE_VERSION
+        and (#legacy.floors > 0 or legacy.ceiling > 0 or legacy.restarts ~= nil) then
+        if not QuickRestartState.set(KEY_VERSION, STATE_VERSION) then
+            QuickRestartLog.warn("heapguard migration could not write state, keeping the legacy file")
+            return
+        end
+
+        QuickRestartState.set(KEY_RESTARTS, legacy.restarts or -1)
+        QuickRestartState.set(KEY_CEILING, legacy.ceiling)
+        local parts = {}
+        for _, value in ipairs(legacy.floors) do
+            parts[#parts + 1] = tostring(value)
+        end
+        if #parts > 0 then
+            QuickRestartState.set(KEY_FLOORS, table.concat(parts, ","))
+        end
+
+        clearLegacyFile()
+        QuickRestartLog.info("heapguard state migrated from the legacy file"
+            .. " floors=" .. tostring(#legacy.floors)
+            .. " ceilingKb=" .. tostring(legacy.ceiling))
+        return
+    end
+
+    if not QuickRestartState.set(KEY_VERSION, STATE_VERSION) then
+        return
+    end
+
+    if legacy then
+        clearLegacyFile()
+        QuickRestartLog.info("heapguard legacy state dropped"
+            .. " storedVersion=" .. tostring(legacy.version)
+            .. " droppedFloors=" .. tostring(#legacy.floors))
+    end
 end
 
 local function ensureLoaded()
@@ -96,31 +177,33 @@ local function ensureLoaded()
     end
     loaded = true
 
-    local current = QuickRestartHeapGuard.getEngineRestartCount()
-    local storedRestarts, storedCeiling, storedVersion, storedFloors = readState()
+    migrateLegacyState()
 
-    ceilingKb = storedCeiling or 0
+    local storedVersion = QuickRestartState.getNumber(KEY_VERSION, 0)
+    local storedRestarts = QuickRestartState.getNumber(KEY_RESTARTS, nil)
+
+    ceilingKb = QuickRestartState.getNumber(KEY_CEILING, 0)
     floors = {}
+    processPeakKb = 0
     level = QuickRestartHeapGuard.LEVEL_OK
-    announcedLevel = level
 
     if storedVersion ~= STATE_VERSION then
-        QuickRestartLog.info("heapguard state migrated"
+        QuickRestartLog.info("heapguard state version mismatch"
             .. " storedVersion=" .. tostring(storedVersion)
-            .. " version=" .. tostring(STATE_VERSION)
-            .. " droppedFloors=" .. tostring(#storedFloors))
+            .. " version=" .. tostring(STATE_VERSION))
         return
     end
 
-    if storedRestarts == nil or current == nil or current < storedRestarts then
+    if not QuickRestartProcessSession.isSameProcess(storedRestarts) then
         QuickRestartLog.info("heapguard new process"
             .. " stored=" .. tostring(storedRestarts)
-            .. " current=" .. tostring(current)
+            .. " current=" .. tostring(QuickRestartProcessSession.getEngineRestartCount())
             .. " carriedCeilingKb=" .. tostring(math.floor(ceilingKb)))
         return
     end
 
-    floors = storedFloors
+    floors = decodeFloors(QuickRestartState.get(KEY_FLOORS))
+    processPeakKb = QuickRestartState.getNumber(KEY_PEAK, 0)
     QuickRestartLog.info("heapguard history restored"
         .. " floors=" .. tostring(#floors)
         .. " ceilingKb=" .. tostring(math.floor(ceilingKb)))
@@ -190,11 +273,13 @@ local function interceptFor(points, slope)
 end
 
 function QuickRestartHeapGuard.getPriorCostKb()
-    if QuickRestartHeapMargin and QuickRestartHeapMargin.getPriorCostKb then
-        local ok, value = pcall(QuickRestartHeapMargin.getPriorCostKb)
-        if ok and type(value) == "number" and value > 0 then
-            return value
-        end
+    if not priorStore then
+        return 0
+    end
+
+    local ok, value = pcall(priorStore.get)
+    if ok and type(value) == "number" and value > 0 then
+        return value
     end
     return 0
 end
@@ -280,6 +365,9 @@ function QuickRestartHeapGuard.recordFloor(usedKb, totalKb, marginKb)
         return false
     end
 
+    if type(totalKb) == "number" and totalKb > processPeakKb then
+        processPeakKb = totalKb
+    end
     if type(totalKb) == "number" and totalKb > ceilingKb then
         ceilingKb = totalKb
     end
@@ -289,12 +377,35 @@ function QuickRestartHeapGuard.recordFloor(usedKb, totalKb, marginKb)
         table.remove(floors, 1)
     end
 
+    local underPressure = false
+    local pressureThreshold = processPeakKb * PRESSURE_RATIO
+    for _, value in ipairs(floors) do
+        if value >= pressureThreshold then
+            underPressure = true
+            break
+        end
+    end
+
+    if underPressure and #floors >= 2 and processPeakKb > 0 and processPeakKb < ceilingKb then
+        QuickRestartLog.info("heapguard ceiling adopted from the current process"
+            .. " oldKb=" .. tostring(math.floor(ceilingKb))
+            .. " newKb=" .. tostring(math.floor(processPeakKb)))
+        ceilingKb = processPeakKb
+    end
+
     lastFloorKb = usedKb
     lastMarginKb = marginKb or 0
     lastCostKb = QuickRestartHeapGuard.getCostKb()
     lastRestartsLeft = QuickRestartHeapGuard.getRestartsLeft(lastMarginKb)
 
-    if lastCostKb > 0 then
+    if ceilingKb <= 0 then
+        level = QuickRestartHeapGuard.LEVEL_OK
+        if lastCostKb > 0 and not ceilingUnknownLogged then
+            ceilingUnknownLogged = true
+            QuickRestartLog.warn("heapguard ceiling unknown, memory warning disarmed"
+                .. " costKb=" .. tostring(math.floor(lastCostKb)))
+        end
+    elseif lastCostKb > 0 then
         level = levelForRestarts(lastRestartsLeft)
     else
         level = levelForHeadroom(ceilingKb - usedKb, lastMarginKb)
@@ -305,8 +416,8 @@ function QuickRestartHeapGuard.recordFloor(usedKb, totalKb, marginKb)
     local points = slopePoints()
     if #points >= MIN_PRIOR_POINTS then
         local measured = measuredSlope(points)
-        if measured ~= nil and QuickRestartHeapMargin and QuickRestartHeapMargin.setPriorCostKb then
-            pcall(QuickRestartHeapMargin.setPriorCostKb, measured)
+        if measured ~= nil and priorStore then
+            pcall(priorStore.set, measured)
         end
     end
 
@@ -321,22 +432,13 @@ function QuickRestartHeapGuard.recordFloor(usedKb, totalKb, marginKb)
         .. " swingKb=" .. tostring(math.floor(QuickRestartHeapGuard.getSwingKb()))
         .. " restartsLeft=" .. string.format("%.2f", lastRestartsLeft)
         .. " level=" .. level
-        .. " engineRestarts=" .. tostring(QuickRestartHeapGuard.getEngineRestartCount()))
-
-    if level ~= announcedLevel then
-        announcedLevel = level
-        for _, fn in ipairs(listeners) do
-            pcall(fn, level, QuickRestartHeapGuard.getState())
-        end
-    end
+        .. " engineRestarts=" .. tostring(QuickRestartProcessSession.getEngineRestartCount()))
 
     return true
 end
 
 function QuickRestartHeapGuard.getRestartsCap()
-    ensureLoaded()
-
-    return THRESHOLD_RESTARTS
+    return DISPLAY_CAP_RESTARTS
 end
 
 function QuickRestartHeapGuard.getState()
@@ -349,7 +451,7 @@ function QuickRestartHeapGuard.getState()
         marginKb = lastMarginKb,
         costKb = lastCostKb,
         restartsLeft = lastRestartsLeft,
-        engineRestarts = QuickRestartHeapGuard.getEngineRestartCount() or -1,
+        engineRestarts = QuickRestartProcessSession.getEngineRestartCount() or -1,
     }
 end
 
@@ -358,23 +460,10 @@ function QuickRestartHeapGuard.getLevel()
     return level
 end
 
-function QuickRestartHeapGuard.getDisplayLevel()
-    return QuickRestartHeapGuard.getLevel()
-end
-
 function QuickRestartHeapGuard.shouldWarnPlayer()
     ensureLoaded()
     return level == QuickRestartHeapGuard.LEVEL_WARN
         or level == QuickRestartHeapGuard.LEVEL_CRITICAL
-end
-
-function QuickRestartHeapGuard.addLevelListener(fn)
-    if type(fn) ~= "function" then
-        return false
-    end
-
-    listeners[#listeners + 1] = fn
-    return true
 end
 
 return QuickRestartHeapGuard

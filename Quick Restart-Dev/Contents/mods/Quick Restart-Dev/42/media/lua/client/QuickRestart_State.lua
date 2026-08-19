@@ -29,7 +29,7 @@ local function load()
 
     local line = reader:readLine()
     while line do
-        local key, raw = string.match(line, "^(%w+)=(%w+)$")
+        local key, raw = string.match(line, "^(%w+)=(%S+)$")
         if key then
             values[key] = raw
             rememberKey(key)

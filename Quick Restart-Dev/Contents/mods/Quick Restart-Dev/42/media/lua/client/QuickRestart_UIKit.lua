@@ -30,6 +30,11 @@ function QuickRestartUIKit.computeLayout(overrides)
     return layout
 end
 
+function QuickRestartUIKit.computeDialogLayout()
+    local hgtSmall = getTextManager():getFontHeight(UIFont.Small)
+    return QuickRestartUIKit.computeLayout({spacing = math.ceil(hgtSmall * 0.75)})
+end
+
 function QuickRestartUIKit.captureButtonBaseAlpha(button)
     if not button or button.baseAlpha then
         return
@@ -128,6 +133,35 @@ end
 function QuickRestartUIKit.newWindowPanel(panelClass, x, y, width, height)
     return QuickRestartUIKit.newPanel(panelClass, x, y, width, height,
         QuickRestartUIKit.COLOR_WINDOW_BACKGROUND, QuickRestartUIKit.COLOR_WINDOW_BORDER)
+end
+
+local COLOR_CONFIRM_BACKGROUND = {r = 0.32, g = 0.06, b = 0.06, a = 0.95}
+local COLOR_CONFIRM_HOVER = {r = 0.6, g = 0.12, b = 0.12, a = 1}
+local COLOR_CONFIRM_BORDER = {r = 0.85, g = 0.45, b = 0.45, a = 0.65}
+local COLOR_NEUTRAL_BACKGROUND = {r = 0, g = 0, b = 0, a = 0.9}
+local COLOR_NEUTRAL_BORDER = {r = 0.7, g = 0.7, b = 0.7, a = 0.35}
+local COLOR_ACCEPT_BACKGROUND = {r = 0.08, g = 0.24, b = 0.1, a = 0.95}
+local COLOR_ACCEPT_HOVER = {r = 0.16, g = 0.48, b = 0.2, a = 1}
+local COLOR_ACCEPT_BORDER = {r = 0.5, g = 0.8, b = 0.55, a = 0.6}
+
+function QuickRestartUIKit.styleConfirmButton(button)
+    button.backgroundColor = copyColor(COLOR_CONFIRM_BACKGROUND)
+    button.backgroundColorMouseOver = copyColor(COLOR_CONFIRM_HOVER)
+    button.borderColor = copyColor(COLOR_CONFIRM_BORDER)
+    return button
+end
+
+function QuickRestartUIKit.styleNeutralButton(button)
+    button.backgroundColor = copyColor(COLOR_NEUTRAL_BACKGROUND)
+    button.borderColor = copyColor(COLOR_NEUTRAL_BORDER)
+    return button
+end
+
+function QuickRestartUIKit.styleAcceptButton(button)
+    button.backgroundColor = copyColor(COLOR_ACCEPT_BACKGROUND)
+    button.backgroundColorMouseOver = copyColor(COLOR_ACCEPT_HOVER)
+    button.borderColor = copyColor(COLOR_ACCEPT_BORDER)
+    return button
 end
 
 return QuickRestartUIKit

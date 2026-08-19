@@ -199,4 +199,194 @@ function QuickRestartClientNetwork.retryPendingSnapshot(player, state, captureCh
     return true
 end
 
+function QuickRestartClientNetwork.onServerCommand(module, command, args, options)
+    options = options or {}
+    if module ~= QuickRestartConstants.MODULE then
+        return
+    end
+
+    local state = options.state
+    if not state or type(args) ~= "table" then
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.SNAPSHOT_ACK then
+        if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
+            QuickRestartLog.warn("mp client ignored SNAPSHOT_ACK due to pendingRequestId mismatch pending="
+                .. tostring(state.pendingRequestId)
+                .. " received=" .. tostring(args.requestId))
+            return
+        end
+
+        QuickRestartLog.info("mp client SNAPSHOT_ACK requestId=" .. tostring(args.requestId)
+            .. " accepted=" .. tostring(args.accepted)
+            .. " stored=" .. tostring(args.stored)
+            .. " profileKey=" .. tostring(args.profileKey)
+            .. " " .. summarizeFaceSnapshot(state.pendingSnapshot))
+        state.waitingForSnapshotAck = false
+        state.snapshotAcked = args.accepted == true
+        if args.profileKey and args.profileKey ~= "" then
+            state.pendingProfileKey = tostring(args.profileKey)
+        end
+        if args.accepted == true and state.pendingSnapshot then
+            if args.stored == true then
+                state.serverSnapshot = state.pendingSnapshot
+                state.serverSnapshotLoaded = true
+                QuickRestartLog.info("mp client active server snapshot updated from ACK "
+                    .. summarizeSnapshot(state.serverSnapshot)
+                    .. " " .. summarizeFaceSnapshot(state.serverSnapshot))
+            end
+            state.pendingSnapshot = nil
+        end
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.SNAPSHOT_RETRY then
+        if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
+            QuickRestartLog.warn("mp client ignored SNAPSHOT_RETRY due to pendingRequestId mismatch pending="
+                .. tostring(state.pendingRequestId)
+                .. " received=" .. tostring(args.requestId))
+            return
+        end
+
+        QuickRestartLog.warn("mp client SNAPSHOT_RETRY requestId=" .. tostring(args.requestId)
+            .. " attempt=" .. tostring(args.attempt))
+        local player = getPlayer()
+        if player and options.retryPendingSnapshot then
+            options.retryPendingSnapshot(player)
+        end
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_ACK then
+        QuickRestartLog.info("mp client APPLY_AUTHORITATIVE_SNAPSHOT_ACK profileKey=" .. tostring(args.profileKey))
+        if options.onApplySkillsAck then
+            options.onApplySkillsAck()
+        end
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.SERVER_CLOTHING_RESTORED then
+        QuickRestartLog.info("mp client SERVER_CLOTHING_RESTORED")
+        local player = getPlayer()
+        if player and options.onServerClothingRestored then
+            options.onServerClothingRestored(player)
+        end
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY then
+        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_RETRY grantId=" .. tostring(args.grantId)
+            .. " reason=" .. tostring(args.reason))
+        if args.grantId and args.grantId ~= "" then
+            state.pendingRestartGrantId = tostring(args.grantId)
+        end
+        if options.retryApplySkills then
+            options.retryApplySkills()
+        end
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED then
+        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_DENIED reason=" .. tostring(args.reason))
+        state.pendingRestartGrantId = nil
+        if options.onApplySkillsDenied then
+            options.onApplySkillsDenied(args.reason)
+        end
+        return
+    end
+
+    if state.pendingRestartRequestId and args.requestId and state.pendingRestartRequestId ~= args.requestId then
+        QuickRestartLog.warn("mp client ignored restart response due to pendingRestartRequestId mismatch command="
+            .. tostring(command)
+            .. " pending=" .. tostring(state.pendingRestartRequestId)
+            .. " received=" .. tostring(args.requestId))
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.RESTART_ACCEPTED then
+        QuickRestartLog.info("mp client RESTART_ACCEPTED mode=" .. tostring(args.mode)
+            .. " requestId=" .. tostring(args.requestId)
+            .. " grantId=" .. tostring(args.grantId)
+            .. " hasServerSnapshot=" .. tostring(state.serverSnapshot ~= nil))
+        state.pendingRestartApproved = true
+        state.lastRestartDeniedReason = nil
+        state.pendingRestartGrantId = args.grantId
+        if state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and state.serverSnapshot and options.startSameWorldRestartFromSnapshot then
+            state.pendingRestartRequestId = nil
+            state.pendingRestartApproved = false
+            options.startSameWorldRestartFromSnapshot(state.serverSnapshot)
+            state.pendingRestartMode = nil
+        end
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.RESTART_DENIED then
+        QuickRestartLog.warn("mp client RESTART_DENIED mode=" .. tostring(args.mode)
+            .. " requestId=" .. tostring(args.requestId)
+            .. " reason=" .. tostring(args.reason))
+        state.pendingRestartRequestId = nil
+        state.pendingRestartApproved = false
+        state.pendingRestartGrantId = nil
+        state.lastRestartDeniedReason = args.reason
+        state.pendingRestartMode = nil
+        return
+    end
+
+    if command == QuickRestartConstants.COMMANDS.SNAPSHOT_DATA then
+        local requestMatchesActive = state.pendingRequestId and args.requestId and state.pendingRequestId == args.requestId
+        local requestMatchesRestart = state.pendingRestartRequestId and args.requestId and state.pendingRestartRequestId == args.requestId
+        local hasTrackedRequest = state.pendingRequestId or state.pendingRestartRequestId
+
+        if hasTrackedRequest and args.requestId and not requestMatchesActive and not requestMatchesRestart then
+            QuickRestartLog.warn("mp client ignored SNAPSHOT_DATA due to request mismatch activePending="
+                .. tostring(state.pendingRequestId)
+                .. " restartPending=" .. tostring(state.pendingRestartRequestId)
+                .. " received=" .. tostring(args.requestId))
+            return
+        end
+
+        if args.profileKey and args.profileKey ~= "" then
+            state.pendingProfileKey = tostring(args.profileKey)
+        end
+
+        local snapshot = args.snapshot
+        local hasValidSnapshot = false
+        if args.found == true and type(snapshot) == "table" and options.isSnapshotValid then
+            hasValidSnapshot = options.isSnapshotValid(snapshot) == true
+        end
+
+        state.serverSnapshot = hasValidSnapshot and snapshot or nil
+        state.serverSnapshotLoaded = hasValidSnapshot
+        state.waitingForActiveSnapshot = false
+        if requestMatchesActive then
+            state.pendingRequestId = nil
+        end
+
+        QuickRestartLog.info("mp client SNAPSHOT_DATA requestId=" .. tostring(args.requestId)
+            .. " found=" .. tostring(args.found)
+            .. " hasValidSnapshot=" .. tostring(hasValidSnapshot)
+            .. " profileKey=" .. tostring(args.profileKey)
+            .. " " .. summarizeSnapshot(snapshot)
+            .. " " .. summarizeFaceSnapshot(snapshot))
+
+        if state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and state.serverSnapshot and options.startSameWorldRestartFromSnapshot then
+            state.pendingRestartRequestId = nil
+            state.pendingRestartApproved = false
+            options.startSameWorldRestartFromSnapshot(state.serverSnapshot)
+            state.pendingRestartMode = nil
+        elseif state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and not state.serverSnapshot then
+            QuickRestartLog.warn("mp client same-world restart canceled: invalid server snapshot")
+            state.pendingRestartRequestId = nil
+            state.pendingRestartApproved = false
+            state.pendingRestartGrantId = nil
+            state.lastRestartDeniedReason = "invalid_server_snapshot"
+            state.pendingRestartMode = nil
+        end
+        if options.tryShowRestartPanel then
+            options.tryShowRestartPanel()
+        end
+    end
+end
+
 return QuickRestartClientNetwork
