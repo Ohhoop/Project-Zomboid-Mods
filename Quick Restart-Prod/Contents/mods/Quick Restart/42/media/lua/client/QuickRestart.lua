@@ -8,6 +8,11 @@ QuickRestart.pendingSameWorld = nil
 QuickRestart.sameWorldData = nil
 QuickRestart.pendingMPRestore = nil
 
+local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
+local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
+local M_BEARD_STUBBLE = QuickRestartConstants.VISUAL.M_BEARD_STUBBLE
+local INVENTORY_CONTAINER = QuickRestartConstants.VISUAL.INVENTORY_CONTAINER
+
 local function getPlayerIdentifier(player)
     if not player then return nil end
     if isMultiplayer() then
@@ -210,11 +215,6 @@ end
 local characterDataSaved = false
 local lastDelayedSaveContext = nil
 
-local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
-local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
-local M_BEARD_STUBBLE = QuickRestartConstants.VISUAL.M_BEARD_STUBBLE
-local INVENTORY_CONTAINER = QuickRestartConstants.VISUAL.INVENTORY_CONTAINER
-
 local function getSaveFileNameForPlayer(playerIdentifier)
     return QuickRestartLocalPersistence.getSaveFileNameForPlayer(playerIdentifier)
 end
@@ -244,7 +244,7 @@ local function sandboxDiffers(sandboxVarsCreation, sandboxVarsCurrent)
 end
 
 local function doRestartNewWorld(data, playerIdentifier, sandboxVars)
-    return QuickRestartLocalPersistence.doRestartNewWorld(data, playerIdentifier, sandboxVars)
+    return QuickRestartRestartLaunch.doRestartNewWorld(data, playerIdentifier, sandboxVars)
 end
 
 function QuickRestart.RestartNewWorld()
@@ -349,7 +349,7 @@ local function checkPendingRestart()
     if pendingRestartChecked then return end
     pendingRestartChecked = true
 
-    QuickRestartLocalPersistence.checkPendingRestart(QuickRestart)
+    QuickRestartRestartLaunch.checkPendingRestart(QuickRestart)
 end
 
 Events.OnMainMenuEnter.Add(checkPendingRestart)
@@ -439,6 +439,15 @@ local function buildFlowOptions(extra)
         onRestartOptionChanged = function(category, value)
             QuickRestartRestartOptions.set(getPlayerIdentifier(getPlayer()), category, value)
         end,
+        createRestartPanel = function(config)
+            return QuickRestartUI.createRestartPanel(config)
+        end,
+        removeDeathScreenDelay = function(playerNum)
+            return QuickRestartUI.removeDeathScreenDelay(playerNum)
+        end,
+        beginDeathScreenFade = function(playerNum)
+            return QuickRestartUI.beginDeathScreenFade(playerNum)
+        end,
     }
 
     if type(extra) == "table" then
@@ -465,6 +474,9 @@ local function buildOnNewGameOptions()
         consumePendingSameWorldData = consumePendingSameWorldData,
         consumeSavedData = consumeSavedData,
         loadDataFromFile = loadDataFromFile,
+        runWhenPlayerSquareReady = function(playerObj, fn)
+            return QuickRestartApply.runWhenPlayerSquareReady(playerObj, fn)
+        end,
         scheduleDelayedSave = function(playerObj, saveFilePath)
             if characterDataSaved then
                 if isMultiplayer() then
@@ -596,7 +608,7 @@ Events.OnGameTimeLoaded.Add(function()
 end)
 
 Events.OnServerCommand.Add(function(module, command, args)
-    QuickRestartClientFlow.onServerCommand(module, command, args, buildFlowOptions({
+    QuickRestartClientNetwork.onServerCommand(module, command, args, buildFlowOptions({
         retryPendingSnapshot = retryPendingSnapshot,
         startSameWorldRestartFromSnapshot = startSameWorldRestartFromSnapshot,
         retryApplySkills = flushPendingMPRestore,
@@ -607,6 +619,17 @@ Events.OnServerCommand.Add(function(module, command, args)
         onApplySkillsDenied = function(reason)
             QuickRestartClientState.pendingRestartGrantId = nil
             QuickRestart.pendingMPRestore = nil
+        end,
+        isSnapshotValid = function(snapshot)
+            return QuickRestartClientFlow.isRestartSnapshotAvailable(snapshot)
+        end,
+        tryShowRestartPanel = function()
+            return tryShowRestartPanel()
+        end,
+        onServerClothingRestored = function(player)
+            if QuickRestartApply and QuickRestartApply.refreshVisualAfterServerClothing then
+                QuickRestartApply.refreshVisualAfterServerClothing(player)
+            end
         end,
     }))
 end)

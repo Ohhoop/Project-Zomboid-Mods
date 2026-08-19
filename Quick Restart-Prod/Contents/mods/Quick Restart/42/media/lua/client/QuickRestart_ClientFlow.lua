@@ -1,5 +1,17 @@
 QuickRestartClientFlow = QuickRestartClientFlow or {}
 
+function QuickRestartClientFlow.registerSpawnRegionPreparer(fn)
+    return QuickRestartSpawnRegion.registerPreparer(fn)
+end
+
+function QuickRestartClientFlow.runSpawnRegionPreparers(context)
+    return QuickRestartSpawnRegion.runPreparers(context)
+end
+
+function QuickRestartClientFlow.prepareSpawnRegion(context, availableRegions)
+    return QuickRestartSpawnRegion.prepare(context, availableRegions)
+end
+
 local function summarizeSnapshot(snapshot)
     if type(snapshot) ~= "table" then
         return "snapshot=nil"
@@ -23,54 +35,17 @@ local function summarizeSnapshot(snapshot)
         .. " recipes=" .. tostring(recipesCount)
 end
 
-local function summarizeFaceSnapshot(snapshot)
-    if type(snapshot) ~= "table" or type(snapshot.clothing) ~= "table" then
-        return "face=nil"
-    end
-
-    for _, clothingData in ipairs(snapshot.clothing) do
-        if type(clothingData) == "table"
-            and type(clothingData.bodyLocation) == "string"
-            and string.find(string.lower(clothingData.bodyLocation), "face", 1, true) ~= nil then
-            return "faceType=" .. tostring(clothingData.type)
-                .. " faceBodyLocation=" .. tostring(clothingData.bodyLocation)
-        end
-    end
-
-    return "face=nil"
-end
-
-local function describeSpawnRegions(regions)
-    if type(regions) ~= "table" then
-        return "<nil>"
-    end
-
-    local names = {}
-    for _, region in ipairs(regions) do
-        names[#names + 1] = tostring(region and region.name or nil)
-    end
-    return "[" .. table.concat(names, ", ") .. "]"
-end
-
-local function describeListboxRegions(listbox)
-    if type(listbox) ~= "table" or type(listbox.items) ~= "table" then
-        return "<nil>"
-    end
-
-    local names = {}
-    for _, entry in ipairs(listbox.items) do
-        local region = entry and entry.item and entry.item.region or nil
-        names[#names + 1] = tostring(region and region.name or nil)
-    end
-    return "[" .. table.concat(names, ", ") .. "]"
-end
-
 function QuickRestartClientFlow.isRestartSnapshotAvailable(data)
     if type(data) ~= "table" then
         return false
     end
 
-    local valid = QuickRestartValidate.validateSnapshotData(data)
+    local valid, reason = QuickRestartValidate.validateSnapshotData(data)
+    if not valid then
+        QuickRestartLog.warn("restart snapshot rejected reason=" .. tostring(reason)
+            .. " name=" .. tostring(data.name)
+            .. " profession=" .. tostring(data.profession))
+    end
     return valid == true
 end
 
@@ -81,80 +56,6 @@ function QuickRestartClientFlow.isDeathUiReady(player)
 
     local playerNum = player:getPlayerNum()
     return ISPostDeathUI and ISPostDeathUI.instance and ISPostDeathUI.instance[playerNum] ~= nil
-end
-
-local function applyVisualToDescriptor(desc, data, visualItemTypes)
-    if not desc or not data or not data.visual or not isMultiplayer() then
-        return
-    end
-
-    local visual = desc:getHumanVisual()
-    if not visual then
-        return
-    end
-
-    local call = pcall
-    local isFemale = desc:isFemale()
-
-    if data.visual.hairModel then
-        call(function() visual:setHairModel(data.visual.hairModel) end)
-    end
-    if data.visual.beardModel and data.visual.beardModel ~= "" then
-        call(function() visual:setBeardModel(data.visual.beardModel) end)
-    else
-        call(function() visual:setBeardModel("") end)
-    end
-    if data.visual.hairColor then
-        call(function()
-            local color = ImmutableColor.new(data.visual.hairColor.r, data.visual.hairColor.g, data.visual.hairColor.b, 1)
-            visual:setNaturalHairColor(color)
-            visual:setHairColor(color)
-            visual:setNaturalBeardColor(color)
-            visual:setBeardColor(color)
-        end)
-    end
-    if data.visual.skinTextureIndex ~= nil then
-        call(function() visual:setSkinTextureIndex(data.visual.skinTextureIndex) end)
-    end
-    if data.visual.bodyHairIndex ~= nil then
-        call(function() visual:setBodyHairIndex(data.visual.bodyHairIndex) end)
-    end
-    if data.visual.hairStubble ~= nil then
-        call(function()
-            if isFemale then
-                if data.visual.hairStubble then
-                    visual:addBodyVisualFromItemType(visualItemTypes.fHairStubble)
-                else
-                    visual:removeBodyVisualFromItemType(visualItemTypes.fHairStubble)
-                end
-            else
-                if data.visual.hairStubble then
-                    visual:addBodyVisualFromItemType(visualItemTypes.mHairStubble)
-                else
-                    visual:removeBodyVisualFromItemType(visualItemTypes.mHairStubble)
-                end
-            end
-        end)
-    end
-    if data.visual.beardStubble ~= nil and not isFemale then
-        call(function()
-            if data.visual.beardStubble then
-                visual:addBodyVisualFromItemType(visualItemTypes.mBeardStubble)
-            else
-                visual:removeBodyVisualFromItemType(visualItemTypes.mBeardStubble)
-            end
-        end)
-    end
-end
-
-local function resolveCharacterProfession(profession)
-    local professionType = tostring(profession or "unemployed")
-    local characterProfession = CharacterProfession.get(ResourceLocation.of(professionType))
-    if characterProfession then
-        return characterProfession
-    end
-
-    return CharacterProfession.get(ResourceLocation.of("unemployed"))
 end
 
 function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
@@ -205,27 +106,8 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
 
         local desc = MainScreen.instance.desc
         if desc then
-            desc:setForename(data.forename or "John")
-            desc:setSurname(data.surname or "Doe")
-            desc:setFemale(data.gender == "female")
-            if data.profession then
-                local prof = resolveCharacterProfession(data.profession)
-                if prof then
-                    desc:setCharacterProfession(prof)
-                    pcall(function()
-                        local professionDefinition = CharacterProfessionDefinition.getCharacterProfessionDefinition(prof)
-                        if professionDefinition then
-                            desc:setProfessionSkills(professionDefinition)
-                        end
-                    end)
-                end
-            end
-            if data.voice then
-                if data.voice.prefix then desc:setVoicePrefix(data.voice.prefix) end
-                if data.voice.type ~= nil then desc:setVoiceType(data.voice.type) end
-                if data.voice.pitch ~= nil then desc:setVoicePitch(data.voice.pitch) end
-            end
-            applyVisualToDescriptor(desc, data, visualItemTypes)
+            QuickRestartCharacterDesc.applyIdentity(desc, data)
+            QuickRestartCharacterDesc.applyVisual(desc, data, visualItemTypes)
         end
 
         local mapSel = coop.mapSpawnSelect
@@ -238,69 +120,49 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
             .. " requestedRegion=" .. tostring(data.region)
             .. " worldMap=" .. tostring(data.worldMap)
             .. " listCount=" .. tostring(listCount)
-            .. " listboxRegions=" .. describeListboxRegions(mapSel and mapSel.listbox or nil)
-            .. " availableRegions=" .. describeSpawnRegions(availableRegions))
+            .. " listboxRegions=" .. QuickRestartSpawnRegion.describeListboxRegions(mapSel and mapSel.listbox or nil)
+            .. " availableRegions=" .. QuickRestartSpawnRegion.describeRegions(availableRegions))
 
         local wantRandomSpawn = false
         pcall(function()
             wantRandomSpawn = QuickRestartRestartOptions.sanitize(data.options).spawn == QuickRestartRestartOptions.RANDOM
         end)
 
-        local selectedRegion = nil
-        if wantRandomSpawn and mapSel.listbox and type(mapSel.listbox.items) == "table" and #mapSel.listbox.items > 0 then
-            local randomIndex = ZombRand(#mapSel.listbox.items) + 1
-            local entry = mapSel.listbox.items[randomIndex]
-            local region = entry and entry.item and entry.item.region or nil
-            if region and region.name then
-                mapSel.listbox.selected = randomIndex
-                selectedRegion = region
-                data.region = region.name
-                QuickRestartLog.info("mp client sameWorld random spawn region selected region="
-                    .. tostring(region.name) .. " index=" .. tostring(randomIndex))
-            end
-        end
+        local resolution = QuickRestartSpawnRegion.resolve({
+            mapSpawnSelect = mapSel,
+            data = data,
+            sameWorld = true,
+            wantRandomSpawn = wantRandomSpawn,
+            availableRegions = availableRegions,
+            randomFallback = false,
+        })
 
-        if not selectedRegion and type(data.region) == "string" and data.region ~= ""
-            and mapSel.listbox and type(mapSel.listbox.items) == "table" then
-            for index, entry in ipairs(mapSel.listbox.items) do
-                local region = entry.item and entry.item.region or nil
-                if region and region.name == data.region then
-                    mapSel.listbox.selected = index
-                    selectedRegion = region
-                    QuickRestartLog.info("mp client sameWorld selected saved region from listbox region="
-                        .. tostring(data.region) .. " index=" .. tostring(index))
-                    break
-                end
-            end
-        end
-
-        if not selectedRegion and type(data.region) == "string" and data.region ~= ""
-            and type(availableRegions) == "table" then
-            for _, region in ipairs(availableRegions) do
-                if region and region.name == data.region then
-                    selectedRegion = region
-                    QuickRestartLog.warn("mp client sameWorld region found in spawn regions but absent from listbox region="
-                        .. tostring(data.region))
-                    break
-                end
-            end
-        end
-
-        local usedDefault = false
-        if selectedRegion then
-            mapSel.selectedRegion = selectedRegion
-        else
+        if resolution.source == "random" then
+            QuickRestartLog.info("mp client sameWorld random spawn region selected region="
+                .. tostring(data.region) .. " index=" .. tostring(resolution.listboxIndex))
+        elseif resolution.source == "listbox" then
+            QuickRestartLog.info("mp client sameWorld selected saved region from listbox region="
+                .. tostring(data.region) .. " index=" .. tostring(resolution.listboxIndex))
+        elseif resolution.source == "available" then
+            QuickRestartLog.warn("mp client sameWorld region found in spawn regions but absent from listbox region="
+                .. tostring(data.region))
+        elseif resolution.source == "default" then
             QuickRestartLog.warn("mp client sameWorld saved region not found, using default requestedRegion="
                 .. tostring(data.region))
-            selectedRegion = mapSel:useDefaultSpawnRegion()
-            usedDefault = true
         end
 
         QuickRestartLog.info("mp client sameWorld region resolution finalized"
             .. " requestedRegion=" .. tostring(data.region)
             .. " finalSelectedRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil)
-            .. " usedDefault=" .. tostring(usedDefault)
+            .. " usedDefault=" .. tostring(resolution.source == "default")
             .. " listboxSelectedIndex=" .. tostring(mapSel.listbox and mapSel.listbox.selected or nil))
+
+        if resolution.preparedRegionName then
+            QuickRestartLog.info("mp client sameWorld spawn region preparer override"
+                .. " requestedRegion=" .. tostring(resolution.preparedRegionName)
+                .. " applied=" .. tostring(resolution.preparedApplied)
+                .. " finalSelectedRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil))
+        end
 
         if isMultiplayer() and data.traits and #data.traits > 0 and coop.charCreationProfession then
             for _, traitStr in ipairs(data.traits) do
@@ -452,7 +314,11 @@ function QuickRestartClientFlow.addRestartPanel(options)
         end
     end
 
-    local panel = QuickRestartUI.createRestartPanel({
+    if not options.createRestartPanel then
+        return nil
+    end
+
+    local panel = options.createRestartPanel({
         charDataAvail = charDataAvail,
         canUseFreshWorld = options.canUseFreshWorld,
         onRestartNewWorld = options.onRestartNewWorld,
@@ -505,8 +371,12 @@ function QuickRestartClientFlow.onPlayerDeath(player, options)
 
     if player and player.getPlayerNum then
         local playerNum = player:getPlayerNum()
-        QuickRestartUI.removeDeathScreenDelay(playerNum)
-        QuickRestartUI.beginDeathScreenFade(playerNum)
+        if options.removeDeathScreenDelay then
+            options.removeDeathScreenDelay(playerNum)
+        end
+        if options.beginDeathScreenFade then
+            options.beginDeathScreenFade(playerNum)
+        end
     end
 
     state.awaitingRestartPanel = true
@@ -593,8 +463,8 @@ function QuickRestartClientFlow.scheduleSpawnRegionCoordCapture(player, options)
         return
     end
 
-    if QuickRestartApply and QuickRestartApply.runWhenPlayerSquareReady then
-        QuickRestartApply.runWhenPlayerSquareReady(player, function()
+    if options.runWhenPlayerSquareReady then
+        options.runWhenPlayerSquareReady(player, function()
             captureSpawnRegionFromCoords(player)
         end)
         return
@@ -735,196 +605,6 @@ function QuickRestartClientFlow.onGameTimeLoaded(options)
 
     if options.flushPendingMPSkills then
         options.flushPendingMPSkills()
-    end
-end
-
-function QuickRestartClientFlow.onServerCommand(module, command, args, options)
-    options = options or {}
-    if module ~= QuickRestartConstants.MODULE then
-        return
-    end
-
-    local state = options.state
-    if not state or type(args) ~= "table" then
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.SNAPSHOT_ACK then
-        if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
-            QuickRestartLog.warn("mp client ignored SNAPSHOT_ACK due to pendingRequestId mismatch pending="
-                .. tostring(state.pendingRequestId)
-                .. " received=" .. tostring(args.requestId))
-            return
-        end
-
-        QuickRestartLog.info("mp client SNAPSHOT_ACK requestId=" .. tostring(args.requestId)
-            .. " accepted=" .. tostring(args.accepted)
-            .. " stored=" .. tostring(args.stored)
-            .. " profileKey=" .. tostring(args.profileKey)
-            .. " " .. summarizeFaceSnapshot(state.pendingSnapshot))
-        state.waitingForSnapshotAck = false
-        state.snapshotAcked = args.accepted == true
-        if args.profileKey and args.profileKey ~= "" then
-            state.pendingProfileKey = tostring(args.profileKey)
-        end
-        if args.accepted == true and state.pendingSnapshot then
-            if args.stored == true then
-                state.serverSnapshot = state.pendingSnapshot
-                state.serverSnapshotLoaded = true
-                QuickRestartLog.info("mp client active server snapshot updated from ACK "
-                    .. summarizeSnapshot(state.serverSnapshot)
-                    .. " " .. summarizeFaceSnapshot(state.serverSnapshot))
-            end
-            state.pendingSnapshot = nil
-        end
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.SNAPSHOT_RETRY then
-        if state.pendingRequestId and args.requestId and state.pendingRequestId ~= args.requestId then
-            QuickRestartLog.warn("mp client ignored SNAPSHOT_RETRY due to pendingRequestId mismatch pending="
-                .. tostring(state.pendingRequestId)
-                .. " received=" .. tostring(args.requestId))
-            return
-        end
-
-        QuickRestartLog.warn("mp client SNAPSHOT_RETRY requestId=" .. tostring(args.requestId)
-            .. " attempt=" .. tostring(args.attempt))
-        local player = getPlayer()
-        if player and options.retryPendingSnapshot then
-            options.retryPendingSnapshot(player)
-        end
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_ACK then
-        QuickRestartLog.info("mp client APPLY_AUTHORITATIVE_SNAPSHOT_ACK profileKey=" .. tostring(args.profileKey))
-        if options.onApplySkillsAck then
-            options.onApplySkillsAck()
-        end
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.SERVER_CLOTHING_RESTORED then
-        QuickRestartLog.info("mp client SERVER_CLOTHING_RESTORED")
-        local player = getPlayer()
-        if player then
-            if QuickRestartApply and QuickRestartApply.refreshVisualAfterServerClothing then
-                QuickRestartApply.refreshVisualAfterServerClothing(player)
-            end
-        end
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY then
-        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_RETRY grantId=" .. tostring(args.grantId)
-            .. " reason=" .. tostring(args.reason))
-        if args.grantId and args.grantId ~= "" then
-            state.pendingRestartGrantId = tostring(args.grantId)
-        end
-        if options.retryApplySkills then
-            options.retryApplySkills()
-        end
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED then
-        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_DENIED reason=" .. tostring(args.reason))
-        state.pendingRestartGrantId = nil
-        if options.onApplySkillsDenied then
-            options.onApplySkillsDenied(args.reason)
-        end
-        return
-    end
-
-    if state.pendingRestartRequestId and args.requestId and state.pendingRestartRequestId ~= args.requestId then
-        QuickRestartLog.warn("mp client ignored restart response due to pendingRestartRequestId mismatch command="
-            .. tostring(command)
-            .. " pending=" .. tostring(state.pendingRestartRequestId)
-            .. " received=" .. tostring(args.requestId))
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.RESTART_ACCEPTED then
-        QuickRestartLog.info("mp client RESTART_ACCEPTED mode=" .. tostring(args.mode)
-            .. " requestId=" .. tostring(args.requestId)
-            .. " grantId=" .. tostring(args.grantId)
-            .. " hasServerSnapshot=" .. tostring(state.serverSnapshot ~= nil))
-        state.pendingRestartApproved = true
-        state.lastRestartDeniedReason = nil
-        state.pendingRestartGrantId = args.grantId
-        if state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and state.serverSnapshot and options.startSameWorldRestartFromSnapshot then
-            state.pendingRestartRequestId = nil
-            state.pendingRestartApproved = false
-            options.startSameWorldRestartFromSnapshot(state.serverSnapshot)
-            state.pendingRestartMode = nil
-        end
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.RESTART_DENIED then
-        QuickRestartLog.warn("mp client RESTART_DENIED mode=" .. tostring(args.mode)
-            .. " requestId=" .. tostring(args.requestId)
-            .. " reason=" .. tostring(args.reason))
-        state.pendingRestartRequestId = nil
-        state.pendingRestartApproved = false
-        state.pendingRestartGrantId = nil
-        state.lastRestartDeniedReason = args.reason
-        state.pendingRestartMode = nil
-        return
-    end
-
-    if command == QuickRestartConstants.COMMANDS.SNAPSHOT_DATA then
-        local requestMatchesActive = state.pendingRequestId and args.requestId and state.pendingRequestId == args.requestId
-        local requestMatchesRestart = state.pendingRestartRequestId and args.requestId and state.pendingRestartRequestId == args.requestId
-        local hasTrackedRequest = state.pendingRequestId or state.pendingRestartRequestId
-
-        if hasTrackedRequest and args.requestId and not requestMatchesActive and not requestMatchesRestart then
-            QuickRestartLog.warn("mp client ignored SNAPSHOT_DATA due to request mismatch activePending="
-                .. tostring(state.pendingRequestId)
-                .. " restartPending=" .. tostring(state.pendingRestartRequestId)
-                .. " received=" .. tostring(args.requestId))
-            return
-        end
-
-        if args.profileKey and args.profileKey ~= "" then
-            state.pendingProfileKey = tostring(args.profileKey)
-        end
-
-        local snapshot = args.snapshot
-        local hasValidSnapshot = false
-        if args.found == true and type(snapshot) == "table" then
-            hasValidSnapshot = QuickRestartClientFlow.isRestartSnapshotAvailable(snapshot)
-        end
-
-        state.serverSnapshot = hasValidSnapshot and snapshot or nil
-        state.serverSnapshotLoaded = hasValidSnapshot
-        state.waitingForActiveSnapshot = false
-        if requestMatchesActive then
-            state.pendingRequestId = nil
-        end
-
-        QuickRestartLog.info("mp client SNAPSHOT_DATA requestId=" .. tostring(args.requestId)
-            .. " found=" .. tostring(args.found)
-            .. " hasValidSnapshot=" .. tostring(hasValidSnapshot)
-            .. " profileKey=" .. tostring(args.profileKey)
-            .. " " .. summarizeSnapshot(snapshot)
-            .. " " .. summarizeFaceSnapshot(snapshot))
-
-        if state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and state.serverSnapshot and options.startSameWorldRestartFromSnapshot then
-            state.pendingRestartRequestId = nil
-            state.pendingRestartApproved = false
-            options.startSameWorldRestartFromSnapshot(state.serverSnapshot)
-            state.pendingRestartMode = nil
-        elseif state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and not state.serverSnapshot then
-            QuickRestartLog.warn("mp client same-world restart canceled: invalid server snapshot")
-            state.pendingRestartRequestId = nil
-            state.pendingRestartApproved = false
-            state.pendingRestartGrantId = nil
-            state.lastRestartDeniedReason = "invalid_server_snapshot"
-            state.pendingRestartMode = nil
-        end
-        QuickRestartClientFlow.tryShowRestartPanel(options)
     end
 end
 

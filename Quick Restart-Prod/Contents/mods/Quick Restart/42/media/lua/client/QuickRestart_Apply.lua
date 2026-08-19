@@ -313,26 +313,44 @@ local function deepCopySupportedValue(value, visited)
     return copy
 end
 
-local function clearTable(tbl)
+local function clearTable(tbl, ignoredKeys)
     if type(tbl) ~= "table" then
         return
     end
 
     for key in pairs(tbl) do
-        tbl[key] = nil
+        if not (ignoredKeys and ignoredKeys[key]) then
+            tbl[key] = nil
+        end
     end
 end
 
-local function applyTableData(target, source)
+local function resolveModOwnedModDataKeys()
+    local keys = {}
+
+    pcall(function()
+        if QuickRestartValidate and QuickRestartValidate.getModOwnedModDataKeys then
+            for key in pairs(QuickRestartValidate.getModOwnedModDataKeys()) do
+                keys[key] = true
+            end
+        end
+    end)
+
+    return keys
+end
+
+local function applyTableData(target, source, ignoredKeys)
     if type(target) ~= "table" or type(source) ~= "table" then
         return false
     end
 
-    clearTable(target)
+    clearTable(target, ignoredKeys)
 
     local copy = deepCopySupportedValue(source, {})
     for key, value in pairs(copy or {}) do
-        target[key] = value
+        if not (ignoredKeys and ignoredKeys[key]) then
+            target[key] = value
+        end
     end
 
     return true
@@ -372,6 +390,7 @@ local function applyModDataPhase(player, data)
     end
 
     local applied = false
+    local modOwnedKeys = resolveModOwnedModDataKeys()
 
     logRestore("applyModDataPhase begin"
         .. " snapshotHasPlayerModData=" .. tostring(type(data.modData.player) == "table")
@@ -386,7 +405,7 @@ local function applyModDataPhase(player, data)
             return player:getModData()
         end)
         if ok and type(playerModData) == "table" then
-            applyTableData(playerModData, data.modData.player)
+            applyTableData(playerModData, data.modData.player, modOwnedKeys)
             applied = true
             logRestore("applyModDataPhase player entries=" .. tostring(countTableEntries(playerModData))
                 .. QuickRestartLog.describeWatchedKeys("player", playerModData))
@@ -402,7 +421,7 @@ local function applyModDataPhase(player, data)
                 return descriptor:getModData()
             end)
             if okModData and type(descriptorModData) == "table" then
-                applyTableData(descriptorModData, data.modData.descriptor)
+                applyTableData(descriptorModData, data.modData.descriptor, modOwnedKeys)
                 applied = true
                 logRestore("applyModDataPhase descriptor entries=" .. tostring(countTableEntries(descriptorModData))
                     .. QuickRestartLog.describeWatchedKeys("descriptor", descriptorModData))

@@ -3,7 +3,6 @@ QuickRestartSnapshotCodec = QuickRestartSnapshotCodec or {}
 local ENCODE_KEY = "QuickRestart_B42_SecretKey_2026"
 local ENCODE_KEY_LEN = #ENCODE_KEY
 local CODEC_VERSION = "3"
-local OPTION_KEYS = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "zombies"}
 
 function QuickRestartSnapshotCodec.encodeString(str)
     if not str or str == "" then return "" end
@@ -369,6 +368,10 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
         end
     end
 
+    if type(data.compat) == "table" then
+        appendFlattenedTable(content, "compat", data.compat, {})
+    end
+
     if type(data.restoreDomains) == "table" then
         if data.restoreDomains.visualOwnedByMod ~= nil then
             appendScalarLine(content, "restoreDomains_visualOwnedByMod", data.restoreDomains.visualOwnedByMod)
@@ -379,7 +382,7 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
     end
 
     if type(data.options) == "table" then
-        for _, optionKey in ipairs(OPTION_KEYS) do
+        for _, optionKey in ipairs(QuickRestartRestartOptions.CATEGORIES) do
             if type(data.options[optionKey]) == "string" then
                 appendScalarLine(content, "options_" .. optionKey, data.options[optionKey])
             end
@@ -486,6 +489,17 @@ function QuickRestartSnapshotCodec.readDecodedContent(decodedContent)
                     data.options = {}
                 end
                 data.options[optionKey] = value
+            elseif key == "compat" or key:match("^compat%.") then
+                local basePath = key:gsub("^compat%.?", "")
+                if basePath == "" then
+                    data.compat = decodeTypedValue(value)
+                elseif type(data.compat) == "table" then
+                    local pathSegments = splitSerializedPath(basePath)
+                    local container, finalKey = ensureDecodedPath(data.compat, pathSegments)
+                    if container and finalKey ~= nil then
+                        container[finalKey] = decodeTypedValue(value)
+                    end
+                end
             elseif key == "modDataPlayer" or key:match("^modDataPlayer%.") then
                 local basePath = key:gsub("^modDataPlayer%.?", "")
                 if basePath == "" then

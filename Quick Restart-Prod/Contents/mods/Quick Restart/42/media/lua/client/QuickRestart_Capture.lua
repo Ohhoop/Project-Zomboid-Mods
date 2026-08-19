@@ -108,6 +108,20 @@ local function detectVisualOwnership(value, depth, visited)
     return false
 end
 
+local function stripModOwnedRootKeys(copy)
+    if type(copy) ~= "table" then
+        return
+    end
+
+    pcall(function()
+        if QuickRestartValidate and QuickRestartValidate.getModOwnedModDataKeys then
+            for key in pairs(QuickRestartValidate.getModOwnedModDataKeys()) do
+                copy[key] = nil
+            end
+        end
+    end)
+end
+
 local function captureModDataSnapshot(target)
     if not target or not target.getModData then
         return nil
@@ -121,6 +135,7 @@ local function captureModDataSnapshot(target)
     end
 
     local copy = deepCopySupportedValue(modData, {})
+    stripModOwnedRootKeys(copy)
     if not tableHasEntries(copy) then
         return nil
     end
@@ -531,6 +546,10 @@ function QuickRestartCapture.captureCharacterData(player, options)
     }
 
     logCapturedModData(playerModData, descriptorModData, data.restoreDomains)
+
+    pcall(function()
+        triggerEvent("OnQuickRestartSnapshotCaptured", data, player)
+    end)
 
     return data
 end
