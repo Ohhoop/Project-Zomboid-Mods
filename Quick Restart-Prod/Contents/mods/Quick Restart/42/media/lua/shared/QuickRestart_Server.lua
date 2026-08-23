@@ -79,6 +79,35 @@ local function buildSnapshotRecord(profileKey, snapshot, persisted, existingReco
     }
 end
 
+local function withoutRestartOptions(snapshot)
+    if type(snapshot) ~= "table" or snapshot.options == nil then
+        return snapshot
+    end
+
+    local stripped = {}
+    for key, value in pairs(snapshot) do
+        if key ~= "options" then
+            stripped[key] = value
+        end
+    end
+
+    return stripped
+end
+
+local function readSnapshotFile(fileName)
+    local snapshot = QuickRestartSnapshotCodec.readDataFromFile(fileName)
+    if snapshot then
+        return snapshot
+    end
+
+    snapshot = QuickRestartLegacyCodec.readDataFromFile(fileName)
+    if snapshot then
+        QuickRestartLog.info("mp server readSnapshotFile migrated legacy snapshot fileName=" .. tostring(fileName))
+    end
+
+    return snapshot
+end
+
 local function validateSnapshotRecord(profileKey, snapshot)
     local valid, reason = QuickRestartValidate.validateSnapshotData(snapshot)
     if valid then
@@ -142,14 +171,17 @@ local function getProfileRecord(profileKey)
     end
 
     local fileName = QuickRestartProfileKey.getServerSnapshotFileName(profileKey)
-    local snapshot = QuickRestartSnapshotCodec.readDataFromFile(fileName)
+    local snapshot = readSnapshotFile(fileName)
+
     if not snapshot then
-        snapshot = QuickRestartLegacyCodec.readDataFromFile(fileName)
+        local sharedFileName = QuickRestartProfileKey.getLegacyServerSnapshotFileName(profileKey)
+        snapshot = withoutRestartOptions(readSnapshotFile(sharedFileName))
         if snapshot then
-            QuickRestartLog.info("mp server getProfileRecord migrated legacy snapshot profileKey=" .. tostring(profileKey)
-                .. " fileName=" .. tostring(fileName))
+            QuickRestartLog.info("mp server getProfileRecord adopted snapshot from shared location profileKey=" .. tostring(profileKey)
+                .. " fileName=" .. tostring(sharedFileName))
         end
     end
+
     if not snapshot then
         QuickRestartLog.info("mp server getProfileRecord miss profileKey=" .. tostring(profileKey)
             .. " fileName=" .. tostring(fileName))
@@ -267,14 +299,14 @@ local function handleSubmitSnapshot(player, args)
     local attempt = tonumber(args.attempt) or 1
     local requestId = args.requestId
     local allowReplace = args.allowReplace == true
-    local username = QuickRestartProfileKey.getUsername(player, args)
+    local username = QuickRestartProfileKey.getUsername(player)
 
     if not username then
         QuickRestartLog.warn("submitSnapshot rejected: missing username")
         return
     end
 
-    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player, args)
+    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player)
     if not profileKey then
         QuickRestartLog.warn("submitSnapshot rejected: missing profile key for " .. tostring(username))
         return
@@ -323,7 +355,7 @@ local function handleRequestActiveSnapshot(player, args)
         return
     end
 
-    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player, args)
+    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player)
     if not profileKey then
         QuickRestartLog.warn("mp server handleRequestActiveSnapshot missing profile key")
         return
@@ -347,7 +379,7 @@ local function handleRequestRestartSameWorld(player, args)
         return
     end
 
-    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player, args)
+    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player)
     local requestId = args and args.requestId or nil
     if not profileKey then
         QuickRestartLog.warn("mp server handleRequestRestartSameWorld denied: missing profile key requestId=" .. tostring(requestId))
@@ -411,7 +443,7 @@ local function handleRequestRestartFreshWorld(player, args)
         return
     end
 
-    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player, args)
+    local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player)
     sendRestartDenied(
         player,
         args and args.requestId or nil,
@@ -447,7 +479,7 @@ local function onClientCommand(module, command, player, args)
     if command == COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT then
         cleanupExpiredRestartGrants()
 
-        local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player, args)
+        local profileKey = QuickRestartProfileKey.resolvePlayerProfileKey(player)
         local grantId = args and args.grantId or nil
         local grant = grantId and QuickRestartServerState.restartGrantsById[grantId] or nil
         if not player or not profileKey then

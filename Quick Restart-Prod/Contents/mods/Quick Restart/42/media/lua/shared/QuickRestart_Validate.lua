@@ -121,16 +121,8 @@ local function traitExists(trait)
     return resolved ~= nil
 end
 
-local function perkIndexExists(index)
-    if type(index) ~= "number" then
-        return false
-    end
-
-    if not Perks or not Perks.getMaxIndex or index < 0 or index >= (Perks.getMaxIndex() - 1) + 1 then
-        return false
-    end
-
-    return Perks.fromIndex(index) ~= nil
+local function perkExists(perkKey)
+    return QuickRestartUtil.resolvePerkKey(perkKey) ~= nil
 end
 
 local function copySerializableTable(value, visited)
@@ -222,13 +214,13 @@ function QuickRestartValidate.validateSnapshotData(data)
         return false, "clothing_not_table"
     end
 
-    local index
     local level
+    local keyValid
 
-    for perkIndex, perkXP in pairs(data.skills) do
-        index = tonumber(perkIndex)
+    for perkKey, perkXP in pairs(data.skills) do
         level = tonumber(perkXP)
-        if index == nil or level == nil or level < 0 then
+        keyValid = isNonEmptyString(perkKey) or type(perkKey) == "number"
+        if not keyValid or level == nil or level < 0 then
             return false, "invalid_skill_entry"
         end
     end
@@ -335,6 +327,7 @@ function QuickRestartValidate.normalizeSnapshotData(data)
         seed = isNonEmptyString(data.seed) and string.sub(data.seed, 1, 16) or nil,
         traits = {},
         skills = {},
+        xpBoosts = {},
         recipes = {},
         visual = {},
         voice = {},
@@ -356,11 +349,21 @@ function QuickRestartValidate.normalizeSnapshotData(data)
         end
     end
 
-    for perkIndex, perkXP in pairs(data.skills or {}) do
-        local normalizedIndex = tonumber(perkIndex)
+    for perkKey, perkXP in pairs(data.skills or {}) do
         local normalizedXP = tonumber(perkXP)
-        if normalizedIndex ~= nil and normalizedXP ~= nil and normalizedXP >= 0 and perkIndexExists(normalizedIndex) then
-            normalized.skills[tostring(normalizedIndex)] = normalizedXP
+        local perkId = QuickRestartUtil.resolvePerkKey(perkKey)
+        if perkId ~= nil and normalizedXP ~= nil and normalizedXP >= 0 then
+            normalized.skills[perkId] = normalizedXP
+        elseif QuickRestartLog and QuickRestartLog.warn then
+            QuickRestartLog.warn("snapshot skill dropped, perk not registered perkKey=" .. tostring(perkKey))
+        end
+    end
+
+    for perkKey, perkBoost in pairs(data.xpBoosts or {}) do
+        local normalizedBoost = tonumber(perkBoost)
+        local perkId = QuickRestartUtil.resolvePerkKey(perkKey)
+        if perkId ~= nil and normalizedBoost ~= nil and normalizedBoost > 0 then
+            normalized.xpBoosts[perkId] = normalizedBoost
         end
     end
 
@@ -443,7 +446,7 @@ function QuickRestartValidate.normalizeSnapshotData(data)
 
     if type(data.options) == "table" then
         normalized.options = {}
-        for _, optionKey in ipairs({"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}) do
+        for _, optionKey in ipairs(QuickRestartRestartOptions.CATEGORIES) do
             if data.options[optionKey] == "random" then
                 normalized.options[optionKey] = "random"
             else
@@ -460,6 +463,6 @@ QuickRestartValidate.normalizeLegacyCharacterData = QuickRestartValidate.normali
 QuickRestartValidate.professionExists = professionExists
 QuickRestartValidate.getSafeProfessionType = getSafeProfessionType
 QuickRestartValidate.traitExists = traitExists
-QuickRestartValidate.perkIndexExists = perkIndexExists
+QuickRestartValidate.perkExists = perkExists
 
 return QuickRestartValidate

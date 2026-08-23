@@ -12,6 +12,7 @@ local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
 local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
 local M_BEARD_STUBBLE = QuickRestartConstants.VISUAL.M_BEARD_STUBBLE
 local INVENTORY_CONTAINER = QuickRestartConstants.VISUAL.INVENTORY_CONTAINER
+local TRANSITION_OVERLAY_READY_TIMEOUT_MS = 4000
 
 local function getPlayerIdentifier(player)
     if not player then return nil end
@@ -366,6 +367,38 @@ end
 Events.OnMainMenuEnter.Add(closeRestartPanel)
 Events.OnCreatePlayer.Add(closeRestartPanel)
 
+local pendingOverlayDismissal = false
+
+local function watchWorldReadinessForOverlay(playerIndex, playerObj)
+    if not pendingOverlayDismissal then
+        return
+    end
+
+    pendingOverlayDismissal = false
+
+    playerObj = playerObj or getPlayer()
+    if not playerObj then
+        QuickRestartLog.warn("same world restart player created without a player object; dismissing transition overlay")
+        QuickRestartUI.hideTransitionOverlay()
+        return
+    end
+
+    local playerNum = playerObj.getPlayerNum and playerObj:getPlayerNum() or playerIndex
+    QuickRestartLog.info("same world restart player created; watching world readiness playerNum=" .. tostring(playerNum))
+
+    QuickRestartApply.runWhenPlayerWorldReady(playerObj, function(_, ticks)
+        QuickRestartLog.info("same world restart world ready after " .. tostring(ticks)
+            .. " ticks; dismissing transition overlay")
+        QuickRestartUI.hideTransitionOverlay()
+    end, TRANSITION_OVERLAY_READY_TIMEOUT_MS, function()
+        QuickRestartLog.warn("same world restart world not ready after "
+            .. tostring(TRANSITION_OVERLAY_READY_TIMEOUT_MS) .. " ms; dismissing transition overlay anyway")
+        QuickRestartUI.hideTransitionOverlay()
+    end)
+end
+
+Events.OnCreatePlayer.Add(watchWorldReadinessForOverlay)
+
 local function consumePendingSameWorldData()
     if QuickRestart.pendingSameWorld and QuickRestart.sameWorldData then
         local data = QuickRestart.sameWorldData
@@ -403,9 +436,6 @@ local function flushPendingMPRestore()
 
     sendClientCommand(QuickRestartConstants.MODULE, QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT, {
         grantId = QuickRestartClientState.pendingRestartGrantId,
-        profileKey = QuickRestartClientState.pendingProfileKey,
-        username = QuickRestartClientState.pendingUsername,
-        steamID = QuickRestartClientState.pendingSteamID,
     })
 end
 
@@ -534,14 +564,10 @@ local function buildOnNewGameOptions()
             triggerEvent("OnQuickRestartAfterApply", data, sameWorldRestart, playerObj)
         end,
         onSameWorldRestartApplied = function(playerObj)
+            QuickRestartLog.info("same world restart applied; overlay dismissal pending player creation")
             QuickRestartApply.clearZombiesAroundPlayer(playerObj)
-            QuickRestartApply.refreshPlayerLighting(playerObj, {
-                scheduler = QuickRestartScheduler,
-                delayTicks = isMultiplayer() and 4 or 20,
-            })
-            QuickRestartScheduler.scheduleAfterMs("hide_same_world_transition_overlay", 500, function()
-                QuickRestartUI.hideTransitionOverlay()
-            end)
+            QuickRestartApply.refreshPlayerLighting(playerObj)
+            pendingOverlayDismissal = true
         end,
         persistAppliedData = function(data, saveFilePath)
             writeDataToFile(data, saveFilePath, data.sandbox)

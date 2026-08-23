@@ -5,8 +5,6 @@ function QuickRestartProtocol.buildSnapshotSubmit(snapshot, options)
 
     return {
         snapshot = snapshot,
-        username = options.username,
-        steamID = options.steamID,
         requestId = options.requestId,
         attempt = tonumber(options.attempt) or 1,
         allowReplace = options.allowReplace == true,
@@ -18,8 +16,6 @@ function QuickRestartProtocol.buildRestartIntent(options)
 
     return {
         requestId = options.requestId,
-        username = options.username,
-        steamID = options.steamID,
         options = options.options,
         randomized = options.randomized,
     }

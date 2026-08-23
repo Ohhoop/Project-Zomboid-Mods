@@ -282,6 +282,16 @@ function QuickRestartSnapshotCodec.serializeData(data, sandboxVars)
         appendScalarLine(content, "skills", "")
     end
 
+    if data.xpBoosts then
+        local boostList = {}
+        for perkId, boost in pairs(data.xpBoosts) do
+            boostList[#boostList + 1] = perkId .. ":" .. tostring(boost)
+        end
+        appendScalarLine(content, "xpBoosts", table.concat(boostList, ","))
+    else
+        appendScalarLine(content, "xpBoosts", "")
+    end
+
     if data.recipes and #data.recipes > 0 then
         appendScalarLine(content, "recipes", table.concat(data.recipes, ","))
     else
@@ -410,6 +420,7 @@ function QuickRestartSnapshotCodec.readDecodedContent(decodedContent)
         visual = {},
         voice = {},
         skills = {},
+        xpBoosts = {},
         traits = {},
         recipes = {},
         clothing = {},
@@ -531,6 +542,13 @@ function QuickRestartSnapshotCodec.readDecodedContent(decodedContent)
                     local perkId, level = skillPair:match("([^:]+):([^:]+)")
                     if perkId and level then
                         data.skills[perkId] = toNum(level)
+                    end
+                end
+            elseif key == "xpBoosts" then
+                for boostPair in gmatch(value, "[^,]+") do
+                    local perkId, boost = boostPair:match("([^:]+):([^:]+)")
+                    if perkId and boost then
+                        data.xpBoosts[perkId] = toNum(boost)
                     end
                 end
             elseif key == "recipes" then

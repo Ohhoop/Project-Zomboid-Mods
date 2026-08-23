@@ -6,7 +6,13 @@ QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 local DICE_KEEP_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Keep.png"
 local DICE_RANDOM_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Random.png"
 local DICE_PULSE_PERIOD_MS = 1600
+local TRANSITION_PULSE_PERIOD_MS = 1600
 local FADE_IN_DURATION_MS = 450
+local LOCK_THROB_DURATION_MS = 1400
+local LOCK_THROB_PERIOD_MS = 700
+local LOCK_ICON_WIDTH = 7
+local LOCK_ICON_HEIGHT = 9
+local LOCK_ICON_GAP = 6
 
 local deathScreenFadeStartMs = nil
 
@@ -60,6 +66,8 @@ end
 
 local OPTION_ROWS = {
     {category = "gender", labelKey = "UI_QuickRestart_Options_Gender", tooltipKey = "UI_QuickRestart_Options_Gender_Tooltip"},
+    {category = "appearance", labelKey = "UI_QuickRestart_Options_Appearance", tooltipKey = "UI_QuickRestart_Options_Appearance_Tooltip"},
+    {category = "name", labelKey = "UI_QuickRestart_Options_Name", tooltipKey = "UI_QuickRestart_Options_Name_Tooltip"},
     {category = "profession", labelKey = "UI_QuickRestart_Options_Profession", tooltipKey = "UI_QuickRestart_Options_Profession_Tooltip"},
     {category = "traits", labelKey = "UI_QuickRestart_Options_Traits", tooltipKey = "UI_QuickRestart_Options_Traits_Tooltip"},
     {category = "clothing", labelKey = "UI_QuickRestart_Options_Clothing", tooltipKey = "UI_QuickRestart_Options_Clothing_Tooltip"},
@@ -237,7 +245,13 @@ function QuickRestartTransitionOverlay:render()
     local x = (self.width - textWidth) / 2
     local y = (self.height - textHeight) / 2
 
-    self:drawText(message, x, y, 1, 1, 1, self.currentAlpha * self.textAlphaScale, font)
+    local alpha = self.currentAlpha * self.textAlphaScale
+    if not self.isClosing then
+        local phase = (getTimestampMs() % TRANSITION_PULSE_PERIOD_MS) / TRANSITION_PULSE_PERIOD_MS
+        alpha = alpha * (0.75 + 0.25 * math.sin(2 * math.pi * phase))
+    end
+
+    self:drawText(message, x, y, 1, 1, 1, alpha, font)
 end
 
 function QuickRestartPanel:prerender()
@@ -272,7 +286,7 @@ function QuickRestartPanel:createChildren()
     local charDataAvail = self.charDataAvail
 
     local freshEnabled = self.freshWorldEnabled and charDataAvail
-    local sameEnabled = charDataAvail
+    local sameEnabled = charDataAvail and not self.snapshotPending
 
     local freshLabel = getText("UI_QuickRestart_FreshWorld")
     local sameLabel = getText("UI_QuickRestart_ThisWorld")
@@ -490,7 +504,24 @@ function QuickRestartOptionsWindow:createChildren()
     end
 end
 
+function QuickRestartOptionsWindow:isTraitsLocked()
+    return QuickRestartRestartOptions.isTraitsLockedBy(self.restartOptions)
+end
+
+function QuickRestartOptionsWindow:drawLockIcon(x, y, alpha)
+    local bodyHeight = LOCK_ICON_HEIGHT - 4
+    local bodyY = y + LOCK_ICON_HEIGHT - bodyHeight
+    self:drawRect(x, bodyY, LOCK_ICON_WIDTH, bodyHeight, alpha, 1, 1, 1)
+    self:drawRect(x + 1, y, 1, 4, alpha, 1, 1, 1)
+    self:drawRect(x + LOCK_ICON_WIDTH - 2, y, 1, 4, alpha, 1, 1, 1)
+    self:drawRect(x + 1, y, LOCK_ICON_WIDTH - 2, 1, alpha, 1, 1, 1)
+end
+
 function QuickRestartOptionsWindow:onOptionRowClick(category)
+    if category == "traits" and self:isTraitsLocked() then
+        return
+    end
+
     local newValue = self.restartOptions[category] == "random" and "keep" or "random"
 
     if newValue == "random" then
@@ -541,6 +572,21 @@ function QuickRestartOptionsWindow:applyOptionValue(category, value)
     if self.onRestartOptionChanged then
         self.onRestartOptionChanged(category, value)
     end
+
+    if category == "profession" then
+        if value == "random" then
+            if self.restartOptions.traits ~= "random" then
+                self.traitsValueBeforeLock = self.restartOptions.traits
+                self.traitsThrobStartMs = getTimestampMs()
+                self:applyOptionValue("traits", "random")
+            end
+        elseif self.traitsValueBeforeLock then
+            local restored = self.traitsValueBeforeLock
+            self.traitsValueBeforeLock = nil
+            self.traitsThrobStartMs = nil
+            self:applyOptionValue("traits", restored)
+        end
+    end
 end
 
 function QuickRestartOptionsWindow:render()
@@ -576,10 +622,42 @@ function QuickRestartOptionsWindow:render()
                 self:drawText(button.disabledLabel, disabledX, labelY, 0.6, 0.6, 0.6, 1, font)
             end
 
+            local locked = row.category == "traits" and self:isTraitsLocked()
+            local lockX, lockY = nil, nil
+            if locked then
+                lockX = button:getX() - LOCK_ICON_GAP - LOCK_ICON_WIDTH
+                lockY = button:getY() + (button:getHeight() - LOCK_ICON_HEIGHT) / 2
+
+                local alpha = 0.75
+                if self.traitsThrobStartMs then
+                    local elapsed = getTimestampMs() - self.traitsThrobStartMs
+                    if elapsed < LOCK_THROB_DURATION_MS then
+                        local phase = (elapsed % LOCK_THROB_PERIOD_MS) / LOCK_THROB_PERIOD_MS
+                        local wave = math.sin(phase * math.pi)
+                        alpha = 0.75 + 0.25 * wave
+                        self:drawRect(button:getX(), button:getY(), button:getWidth(), button:getHeight(),
+                            0.30 * wave, 1, 1, 1)
+                    else
+                        self.traitsThrobStartMs = nil
+                    end
+                end
+
+                self:drawLockIcon(lockX, lockY, alpha)
+            end
+
             if not tooltipText and button:isMouseOver() then
                 tooltipText = getText(row.tooltipKey)
                 if button.enable == false then
                     tooltipText = tooltipText .. "\n" .. getText("UI_QuickRestart_MP_Tooltip")
+                end
+            end
+
+            if not tooltipText and locked and lockX then
+                local mouseX = getMouseX() - self:getAbsoluteX()
+                local mouseY = getMouseY() - self:getAbsoluteY()
+                if mouseX >= lockX - 2 and mouseX <= lockX + LOCK_ICON_WIDTH + 2
+                    and mouseY >= lockY - 2 and mouseY <= lockY + LOCK_ICON_HEIGHT + 2 then
+                    tooltipText = getText("UI_QuickRestart_Options_TraitsLocked_Tooltip")
                 end
             end
         end
@@ -652,6 +730,15 @@ function QuickRestartUI.openOptionsWindow(ownerPanel)
     window.freshWorldAllowed = (ownerPanel and ownerPanel.canUseFreshWorld and ownerPanel.canUseFreshWorld()) == true
     window.restartOptions = (ownerPanel and ownerPanel.onGetRestartOptions and ownerPanel.onGetRestartOptions()) or {}
     window.onRestartOptionChanged = ownerPanel and ownerPanel.onRestartOptionChanged or nil
+
+    if QuickRestartRestartOptions.isTraitsLockedBy(window.restartOptions)
+        and window.restartOptions.traits ~= "random" then
+        window.restartOptions.traits = "random"
+        if window.onRestartOptionChanged then
+            window.onRestartOptionChanged("traits", "random")
+        end
+    end
+
     window:initialise()
     window:instantiate()
     window:addToUIManager()
@@ -836,6 +923,10 @@ function QuickRestartPanel:render()
         drawDisabledLabel(self.freshButton)
         drawDisabledLabel(self.sameButton)
 
+        if self.snapshotPending then
+            QuickRestartUIKit.drawSpinner(self, self.sameButton, fade, font, fontHeight)
+        end
+
         local tooltipText = nil
         if self.freshButton:isMouseOver() then
             if not self.freshWorldEnabled then
@@ -848,7 +939,11 @@ function QuickRestartPanel:render()
                 tooltipText = getText("UI_QuickRestart_FreshWorld_Tooltip")
             end
         elseif self.sameButton and self.sameButton:isMouseOver() then
-            if not self.charDataAvail then
+            if self.snapshotPending then
+                tooltipText = getText("UI_QuickRestart_SnapshotPending_Tooltip")
+            elseif self.snapshotUnavailable then
+                tooltipText = getText("UI_QuickRestart_SnapshotUnavailable_Tooltip")
+            elseif not self.charDataAvail then
                 tooltipText = getText("UI_QuickRestart_NoData_Tooltip")
             elseif self:hasSameWorldRandomOption() then
                 tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip_Random")
@@ -901,6 +996,8 @@ function QuickRestartUI.createRestartPanel(options)
     panel.layout = layout
     panel.buttonWidth = buttonWidth
     panel.charDataAvail = options.charDataAvail == true
+    panel.snapshotPending = options.snapshotPending == true
+    panel.snapshotUnavailable = options.snapshotUnavailable == true
     panel.canUseFreshWorld = options.canUseFreshWorld
     panel.onRestartNewWorld = options.onRestartNewWorld
     panel.onRestartSameWorld = options.onRestartSameWorld
@@ -948,9 +1045,11 @@ end
 function QuickRestartUI.hideTransitionOverlay()
     local overlay = QuickRestartUI.transitionOverlay
     if not overlay then
+        QuickRestartLog.info("transition overlay hide requested but no overlay is active")
         return false
     end
 
+    QuickRestartLog.info("transition overlay fade out started")
     overlay.targetAlpha = 0
     overlay.isClosing = true
     overlay:bringToTop()

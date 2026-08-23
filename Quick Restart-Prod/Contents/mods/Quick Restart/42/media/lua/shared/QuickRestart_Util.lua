@@ -110,15 +110,118 @@ function QuickRestartUtil.findRegionMatchingPlayerCoords(playerX, playerY, playe
     return bestRegion, false, math.sqrt(bestDistanceSq)
 end
 
-function QuickRestartUtil.buildProfileKey(steamID, username)
-    local cleanUsername = QuickRestartUtil.sanitizeFileComponent(username)
-    local cleanSteamID = QuickRestartUtil.sanitizeFileComponent(steamID)
-
-    if steamID and steamID ~= "" then
-        return cleanSteamID .. "__" .. cleanUsername
+function QuickRestartUtil.buildProfileKey(username)
+    if type(username) ~= "string" or username == "" then
+        return nil
     end
 
-    return cleanUsername
+    return QuickRestartUtil.sanitizeFileComponent(username)
+end
+
+local registeredPerks = nil
+
+local function buildRegisteredPerks()
+    local perks = {}
+
+    local ok = pcall(function()
+        local perkList = PerkFactory and PerkFactory.PerkList
+        if not perkList then
+            return
+        end
+
+        for i = 0, perkList:size() - 1 do
+            local perk = perkList:get(i)
+            if perk and perk.getId then
+                local perkId = perk:getId()
+                if type(perkId) == "string" and perkId ~= "" then
+                    perks[perkId] = perk
+                end
+            end
+        end
+    end)
+
+    if not ok then
+        return nil
+    end
+
+    return perks
+end
+
+function QuickRestartUtil.getRegisteredPerks()
+    if registeredPerks ~= nil then
+        return registeredPerks
+    end
+
+    local perks = buildRegisteredPerks()
+    if not perks then
+        return {}
+    end
+
+    local hasAnyPerk = false
+    for _ in pairs(perks) do
+        hasAnyPerk = true
+        break
+    end
+
+    if not hasAnyPerk then
+        return perks
+    end
+
+    registeredPerks = perks
+    return registeredPerks
+end
+
+function QuickRestartUtil.getPerkById(perkId)
+    if type(perkId) ~= "string" or perkId == "" then
+        return nil
+    end
+
+    return QuickRestartUtil.getRegisteredPerks()[perkId]
+end
+
+function QuickRestartUtil.getPerkIdFromIndex(index)
+    index = tonumber(index)
+    if index == nil or index < 0 then
+        return nil
+    end
+
+    local perkId = nil
+    pcall(function()
+        if not Perks or not Perks.fromIndex then
+            return
+        end
+
+        local perk = Perks.fromIndex(index)
+        if perk and perk.getId then
+            perkId = perk:getId()
+        end
+    end)
+
+    if type(perkId) ~= "string" or perkId == "" then
+        return nil
+    end
+
+    if not QuickRestartUtil.getPerkById(perkId) then
+        return nil
+    end
+
+    return perkId
+end
+
+function QuickRestartUtil.resolvePerkKey(perkKey)
+    if type(perkKey) == "number" or (type(perkKey) == "string" and perkKey:match("^%d+$")) then
+        return QuickRestartUtil.getPerkIdFromIndex(perkKey)
+    end
+
+    if type(perkKey) ~= "string" or perkKey == "" then
+        return nil
+    end
+
+    if not QuickRestartUtil.getPerkById(perkKey) then
+        return nil
+    end
+
+    return perkKey
 end
 
 return QuickRestartUtil

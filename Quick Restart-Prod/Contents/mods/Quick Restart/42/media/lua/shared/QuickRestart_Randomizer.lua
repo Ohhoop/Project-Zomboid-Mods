@@ -6,6 +6,16 @@ local MAX_CONVERGE_ITERATIONS = 1000
 local MAX_TRAIT_COUNT = 40
 local MAX_CLOTHING_ENTRIES = 20
 local MAX_FORENAME_LENGTH = 64
+local SKIN_TEXTURE_COUNT = 5
+local BODY_HAIR_NONE = -1
+local BODY_HAIR_PRESENT = 0
+local BEARD_CHANCE_PERCENT = 50
+local TRAIT_COUNT_MIN = 2
+local TRAIT_COUNT_MAX = 26
+local TRAIT_COUNT_MODE = 6
+local TRAIT_COUNT_FALLOFF_LOW = 3
+local TRAIT_COUNT_FALLOFF_HIGH = 4
+local TRAIT_COUNT_TOLERANCE = 1
 
 local function logInfo(message)
     if QuickRestartLog and QuickRestartLog.info then
@@ -369,6 +379,27 @@ function QuickRestartRandomizer.computeTraitBudget(professionType, traitStrings)
     return computeBudgetForDefs(professionDef, defs)
 end
 
+function QuickRestartRandomizer.rollTargetTraitCount()
+    local total = 0
+    local entries = {}
+
+    for value = TRAIT_COUNT_MIN, TRAIT_COUNT_MAX do
+        local distance = value - TRAIT_COUNT_MODE
+        local falloff = distance < 0 and TRAIT_COUNT_FALLOFF_LOW or TRAIT_COUNT_FALLOFF_HIGH
+        total = total + math.exp(-math.abs(distance) / falloff)
+        entries[#entries + 1] = {value = value, cumulative = total}
+    end
+
+    local roll = (ZombRand(1000000) / 1000000) * total
+    for _, entry in ipairs(entries) do
+        if roll <= entry.cumulative then
+            return entry.value
+        end
+    end
+
+    return TRAIT_COUNT_MODE
+end
+
 function QuickRestartRandomizer.rollTraits(professionType)
     local professionDef = resolveProfessionDefinition(professionType)
     if not professionDef then
@@ -413,14 +444,67 @@ function QuickRestartRandomizer.rollTraits(professionType)
         return true
     end
 
-    for _ = 1, ZombRand(5) + 1 do
-        addRandomGood()
+    local function addBestFit(wantedCost)
+        local goodPool, badPool = buildCandidatePools(selection)
+        local best, bestDistance = nil, nil
+
+        local function consider(pool)
+            for _, def in ipairs(pool) do
+                local okCost, cost = pcall(function() return def:getCost() end)
+                if okCost and type(cost) == "number" then
+                    local distance = math.abs(cost - wantedCost)
+                    if bestDistance == nil or distance < bestDistance then
+                        best, bestDistance = def, distance
+                    end
+                end
+            end
+        end
+
+        consider(goodPool)
+        consider(badPool)
+
+        if not best then
+            return false
+        end
+
+        return addSelectionEntry(selection, best, true)
     end
-    for _ = 1, ZombRand(5) + 1 do
-        addRandomBad()
+
+    local targetCount = QuickRestartRandomizer.rollTargetTraitCount()
+    local minCount = math.max(1, targetCount - TRAIT_COUNT_TOLERANCE)
+
+    local filling = MAX_CONVERGE_ITERATIONS
+    while filling > 0 and #selection.ordered < targetCount do
+        filling = filling - 1
+        local budget = computeBudgetForDefs(professionDef, selectionDefs(selection))
+        local remaining = targetCount - #selection.ordered
+        local added
+
+        if remaining <= 2 then
+            added = addBestFit(budget - MIN_LEFTOVER)
+        elseif budget > MAX_LEFTOVER then
+            added = addRandomGood() or addRandomBad()
+        else
+            added = addRandomBad() or addRandomGood()
+        end
+
+        if not added then
+            break
+        end
     end
 
     local leftover = computeBudgetForDefs(professionDef, selectionDefs(selection))
+
+    local closing = MAX_CONVERGE_ITERATIONS
+    while closing > 0 and #selection.ordered >= minCount
+        and (leftover < MIN_LEFTOVER or leftover > MAX_LEFTOVER) do
+        closing = closing - 1
+        if not addBestFit(leftover - MIN_LEFTOVER) then
+            break
+        end
+        leftover = computeBudgetForDefs(professionDef, selectionDefs(selection))
+    end
+
     local iterations = MAX_CONVERGE_ITERATIONS
     while iterations > 0 and (leftover < MIN_LEFTOVER or leftover > MAX_LEFTOVER) do
         iterations = iterations - 1
@@ -453,7 +537,7 @@ function QuickRestartRandomizer.rollTraits(professionType)
         traits[#traits + 1] = entry.key
     end
 
-    return {traits = traits, leftover = leftover}
+    return {traits = traits, leftover = leftover, targetCount = targetCount}
 end
 
 function QuickRestartRandomizer.validateTraitSelection(professionType, traitStrings)
@@ -509,70 +593,266 @@ function QuickRestartRandomizer.validateTraitSelection(professionType, traitStri
     return true
 end
 
-function QuickRestartRandomizer.rollVisual(gender)
-    local ok, result = pcall(function()
-        if not SurvivorFactory or not SurvivorFactory.CreateSurvivor then
-            return nil
+local function hairStyles()
+    if type(getHairStylesInstance) ~= "function" then
+        return nil
+    end
+
+    local ok, instance = pcall(getHairStylesInstance)
+    if not ok then
+        return nil
+    end
+
+    return instance
+end
+
+local function beardStyles()
+    if type(getBeardStylesInstance) ~= "function" then
+        return nil
+    end
+
+    local ok, instance = pcall(getBeardStylesInstance)
+    if not ok then
+        return nil
+    end
+
+    return instance
+end
+
+function QuickRestartRandomizer.rollHairModel(gender)
+    local instance = hairStyles()
+    if not instance then
+        return nil
+    end
+
+    local ok, name = pcall(function()
+        if gender == "female" then
+            return instance:getRandomFemaleStyle("")
         end
-
-        local female = gender == "female"
-        local tempDesc = SurvivorFactory.CreateSurvivor(SurvivorType.Neutral, female)
-        if not tempDesc then
-            return nil
-        end
-
-        local visual = {
-            hairStubble = false,
-            beardStubble = false,
-        }
-        local humanVisual = tempDesc:getHumanVisual()
-        if humanVisual then
-            local okField, value = pcall(function() return humanVisual:getHairModel() end)
-            if okField and value ~= nil then
-                visual.hairModel = tostring(value)
-            end
-
-            if female then
-                visual.beardModel = ""
-            else
-                okField, value = pcall(function() return humanVisual:getBeardModel() end)
-                if okField and value ~= nil then
-                    visual.beardModel = tostring(value)
-                end
-            end
-
-            okField, value = pcall(function() return humanVisual:getNaturalHairColor() end)
-            if okField and value then
-                visual.hairColor = {
-                    r = value:getRedFloat(),
-                    g = value:getGreenFloat(),
-                    b = value:getBlueFloat(),
-                }
-            end
-
-            okField, value = pcall(function() return humanVisual:getSkinTextureIndex() end)
-            if okField and type(value) == "number" then
-                visual.skinTextureIndex = value
-            end
-
-            okField, value = pcall(function() return humanVisual:getBodyHairIndex() end)
-            if okField and type(value) == "number" then
-                visual.bodyHairIndex = value
-            end
-        end
-
-        local forename = nil
-        local okName, name = pcall(function() return tempDesc:getForename() end)
-        if okName and type(name) == "string" and name ~= "" then
-            forename = name
-        end
-
-        return {visual = visual, forename = forename}
+        return instance:getRandomMaleStyle("")
     end)
+
+    if not ok or type(name) ~= "string" then
+        return nil
+    end
+
+    return name
+end
+
+function QuickRestartRandomizer.rollBeardModel(gender)
+    if gender == "female" then
+        return ""
+    end
+
+    if ZombRand(100) >= BEARD_CHANCE_PERCENT then
+        return ""
+    end
+
+    local instance = beardStyles()
+    if not instance then
+        return ""
+    end
+
+    local ok, name = pcall(function()
+        local all = instance:getAllStyles()
+        if not all then
+            return ""
+        end
+
+        local candidates = {}
+        for i = 0, all:size() - 1 do
+            local style = all:get(i)
+            local styleName = style and style:getName() or nil
+            if type(styleName) == "string" and styleName ~= "" then
+                candidates[#candidates + 1] = styleName
+            end
+        end
+
+        if #candidates == 0 then
+            return ""
+        end
+
+        return candidates[ZombRand(#candidates) + 1]
+    end)
+
+    if not ok or type(name) ~= "string" then
+        return ""
+    end
+
+    return name
+end
+
+function QuickRestartRandomizer.rollHairColor()
+    local ok, color = pcall(function()
+        if not SurvivorDesc or not SurvivorDesc.HairCommonColors then
+            return nil
+        end
+
+        local pool = SurvivorDesc.HairCommonColors
+        local count = pool:size()
+        if count <= 0 then
+            return nil
+        end
+
+        local picked = pool:get(ZombRand(count))
+        if not picked then
+            return nil
+        end
+
+        return {
+            r = picked:getRedFloat(),
+            g = picked:getGreenFloat(),
+            b = picked:getBlueFloat(),
+        }
+    end)
+
+    if not ok or type(color) ~= "table" then
+        return nil
+    end
+
+    return color
+end
+
+function QuickRestartRandomizer.rollSkinTextureIndex()
+    return ZombRand(SKIN_TEXTURE_COUNT)
+end
+
+function QuickRestartRandomizer.rollBodyHairIndex(gender)
+    if gender == "female" then
+        return BODY_HAIR_NONE
+    end
+
+    if ZombRand(2) == 0 then
+        return BODY_HAIR_PRESENT
+    end
+
+    return BODY_HAIR_NONE
+end
+
+function QuickRestartRandomizer.hairModelExistsForGender(name, gender)
+    if type(name) ~= "string" then
+        return false
+    end
+
+    local instance = hairStyles()
+    if not instance then
+        return false
+    end
+
+    local ok, style = pcall(function()
+        if gender == "female" then
+            return instance:FindFemaleStyle(name)
+        end
+        return instance:FindMaleStyle(name)
+    end)
+
+    return ok and style ~= nil
+end
+
+local function isCompleteHairColor(color)
+    return type(color) == "table"
+        and type(color.r) == "number"
+        and type(color.g) == "number"
+        and type(color.b) == "number"
+end
+
+local function isValidSkinTextureIndex(index)
+    return type(index) == "number"
+        and index % 1 == 0
+        and index >= 0
+        and index < SKIN_TEXTURE_COUNT
+end
+
+function QuickRestartRandomizer.transferVisualAcrossGender(baseVisual, newGender)
+    local base = type(baseVisual) == "table" and deepCopy(baseVisual) or {}
+    local female = newGender == "female"
+
+    local hairModel = base.hairModel
+    if not QuickRestartRandomizer.hairModelExistsForGender(hairModel, newGender) then
+        hairModel = QuickRestartRandomizer.rollHairModel(newGender) or ""
+    end
+
+    local beardModel = ""
+    if not female and type(base.beardModel) == "string" then
+        beardModel = base.beardModel
+    end
+
+    local hairColor = base.hairColor
+    if not isCompleteHairColor(hairColor) then
+        hairColor = QuickRestartRandomizer.rollHairColor()
+    end
+
+    local skinTextureIndex = base.skinTextureIndex
+    if not isValidSkinTextureIndex(skinTextureIndex) then
+        skinTextureIndex = QuickRestartRandomizer.rollSkinTextureIndex()
+    end
+
+    local bodyHairIndex = BODY_HAIR_NONE
+    if not female and base.bodyHairIndex == BODY_HAIR_PRESENT then
+        bodyHairIndex = BODY_HAIR_PRESENT
+    end
+
+    return {
+        hairModel = hairModel,
+        beardModel = beardModel,
+        hairColor = hairColor,
+        skinTextureIndex = skinTextureIndex,
+        bodyHairIndex = bodyHairIndex,
+        hairStubble = base.hairStubble == true,
+        beardStubble = (not female) and base.beardStubble == true,
+    }
+end
+
+function QuickRestartRandomizer.rollAppearance(gender, baseVisual)
+    local base = type(baseVisual) == "table" and deepCopy(baseVisual) or {}
+    local female = gender == "female"
+
+    local hairModel = QuickRestartRandomizer.rollHairModel(gender)
+    if type(hairModel) ~= "string" then
+        hairModel = type(base.hairModel) == "string" and base.hairModel or ""
+    end
+
+    local hairColor = QuickRestartRandomizer.rollHairColor()
+    if not isCompleteHairColor(hairColor) then
+        hairColor = isCompleteHairColor(base.hairColor) and base.hairColor or nil
+    end
+
+    return {
+        hairModel = hairModel,
+        beardModel = QuickRestartRandomizer.rollBeardModel(gender),
+        hairColor = hairColor,
+        skinTextureIndex = QuickRestartRandomizer.rollSkinTextureIndex(),
+        bodyHairIndex = QuickRestartRandomizer.rollBodyHairIndex(gender),
+        hairStubble = base.hairStubble == true,
+        beardStubble = (not female) and base.beardStubble == true,
+    }
+end
+
+function QuickRestartRandomizer.rollName(gender)
+    local ok, result = pcall(function()
+        if not SurvivorFactory or not SurvivorFactory.getRandomForename or not SurvivorFactory.getRandomSurname then
+            return nil
+        end
+
+        local forename = SurvivorFactory.getRandomForename(gender == "female")
+        local surname = SurvivorFactory.getRandomSurname()
+
+        if type(forename) ~= "string" or forename == "" then
+            return nil
+        end
+
+        if type(surname) ~= "string" or surname == "" then
+            return nil
+        end
+
+        return {forename = forename, surname = surname}
+    end)
+
     if not ok or type(result) ~= "table" then
         return nil, nil
     end
-    return result.visual, result.forename
+
+    return result.forename, result.surname
 end
 
 function QuickRestartRandomizer.rollVoice(gender)
@@ -1129,7 +1409,9 @@ function QuickRestartRandomizer.transformSnapshot(snapshot, options)
         if result then
             transformed.traits = result.traits
             deltas.traits = deepCopy(result.traits)
-            logInfo("transform traits count=" .. tostring(#result.traits) .. " leftover=" .. tostring(result.leftover))
+            logInfo("transform traits count=" .. tostring(#result.traits)
+                .. " target=" .. tostring(result.targetCount)
+                .. " leftover=" .. tostring(result.leftover))
         else
             logWarn("transform traits roll failed reason=" .. tostring(reason) .. ", keeping saved traits")
         end
@@ -1156,31 +1438,55 @@ function QuickRestartRandomizer.transformSnapshot(snapshot, options)
     if sanitized.gender == RANDOM then
         local gender = QuickRestartRandomizer.rollGender()
         if gender ~= snapshot.gender then
-            local visual, forename = QuickRestartRandomizer.rollVisual(gender)
+            local visual = QuickRestartRandomizer.transferVisualAcrossGender(transformed.visual, gender)
             local voice = QuickRestartRandomizer.rollVoice(gender)
-            if visual and voice and forename then
+            if visual and voice then
                 transformed.gender = gender
                 transformed.visual = visual
                 transformed.voice = voice
-                transformed.forename = forename
-                transformed.name = forename .. " " .. tostring(transformed.surname or "")
                 deltas.gender = gender
                 deltas.visual = deepCopy(visual)
                 deltas.voice = deepCopy(voice)
-                deltas.forename = forename
-                logInfo("transform gender=" .. gender .. " forename=" .. tostring(forename))
+                logInfo("transform gender=" .. gender .. " visual transferred")
             else
-                logWarn("transform gender flip aborted: visual, voice or name roll failed, keeping saved gender")
+                logWarn("transform gender flip aborted: transfer or voice roll failed, keeping saved gender")
             end
         else
             logInfo("transform gender roll matched saved gender")
         end
     end
 
+    local effectiveGender = transformed.gender or snapshot.gender
+
+    if sanitized.appearance == RANDOM then
+        local visual = QuickRestartRandomizer.rollAppearance(effectiveGender, transformed.visual)
+        if visual then
+            transformed.visual = visual
+            deltas.visual = deepCopy(visual)
+            logInfo("transform appearance gender=" .. tostring(effectiveGender))
+        else
+            logWarn("transform appearance roll failed, keeping saved appearance")
+        end
+    end
+
+    if sanitized.name == RANDOM then
+        local forename, surname = QuickRestartRandomizer.rollName(effectiveGender)
+        if forename and surname then
+            transformed.forename = forename
+            transformed.surname = surname
+            transformed.name = forename .. " " .. surname
+            deltas.forename = forename
+            deltas.surname = surname
+            logInfo("transform name forename=" .. forename .. " surname=" .. surname)
+        else
+            logWarn("transform name roll aborted: name roll failed, keeping saved name")
+        end
+    end
+
     if sanitized.clothing == RANDOM then
         local clothing = QuickRestartRandomizer.rollClothing(
             effectiveProfession,
-            transformed.gender or snapshot.gender,
+            effectiveGender,
             transformed.traits or snapshot.traits
         )
         if clothing then
@@ -1226,9 +1532,14 @@ function QuickRestartRandomizer.mergeDeltasOntoSnapshot(snapshot, deltas)
     if type(deltas.voice) == "table" then
         merged.voice = deepCopy(deltas.voice)
     end
+    if deltas.surname ~= nil then
+        merged.surname = tostring(deltas.surname)
+    end
     if deltas.forename ~= nil then
         merged.forename = tostring(deltas.forename)
-        merged.name = merged.forename .. " " .. tostring(merged.surname or "")
+    end
+    if deltas.forename ~= nil or deltas.surname ~= nil then
+        merged.name = tostring(merged.forename or "") .. " " .. tostring(merged.surname or "")
     end
     if type(deltas.clothing) == "table" then
         merged.clothing = deepCopy(deltas.clothing)
@@ -1248,6 +1559,12 @@ function QuickRestartRandomizer.mergeDeltasOntoSnapshot(snapshot, deltas)
             merged.traits = deepCopy(snapshot.traits)
             logWarn("merge profession delta reverted: kept traits cannot fit budget leftover=" .. tostring(leftover))
         end
+    end
+
+    if deltas.profession ~= nil or deltas.traits ~= nil then
+        merged.skills = {}
+        merged.xpBoosts = {}
+        logInfo("merge skills and xp boosts cleared: profession or traits rolled, character creation is authoritative")
     end
 
     return merged
@@ -1320,6 +1637,18 @@ function QuickRestartRandomizer.validateRandomizedResult(baseline, deltas)
                 return false, "invalid_visual"
             end
         end
+        if visual.skinTextureIndex ~= nil then
+            if visual.skinTextureIndex % 1 ~= 0
+                or visual.skinTextureIndex < 0
+                or visual.skinTextureIndex >= SKIN_TEXTURE_COUNT then
+                return false, "invalid_visual"
+            end
+        end
+        if visual.bodyHairIndex ~= nil then
+            if visual.bodyHairIndex ~= BODY_HAIR_NONE and visual.bodyHairIndex ~= BODY_HAIR_PRESENT then
+                return false, "invalid_visual"
+            end
+        end
     end
 
     if deltas.voice ~= nil then
@@ -1342,8 +1671,14 @@ function QuickRestartRandomizer.validateRandomizedResult(baseline, deltas)
         end
     end
 
+    if deltas.surname ~= nil then
+        if type(deltas.surname) ~= "string" or deltas.surname == "" or #deltas.surname > MAX_FORENAME_LENGTH then
+            return false, "invalid_surname"
+        end
+    end
+
     if deltas.gender ~= nil and deltas.gender ~= baseline.gender then
-        if deltas.visual == nil or deltas.voice == nil or deltas.forename == nil then
+        if deltas.visual == nil or deltas.voice == nil then
             return false, "incomplete_gender_change"
         end
     end

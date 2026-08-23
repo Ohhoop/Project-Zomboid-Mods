@@ -35,6 +35,35 @@ function QuickRestartUIKit.computeDialogLayout()
     return QuickRestartUIKit.computeLayout({spacing = math.ceil(hgtSmall * 0.75)})
 end
 
+local SPINNER_FRAMES = {"|", "/", "—", "\\"}
+local SPINNER_FRAME_MS = 120
+
+function QuickRestartUIKit.drawSpinner(panel, button, fade, font, fontHeight)
+    if not panel or not button then
+        return false
+    end
+
+    local textManager = getTextManager()
+    local frame = SPINNER_FRAMES[(math.floor(getTimestampMs() / SPINNER_FRAME_MS) % #SPINNER_FRAMES) + 1]
+
+    local cellWidth = 0
+    for _, candidate in ipairs(SPINNER_FRAMES) do
+        local candidateWidth = textManager:MeasureStringX(font, candidate)
+        if candidateWidth > cellWidth then
+            cellWidth = candidateWidth
+        end
+    end
+
+    local labelWidth = button.disabledLabel and textManager:MeasureStringX(font, button.disabledLabel) or 0
+    local gap = textManager:MeasureStringX(font, " ") * 2
+    local cellX = button:getX() + (button:getWidth() + labelWidth) / 2 + gap
+    local x = cellX + (cellWidth - textManager:MeasureStringX(font, frame)) / 2
+    local y = button:getY() + (button:getHeight() - fontHeight) / 2
+
+    panel:drawText(frame, x, y, 0.8, 0.8, 0.8, fade or 1, font)
+    return true
+end
+
 function QuickRestartUIKit.captureButtonBaseAlpha(button)
     if not button or button.baseAlpha then
         return

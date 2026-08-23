@@ -350,6 +350,190 @@ local function applyAuthoritativeModData(player, snapshot)
     return applied
 end
 
+local function logSkillDelta(player, skills, stage)
+    if not QuickRestartLog or not QuickRestartLog.info then
+        return
+    end
+
+    local xp = nil
+    pcall(function() xp = player:getXp() end)
+    if not xp then
+        return
+    end
+
+    local matched = 0
+    local mismatched = 0
+    local details = {}
+
+    for perkKey, targetXP in pairs(skills) do
+        local perkId = QuickRestartUtil.resolvePerkKey(perkKey)
+        local perk = perkId and QuickRestartUtil.getPerkById(perkId) or nil
+        if perk then
+            local currentXP = nil
+            pcall(function() currentXP = xp:getXP(perk) end)
+            currentXP = tonumber(currentXP) or 0
+            local target = tonumber(targetXP) or 0
+
+            if math.abs(currentXP - target) < 0.01 then
+                matched = matched + 1
+            else
+                mismatched = mismatched + 1
+                details[#details + 1] = tostring(perkId) .. " has=" .. tostring(currentXP) .. " want=" .. tostring(target)
+            end
+        end
+    end
+
+    QuickRestartLog.info("mp server skill delta " .. tostring(stage)
+        .. " matched=" .. tostring(matched)
+        .. " mismatched=" .. tostring(mismatched)
+        .. (#details > 0 and (" [" .. table.concat(details, ", ") .. "]") or ""))
+end
+
+local function logTraitDiagnostics(player, snapshot)
+    if not QuickRestartLog or not QuickRestartLog.info then
+        return
+    end
+
+    local characterTraits = nil
+    pcall(function() characterTraits = player:getCharacterTraits() end)
+
+    local wanted = {}
+    local missing = {}
+    local present = 0
+
+    for _, traitStr in ipairs(snapshot.traits or {}) do
+        local traitId = tostring(traitStr)
+        wanted[traitId] = true
+
+        local has = false
+        pcall(function()
+            local characterTrait = CharacterTrait.get(ResourceLocation.of(traitId))
+            has = characterTrait ~= nil and player:hasTrait(characterTrait) == true
+        end)
+
+        if has then
+            present = present + 1
+        else
+            missing[#missing + 1] = traitId
+        end
+    end
+
+    local extra = {}
+    pcall(function()
+        local known = characterTraits:getKnownTraits()
+        for i = 0, known:size() - 1 do
+            local traitId = tostring(known:get(i))
+            if not wanted[traitId] then
+                extra[#extra + 1] = traitId
+            end
+        end
+    end)
+
+    local boosts = {}
+    pcall(function()
+        local xp = player:getXp()
+        for _, perkId in ipairs({ "Fitness", "Strength" }) do
+            local perk = QuickRestartUtil.getPerkById(perkId)
+            if perk then
+                boosts[#boosts + 1] = perkId
+                    .. " boost=" .. tostring(xp:getPerkBoost(perk))
+                    .. " level=" .. tostring(player:getPerkLevel(perk))
+                    .. " xp=" .. tostring(xp:getXP(perk))
+            end
+        end
+    end)
+
+    QuickRestartLog.info("mp server trait diagnostics"
+        .. " wanted=" .. tostring(#(snapshot.traits or {}))
+        .. " present=" .. tostring(present)
+        .. " missing=[" .. table.concat(missing, ", ") .. "]"
+        .. " extra=[" .. table.concat(extra, ", ") .. "]"
+        .. " " .. table.concat(boosts, " | "))
+end
+
+local function captureCurrentSkills(player)
+    local skills = {}
+    local ok = pcall(function()
+        local xp = player:getXp()
+        if not xp then
+            return
+        end
+
+        for perkId, perk in pairs(QuickRestartUtil.getRegisteredPerks()) do
+            local perkOk, perkXP = pcall(function() return xp:getXP(perk) end)
+            if perkOk and type(perkXP) == "number" then
+                skills[perkId] = perkXP
+            end
+        end
+    end)
+
+    if not ok then
+        return nil
+    end
+
+    return skills
+end
+
+local function backfillClearedSkills(player, snapshot)
+    if type(snapshot.skills) ~= "table" then
+        return
+    end
+
+    for _ in pairs(snapshot.skills) do
+        return
+    end
+
+    local skills = captureCurrentSkills(player)
+    if not skills then
+        QuickRestartLog.warn("mp server skills backfill failed, snapshot keeps empty skills")
+        return
+    end
+
+    local count = 0
+    for _ in pairs(skills) do
+        count = count + 1
+    end
+
+    snapshot.skills = skills
+    QuickRestartLog.info("mp server skills backfilled from character creation count=" .. tostring(count))
+end
+
+local function rebaseAntiCheatXpBaseline(player)
+    if not isServer() or not player then
+        return
+    end
+
+    if type(addXpNoMultiplier) ~= "function" then
+        QuickRestartLog.warn("mp server xp baseline rebase unavailable, addXpNoMultiplier is missing")
+        return
+    end
+
+    local perk = Perks and Perks.Woodwork or nil
+    if not perk then
+        QuickRestartLog.warn("mp server xp baseline rebase skipped, no usable perk")
+        return
+    end
+
+    local existsInTheWorld, isDead
+    pcall(function()
+        existsInTheWorld = player:isExistInTheWorld()
+        isDead = player:isDead()
+    end)
+
+    QuickRestartLog.info("mp server xp baseline rebase"
+        .. " existsInTheWorld=" .. tostring(existsInTheWorld)
+        .. " isDead=" .. tostring(isDead))
+
+    if existsInTheWorld ~= true or isDead == true then
+        QuickRestartLog.warn("mp server xp baseline rebase skipped, player is not eligible")
+        return
+    end
+
+    if not pcall(function() addXpNoMultiplier(player, perk, 0) end) then
+        QuickRestartLog.warn("mp server xp baseline rebase failed")
+    end
+end
+
 function QuickRestartRestore.applyAuthoritativeSnapshot(player, snapshot)
     if not player or type(snapshot) ~= "table" then
         return false, "invalid_snapshot"
@@ -360,6 +544,8 @@ function QuickRestartRestore.applyAuthoritativeSnapshot(player, snapshot)
     end
 
     applyAuthoritativeModData(player, snapshot)
+
+    logTraitDiagnostics(player, snapshot)
 
     if type(snapshot.traits) == "table" then
         QuickRestartTraits.applyToPlayer(player, snapshot.traits)
@@ -383,9 +569,18 @@ function QuickRestartRestore.applyAuthoritativeSnapshot(player, snapshot)
         applyKnownRecipes(player, snapshot.recipes)
     end
 
-    if type(snapshot.skills) == "table" then
-        QuickRestartSkills.applyToPlayer(player, snapshot.skills)
+    if type(snapshot.xpBoosts) == "table" then
+        QuickRestartSkills.applyBoostsToPlayer(player, snapshot.xpBoosts)
     end
+
+    if type(snapshot.skills) == "table" then
+        logSkillDelta(player, snapshot.skills, "before")
+        QuickRestartSkills.applyToPlayer(player, snapshot.skills)
+        logSkillDelta(player, snapshot.skills, "after")
+    end
+
+    backfillClearedSkills(player, snapshot)
+    rebaseAntiCheatXpBaseline(player)
 
     return true, nil
 end

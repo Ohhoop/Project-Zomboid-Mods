@@ -1,5 +1,8 @@
 QuickRestartClientFlow = QuickRestartClientFlow or {}
 
+local ACTIVE_SNAPSHOT_TIMEOUT_MS = 5000
+local ACTIVE_SNAPSHOT_TIMEOUT_TASK_KEY = "active_snapshot_timeout"
+
 function QuickRestartClientFlow.registerSpawnRegionPreparer(fn)
     return QuickRestartSpawnRegion.registerPreparer(fn)
 end
@@ -164,6 +167,14 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
                 .. " finalSelectedRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil))
         end
 
+        if CoopMapSpawnSelect and CoopMapSpawnSelect.instance and CoopMapSpawnSelect.instance ~= mapSel then
+            QuickRestartLog.warn("mp client sameWorld spawn select instance mismatch"
+                .. " localRegion=" .. tostring(mapSel.selectedRegion and mapSel.selectedRegion.name or nil)
+                .. " globalRegion=" .. tostring(CoopMapSpawnSelect.instance.selectedRegion
+                    and CoopMapSpawnSelect.instance.selectedRegion.name or nil))
+            CoopMapSpawnSelect.instance.selectedRegion = mapSel.selectedRegion
+        end
+
         if isMultiplayer() and data.traits and #data.traits > 0 and coop.charCreationProfession then
             for _, traitStr in ipairs(data.traits) do
                 local characterTrait = CharacterTrait.get(ResourceLocation.of(tostring(traitStr)))
@@ -318,8 +329,14 @@ function QuickRestartClientFlow.addRestartPanel(options)
         return nil
     end
 
+    local state = options.state
+    local snapshotPending = isMultiplayer() and state ~= nil and state.waitingForActiveSnapshot == true
+    local snapshotUnavailable = isMultiplayer() and state ~= nil and state.activeSnapshotTimedOut == true
+
     local panel = options.createRestartPanel({
         charDataAvail = charDataAvail,
+        snapshotPending = snapshotPending,
+        snapshotUnavailable = snapshotUnavailable,
         canUseFreshWorld = options.canUseFreshWorld,
         onRestartNewWorld = options.onRestartNewWorld,
         onRestartSameWorld = options.onRestartSameWorld,
@@ -336,6 +353,32 @@ function QuickRestartClientFlow.addRestartPanel(options)
     return panel
 end
 
+function QuickRestartClientFlow.requestRestartPanelRebuild(options)
+    options = options or {}
+
+    local state = options.state
+    if not state or state.pendingRestartApproved then
+        return false
+    end
+
+    if not options.getRestartPanel then
+        return false
+    end
+
+    local panel = options.getRestartPanel()
+    if not panel then
+        return false
+    end
+
+    panel:removeFromUIManager()
+    if options.setRestartPanel then
+        options.setRestartPanel(nil)
+    end
+
+    state.awaitingRestartPanel = true
+    return true
+end
+
 function QuickRestartClientFlow.tryShowRestartPanel(options)
     options = options or {}
 
@@ -349,12 +392,34 @@ function QuickRestartClientFlow.tryShowRestartPanel(options)
         return nil
     end
 
-    if isMultiplayer() and state.waitingForActiveSnapshot then
-        return nil
-    end
-
     state.awaitingRestartPanel = false
     return QuickRestartClientFlow.addRestartPanel(options)
+end
+
+function QuickRestartClientFlow.scheduleActiveSnapshotTimeout(options)
+    options = options or {}
+
+    local state = options.state
+    if not state then
+        return false
+    end
+
+    local scheduler = options.scheduler or QuickRestartScheduler
+    if not scheduler or not scheduler.scheduleAfterMs then
+        return false
+    end
+
+    return scheduler.scheduleAfterMs(ACTIVE_SNAPSHOT_TIMEOUT_TASK_KEY, ACTIVE_SNAPSHOT_TIMEOUT_MS, function()
+        if not state.waitingForActiveSnapshot then
+            return
+        end
+
+        state.waitingForActiveSnapshot = false
+        state.activeSnapshotTimedOut = true
+        QuickRestartLog.warn("mp client active snapshot request timed out after "
+            .. tostring(ACTIVE_SNAPSHOT_TIMEOUT_MS) .. "ms; showing restart panel without server snapshot")
+        QuickRestartClientFlow.requestRestartPanelRebuild(options)
+    end)
 end
 
 function QuickRestartClientFlow.onPlayerDeath(player, options)
@@ -388,7 +453,9 @@ function QuickRestartClientFlow.onPlayerDeath(player, options)
     if isMultiplayer() then
         if options.requestActiveServerSnapshot then
             QuickRestartLog.info("mp client onPlayerDeath request active snapshot")
+            state.activeSnapshotTimedOut = false
             options.requestActiveServerSnapshot(player)
+            QuickRestartClientFlow.scheduleActiveSnapshotTimeout(options)
         end
     else
         QuickRestartClientFlow.tryShowRestartPanel(options)
@@ -546,23 +613,14 @@ function QuickRestartClientFlow.onNewGame(player, options)
 
     if not data or not data.name then
         if isMultiplayer() and state then
-            local hasExistingSnapshot = QuickRestartClientFlow.isRestartSnapshotAvailable(state.serverSnapshot)
-            state.replaceSnapshotOnNextCapture = false
+            state.replaceSnapshotOnNextCapture = true
 
-            if hasExistingSnapshot then
-                QuickRestartLog.info("mp client onNewGame no loaded snapshot; keeping existing server snapshot and skipping delayed capture"
-                    .. " currentServerSnapshotLoaded=" .. tostring(state.serverSnapshotLoaded)
-                    .. " currentServerSnapshot=" .. summarizeSnapshot(state.serverSnapshot))
-            else
-                QuickRestartLog.info("mp client onNewGame no loaded snapshot; scheduling initial delayed capture replaceNext=false"
-                    .. " currentServerSnapshotLoaded=" .. tostring(state.serverSnapshotLoaded)
-                    .. " currentServerSnapshot=" .. summarizeSnapshot(state.serverSnapshot))
-            end
+            QuickRestartLog.info("mp client onNewGame new character; scheduling delayed capture replaceNext=true"
+                .. " currentServerSnapshotLoaded=" .. tostring(state.serverSnapshotLoaded)
+                .. " currentServerSnapshot=" .. summarizeSnapshot(state.serverSnapshot))
+        end
 
-            if not hasExistingSnapshot and options.scheduleDelayedSave then
-                options.scheduleDelayedSave(player, saveFilePath)
-            end
-        elseif options.scheduleDelayedSave then
+        if options.scheduleDelayedSave then
             options.scheduleDelayedSave(player, saveFilePath)
         end
     else
