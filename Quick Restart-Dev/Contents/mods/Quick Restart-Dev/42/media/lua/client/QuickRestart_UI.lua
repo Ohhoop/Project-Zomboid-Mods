@@ -6,6 +6,7 @@ QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 local DICE_KEEP_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Keep.png"
 local DICE_RANDOM_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Random.png"
 local DICE_PULSE_PERIOD_MS = 1600
+local TRANSITION_PULSE_PERIOD_MS = 1600
 local FADE_IN_DURATION_MS = 450
 local LOCK_THROB_DURATION_MS = 1400
 local LOCK_THROB_PERIOD_MS = 700
@@ -244,7 +245,13 @@ function QuickRestartTransitionOverlay:render()
     local x = (self.width - textWidth) / 2
     local y = (self.height - textHeight) / 2
 
-    self:drawText(message, x, y, 1, 1, 1, self.currentAlpha * self.textAlphaScale, font)
+    local alpha = self.currentAlpha * self.textAlphaScale
+    if not self.isClosing then
+        local phase = (getTimestampMs() % TRANSITION_PULSE_PERIOD_MS) / TRANSITION_PULSE_PERIOD_MS
+        alpha = alpha * (0.75 + 0.25 * math.sin(2 * math.pi * phase))
+    end
+
+    self:drawText(message, x, y, 1, 1, 1, alpha, font)
 end
 
 function QuickRestartPanel:prerender()
@@ -1046,26 +1053,6 @@ function QuickRestartUI.hideTransitionOverlay()
     overlay.targetAlpha = 0
     overlay.isClosing = true
     overlay:bringToTop()
-    return true
-end
-
-function QuickRestartUI.forceHideTransitionOverlay()
-    local overlay = QuickRestartUI.transitionOverlay
-    if not overlay then
-        return false
-    end
-
-    QuickRestartLog.warn("transition overlay still active, removing it directly")
-    pcall(function()
-        overlay.isClosing = true
-        overlay.currentAlpha = 0
-        overlay.targetAlpha = 0
-        overlay.backgroundColor.a = 0
-        overlay:setCapture(false)
-        overlay:setVisible(false)
-        overlay:removeFromUIManager()
-    end)
-    QuickRestartUI.transitionOverlay = nil
     return true
 end
 

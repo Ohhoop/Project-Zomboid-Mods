@@ -810,12 +810,29 @@ function QuickRestartApply.refreshVisualAfterServerClothing(player, options)
     return true
 end
 
-function QuickRestartApply.runWhenPlayerSquareReady(player, action)
-    if not player or type(action) ~= "function" then
+local function waitForPlayer(player, isReady, action, timeoutMs, timeoutKey, onTimeout)
+    if not player or type(isReady) ~= "function" or type(action) ~= "function" then
         return false
     end
 
+    local ticks = 0
+    local finished = false
     local handler
+
+    local function detach()
+        if finished then
+            return false
+        end
+
+        finished = true
+        Events.OnPlayerUpdate.Remove(handler)
+        if timeoutKey then
+            QuickRestartScheduler.cancel(timeoutKey)
+        end
+
+        return true
+    end
+
     handler = function(updatedPlayer)
         if updatedPlayer ~= player then
             return
@@ -826,127 +843,103 @@ function QuickRestartApply.runWhenPlayerSquareReady(player, action)
             isDead = player:isDead()
         end)
         if isDead then
-            Events.OnPlayerUpdate.Remove(handler)
+            detach()
             return
         end
 
-        local square = nil
-        pcall(function()
-            square = player:getCurrentSquare()
-        end)
-        if not square then
+        ticks = ticks + 1
+        if not isReady(player) then
             return
         end
 
-        Events.OnPlayerUpdate.Remove(handler)
-        action(player, square)
+        if detach() then
+            action(player, ticks)
+        end
     end
 
     Events.OnPlayerUpdate.Add(handler)
+
+    if timeoutMs and timeoutKey then
+        QuickRestartScheduler.scheduleAfterMs(timeoutKey, timeoutMs, function()
+            if detach() and type(onTimeout) == "function" then
+                onTimeout(player, ticks)
+            end
+        end)
+    end
+
     return true
 end
 
-local WORLD_READY_PROBE_RADIUS = 8
-local WORLD_READY_GRACE_TICKS = 3
-local WORLD_READY_PROBE_OFFSETS = {
-    {-1, 0}, {1, 0}, {0, -1}, {0, 1},
-    {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
-}
-
-local function areSurroundingSquaresLoaded(square, radius)
-    local cell = getCell()
-    if not cell then
+function QuickRestartApply.runWhenPlayerSquareReady(player, action)
+    if type(action) ~= "function" then
         return false
     end
 
-    local x = square:getX()
-    local y = square:getY()
-    local z = square:getZ()
+    local readySquare
 
-    for _, offset in ipairs(WORLD_READY_PROBE_OFFSETS) do
-        local probe = nil
+    return waitForPlayer(player, function(playerObj)
+        readySquare = nil
         pcall(function()
-            probe = cell:getGridSquare(x + offset[1] * radius, y + offset[2] * radius, z)
+            readySquare = playerObj:getCurrentSquare()
         end)
-        if not probe then
-            return false
-        end
-    end
-
-    return true
+        return readySquare ~= nil
+    end, function(playerObj)
+        action(playerObj, readySquare)
+    end)
 end
 
-local function isPlayerWorldReady(player, radius)
+local function isPlayerWorldReady(player)
     local existsInTheWorld = false
-    pcall(function() existsInTheWorld = player:isExistInTheWorld() end)
+    pcall(function()
+        existsInTheWorld = player:isExistInTheWorld()
+    end)
     if existsInTheWorld ~= true then
         return false
     end
 
     local square = nil
-    pcall(function() square = player:getCurrentSquare() end)
+    pcall(function()
+        square = player:getCurrentSquare()
+    end)
     if not square then
         return false
     end
 
-    local chunk = nil
-    pcall(function() chunk = square:getChunk() end)
-    if not chunk then
-        return false
-    end
-
-    if player.isAddedToModelManager then
-        local modelReady = false
-        pcall(function() modelReady = player:isAddedToModelManager() end)
-        if modelReady ~= true then
-            return false
+    local ready = false
+    pcall(function()
+        local cell = getCell()
+        local chunkMap = cell and cell:getChunkMap(player:getPlayerNum()) or nil
+        if not chunkMap then
+            return
         end
-    end
 
-    return areSurroundingSquaresLoaded(square, radius)
+        local chunkSize = getChunkSizeInSquares()
+        local x = square:getX()
+        local y = square:getY()
+
+        for dx = -1, 1 do
+            for dy = -1, 1 do
+                if not chunkMap:getChunkForGridSquare(x + dx * chunkSize, y + dy * chunkSize) then
+                    return
+                end
+            end
+        end
+
+        ready = true
+    end)
+
+    return ready
 end
 
-function QuickRestartApply.runWhenPlayerWorldReady(player, action, options)
-    if not player or type(action) ~= "function" then
+function QuickRestartApply.runWhenPlayerWorldReady(player, action, timeoutMs, onTimeout)
+    if not player then
         return false
     end
 
-    options = options or {}
-    local radius = tonumber(options.radius) or WORLD_READY_PROBE_RADIUS
-    local graceTicks = tonumber(options.graceTicks) or WORLD_READY_GRACE_TICKS
-    local remainingGrace = graceTicks
+    local playerNum = player.getPlayerNum and player:getPlayerNum() or 0
+    local timeoutKey = "hide_transition_overlay_" .. tostring(playerNum)
 
-    local handler
-    handler = function(updatedPlayer)
-        if updatedPlayer ~= player then
-            return
-        end
-
-        local isDead = false
-        pcall(function()
-            isDead = player:isDead()
-        end)
-        if isDead then
-            Events.OnPlayerUpdate.Remove(handler)
-            return
-        end
-
-        if not isPlayerWorldReady(player, radius) then
-            remainingGrace = graceTicks
-            return
-        end
-
-        if remainingGrace > 0 then
-            remainingGrace = remainingGrace - 1
-            return
-        end
-
-        Events.OnPlayerUpdate.Remove(handler)
-        action(player, player:getCurrentSquare())
-    end
-
-    Events.OnPlayerUpdate.Add(handler)
-    return true
+    return waitForPlayer(player, isPlayerWorldReady, action, timeoutMs, timeoutKey, onTimeout)
 end
 
 function QuickRestartApply.clearZombiesAroundPlayer(player, options)
