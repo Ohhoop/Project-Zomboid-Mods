@@ -551,6 +551,10 @@ local function applySkillsToPlayer(player, data, options)
         return
     end
 
+    if type(data.xpBoosts) == "table" then
+        QuickRestartSkills.applyBoostsToPlayer(player, data.xpBoosts)
+    end
+
     QuickRestartSkills.applyToPlayer(player, data.skills, {logProgress = true})
 end
 
@@ -842,6 +846,109 @@ function QuickRestartApply.runWhenPlayerSquareReady(player, action)
     return true
 end
 
+local WORLD_READY_PROBE_RADIUS = 8
+local WORLD_READY_GRACE_TICKS = 3
+local WORLD_READY_PROBE_OFFSETS = {
+    {-1, 0}, {1, 0}, {0, -1}, {0, 1},
+    {-1, -1}, {1, -1}, {-1, 1}, {1, 1},
+}
+
+local function areSurroundingSquaresLoaded(square, radius)
+    local cell = getCell()
+    if not cell then
+        return false
+    end
+
+    local x = square:getX()
+    local y = square:getY()
+    local z = square:getZ()
+
+    for _, offset in ipairs(WORLD_READY_PROBE_OFFSETS) do
+        local probe = nil
+        pcall(function()
+            probe = cell:getGridSquare(x + offset[1] * radius, y + offset[2] * radius, z)
+        end)
+        if not probe then
+            return false
+        end
+    end
+
+    return true
+end
+
+local function isPlayerWorldReady(player, radius)
+    local existsInTheWorld = false
+    pcall(function() existsInTheWorld = player:isExistInTheWorld() end)
+    if existsInTheWorld ~= true then
+        return false
+    end
+
+    local square = nil
+    pcall(function() square = player:getCurrentSquare() end)
+    if not square then
+        return false
+    end
+
+    local chunk = nil
+    pcall(function() chunk = square:getChunk() end)
+    if not chunk then
+        return false
+    end
+
+    if player.isAddedToModelManager then
+        local modelReady = false
+        pcall(function() modelReady = player:isAddedToModelManager() end)
+        if modelReady ~= true then
+            return false
+        end
+    end
+
+    return areSurroundingSquaresLoaded(square, radius)
+end
+
+function QuickRestartApply.runWhenPlayerWorldReady(player, action, options)
+    if not player or type(action) ~= "function" then
+        return false
+    end
+
+    options = options or {}
+    local radius = tonumber(options.radius) or WORLD_READY_PROBE_RADIUS
+    local graceTicks = tonumber(options.graceTicks) or WORLD_READY_GRACE_TICKS
+    local remainingGrace = graceTicks
+
+    local handler
+    handler = function(updatedPlayer)
+        if updatedPlayer ~= player then
+            return
+        end
+
+        local isDead = false
+        pcall(function()
+            isDead = player:isDead()
+        end)
+        if isDead then
+            Events.OnPlayerUpdate.Remove(handler)
+            return
+        end
+
+        if not isPlayerWorldReady(player, radius) then
+            remainingGrace = graceTicks
+            return
+        end
+
+        if remainingGrace > 0 then
+            remainingGrace = remainingGrace - 1
+            return
+        end
+
+        Events.OnPlayerUpdate.Remove(handler)
+        action(player, player:getCurrentSquare())
+    end
+
+    Events.OnPlayerUpdate.Add(handler)
+    return true
+end
+
 function QuickRestartApply.clearZombiesAroundPlayer(player, options)
     if not player or isMultiplayer() then
         return false
@@ -850,7 +957,7 @@ function QuickRestartApply.clearZombiesAroundPlayer(player, options)
     return QuickRestartRestore.startSpawnZombiePurge(player, options)
 end
 
-function QuickRestartApply.refreshPlayerLighting(player, options)
+function QuickRestartApply.refreshPlayerLighting(player)
     if not player then
         return false
     end

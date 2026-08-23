@@ -12,6 +12,7 @@ local F_HAIR_STUBBLE = QuickRestartConstants.VISUAL.F_HAIR_STUBBLE
 local M_HAIR_STUBBLE = QuickRestartConstants.VISUAL.M_HAIR_STUBBLE
 local M_BEARD_STUBBLE = QuickRestartConstants.VISUAL.M_BEARD_STUBBLE
 local INVENTORY_CONTAINER = QuickRestartConstants.VISUAL.INVENTORY_CONTAINER
+local TRANSITION_OVERLAY_TIMEOUT_MS = 10000
 
 local function getPlayerIdentifier(player)
     if not player then return nil end
@@ -403,9 +404,6 @@ local function flushPendingMPRestore()
 
     sendClientCommand(QuickRestartConstants.MODULE, QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT, {
         grantId = QuickRestartClientState.pendingRestartGrantId,
-        profileKey = QuickRestartClientState.pendingProfileKey,
-        username = QuickRestartClientState.pendingUsername,
-        steamID = QuickRestartClientState.pendingSteamID,
     })
 end
 
@@ -534,13 +532,15 @@ local function buildOnNewGameOptions()
             triggerEvent("OnQuickRestartAfterApply", data, sameWorldRestart, playerObj)
         end,
         onSameWorldRestartApplied = function(playerObj)
+            QuickRestartLog.info("same world restart applied; waiting for the world around the character")
             QuickRestartApply.clearZombiesAroundPlayer(playerObj)
-            QuickRestartApply.refreshPlayerLighting(playerObj, {
-                scheduler = QuickRestartScheduler,
-                delayTicks = isMultiplayer() and 4 or 20,
-            })
-            QuickRestartScheduler.scheduleAfterMs("hide_same_world_transition_overlay", 500, function()
+            QuickRestartApply.refreshPlayerLighting(playerObj)
+            QuickRestartApply.runWhenPlayerWorldReady(playerObj, function()
+                QuickRestartLog.info("same world restart world ready; dismissing transition overlay")
                 QuickRestartUI.hideTransitionOverlay()
+            end)
+            QuickRestartScheduler.scheduleAfterMs("force_hide_same_world_transition_overlay", TRANSITION_OVERLAY_TIMEOUT_MS, function()
+                QuickRestartUI.forceHideTransitionOverlay()
             end)
         end,
         persistAppliedData = function(data, saveFilePath)

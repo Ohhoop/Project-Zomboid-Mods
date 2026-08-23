@@ -24,6 +24,7 @@ function QuickRestartSchema.newSnapshot()
         visual = {},
         traits = {},
         skills = {},
+        xpBoosts = {},
         recipes = {},
         clothing = {},
         sandbox = {},

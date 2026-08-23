@@ -54,15 +54,12 @@ function QuickRestartClientNetwork.sendRestartIntent(player, commandName, state,
 
     local requestId = nextSnapshotRequestId()
     local username = player:getUsername()
-    local steamID = QuickRestartProfileKey.getClientSteamID()
 
     state.pendingRestartMode = commandName
     state.pendingRestartRequestId = requestId
     state.pendingRestartApproved = false
     state.lastRestartDeniedReason = nil
-    state.pendingUsername = username
-    state.pendingSteamID = steamID
-    state.pendingProfileKey = QuickRestartProfileKey.resolveProfileKey(steamID, username)
+    state.pendingProfileKey = QuickRestartProfileKey.resolveProfileKey(username)
 
     QuickRestartLog.info("mp client sendRestartIntent command=" .. tostring(commandName)
         .. " requestId=" .. tostring(requestId)
@@ -72,8 +69,6 @@ function QuickRestartClientNetwork.sendRestartIntent(player, commandName, state,
 
     sendClientCommand(QuickRestartConstants.MODULE, commandName, QuickRestartProtocol.buildRestartIntent({
         requestId = requestId,
-        username = username,
-        steamID = steamID,
         options = extra and extra.options or nil,
         randomized = extra and extra.randomized or nil,
     }))
@@ -88,12 +83,9 @@ function QuickRestartClientNetwork.requestActiveServerSnapshot(player, state)
 
     local requestId = nextSnapshotRequestId()
     local username = player:getUsername()
-    local steamID = QuickRestartProfileKey.getClientSteamID()
 
     state.pendingRequestId = requestId
-    state.pendingUsername = username
-    state.pendingSteamID = steamID
-    state.pendingProfileKey = QuickRestartProfileKey.resolveProfileKey(steamID, username)
+    state.pendingProfileKey = QuickRestartProfileKey.resolveProfileKey(username)
     state.serverSnapshotLoaded = false
     state.waitingForActiveSnapshot = true
 
@@ -105,8 +97,6 @@ function QuickRestartClientNetwork.requestActiveServerSnapshot(player, state)
         QuickRestartConstants.COMMANDS.REQUEST_ACTIVE_SNAPSHOT,
         {
             requestId = requestId,
-            username = username,
-            steamID = steamID,
         }
     )
 
@@ -119,15 +109,12 @@ function QuickRestartClientNetwork.sendSnapshotPayload(player, data, allowReplac
     end
 
     local username = player:getUsername()
-    local steamID = QuickRestartProfileKey.getClientSteamID()
     local requestId = nextSnapshotRequestId()
 
     state.snapshotAttempts = 1
     state.snapshotAcked = false
     state.waitingForSnapshotAck = true
-    state.pendingProfileKey = QuickRestartProfileKey.resolveProfileKey(steamID, username)
-    state.pendingSteamID = steamID
-    state.pendingUsername = username
+    state.pendingProfileKey = QuickRestartProfileKey.resolveProfileKey(username)
     state.pendingSnapshot = data
     state.pendingRequestId = requestId
     state.allowSnapshotReplace = allowReplace == true
@@ -142,8 +129,6 @@ function QuickRestartClientNetwork.sendSnapshotPayload(player, data, allowReplac
         QuickRestartConstants.MODULE,
         QuickRestartConstants.COMMANDS.SUBMIT_SNAPSHOT,
         QuickRestartProtocol.buildSnapshotSubmit(data, {
-            username = username,
-            steamID = steamID,
             requestId = requestId,
             attempt = state.snapshotAttempts,
             allowReplace = state.allowSnapshotReplace,
@@ -188,8 +173,6 @@ function QuickRestartClientNetwork.retryPendingSnapshot(player, state, captureCh
         QuickRestartConstants.MODULE,
         QuickRestartConstants.COMMANDS.SUBMIT_SNAPSHOT,
         QuickRestartProtocol.buildSnapshotSubmit(freshSnapshot, {
-            username = state.pendingUsername,
-            steamID = state.pendingSteamID,
             requestId = state.pendingRequestId,
             attempt = state.snapshotAttempts,
             allowReplace = state.allowSnapshotReplace,
@@ -369,6 +352,13 @@ function QuickRestartClientNetwork.onServerCommand(module, command, args, option
             .. " profileKey=" .. tostring(args.profileKey)
             .. " " .. summarizeSnapshot(snapshot)
             .. " " .. summarizeFaceSnapshot(snapshot))
+
+        state.activeSnapshotTimedOut = false
+
+        if QuickRestartClientFlow.requestRestartPanelRebuild(options) then
+            QuickRestartLog.info("mp client SNAPSHOT_DATA received; rebuilding restart panel hasValidSnapshot="
+                .. tostring(hasValidSnapshot))
+        end
 
         if state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and state.serverSnapshot and options.startSameWorldRestartFromSnapshot then
             state.pendingRestartRequestId = nil

@@ -400,16 +400,17 @@ function QuickRestartCapture.captureCharacterData(player, options)
     end
 
     data.skills = {}
+    data.xpBoosts = {}
     local xp = player:getXp()
-    local maxPerkIndex = Perks.getMaxIndex() - 1
-    for i = 0, maxPerkIndex do
-        local perkEnum = Perks.fromIndex(i)
-        local perk = PerkFactory.getPerk(perkEnum)
-        if perk then
-            local perkXP = xp:getXP(perkEnum)
-            if perkXP then
-                data.skills[toStr(i)] = perkXP
-            end
+    for perkId, perk in pairs(QuickRestartUtil.getRegisteredPerks()) do
+        local perkXPOk, perkXP = call(function() return xp:getXP(perk) end)
+        if perkXPOk and perkXP then
+            data.skills[perkId] = perkXP
+        end
+
+        local boostOk, boost = call(function() return xp:getPerkBoost(perk) end)
+        if boostOk and type(boost) == "number" and boost > 0 then
+            data.xpBoosts[perkId] = boost
         end
     end
 

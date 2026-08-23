@@ -2,7 +2,7 @@ QuickRestartRestartOptions = QuickRestartRestartOptions or {}
 
 QuickRestartRestartOptions.KEEP = "keep"
 QuickRestartRestartOptions.RANDOM = "random"
-QuickRestartRestartOptions.CATEGORIES = {"gender", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}
+QuickRestartRestartOptions.CATEGORIES = {"gender", "appearance", "name", "profession", "traits", "clothing", "spawn", "seed", "sandbox", "sandboxMods", "zombies"}
 QuickRestartRestartOptions.WORLD_CATEGORIES = {"sandbox", "sandboxMods", "zombies"}
 
 local KEEP = QuickRestartRestartOptions.KEEP
@@ -38,6 +38,10 @@ function QuickRestartRestartOptions.isCategory(category)
     return false
 end
 
+function QuickRestartRestartOptions.isTraitsLockedBy(options)
+    return type(options) == "table" and options.profession == RANDOM
+end
+
 function QuickRestartRestartOptions.sanitize(options)
     local sanitized = QuickRestartRestartOptions.defaults()
     if type(options) == "table" then
@@ -47,6 +51,11 @@ function QuickRestartRestartOptions.sanitize(options)
             end
         end
     end
+
+    if sanitized.profession == RANDOM then
+        sanitized.traits = RANDOM
+    end
+
     return sanitized
 end
 
