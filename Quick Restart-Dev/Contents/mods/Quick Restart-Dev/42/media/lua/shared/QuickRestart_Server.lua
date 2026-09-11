@@ -327,7 +327,7 @@ local function handleSubmitSnapshot(player, args)
         if attempt < MAX_SNAPSHOT_ATTEMPTS then
             sendSnapshotRetry(player, requestId, attempt + 1)
         else
-            QuickRestartLog.warn("submitSnapshot failed after retries for " .. tostring(profileKey) .. " reason=" .. tostring(reason))
+            QuickRestartLog.error("submitSnapshot failed after retries for " .. tostring(profileKey) .. " reason=" .. tostring(reason))
             sendSnapshotAck(player, requestId, profileKey, false, false)
         end
         return
@@ -483,10 +483,12 @@ local function onClientCommand(module, command, player, args)
         local grantId = args and args.grantId or nil
         local grant = grantId and QuickRestartServerState.restartGrantsById[grantId] or nil
         if not player or not profileKey then
+            QuickRestartLog.warn("mp server apply authoritative snapshot ignored: missing player or profile key")
             return
         end
 
         if not grant then
+            QuickRestartLog.info("mp server apply authoritative snapshot grant missing or expired, reissuing profileKey=" .. tostring(profileKey))
             local replacementGrantId = issueRestartGrant(profileKey, COMMANDS.REQUEST_RESTART_SAME_WORLD, args and args.requestId or "apply")
             sendServerCommand(player, MODULE, COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY, QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse({
                 profileKey = profileKey,
@@ -497,6 +499,8 @@ local function onClientCommand(module, command, player, args)
         end
 
         if grant.profileKey ~= profileKey or grant.mode ~= COMMANDS.REQUEST_RESTART_SAME_WORLD then
+            QuickRestartLog.warn("mp server apply authoritative snapshot grant mismatch, reissuing profileKey=" .. tostring(profileKey)
+                .. " grantProfileKey=" .. tostring(grant.profileKey) .. " grantMode=" .. tostring(grant.mode))
             local replacementGrantId = issueRestartGrant(profileKey, COMMANDS.REQUEST_RESTART_SAME_WORLD, args and args.requestId or "apply")
             sendServerCommand(player, MODULE, COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY, QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse({
                 profileKey = profileKey,
@@ -508,6 +512,7 @@ local function onClientCommand(module, command, player, args)
 
         local record = getProfileRecord(profileKey)
         if not record or not record.snapshot then
+            QuickRestartLog.error("mp server apply authoritative snapshot denied: missing snapshot profileKey=" .. tostring(profileKey))
             sendServerCommand(player, MODULE, COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED, QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse({
                 profileKey = profileKey,
                 reason = "missing_snapshot_restore_data",
@@ -520,6 +525,8 @@ local function onClientCommand(module, command, player, args)
 
         local restored, reason = QuickRestartRestore.applyAuthoritativeSnapshot(player, effectiveSnapshot)
         if not restored then
+            QuickRestartLog.error("mp server apply authoritative snapshot failed profileKey=" .. tostring(profileKey)
+                .. " reason=" .. tostring(reason or "restore_apply_failed"))
             sendServerCommand(player, MODULE, COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED, QuickRestartProtocol.buildApplyAuthoritativeSnapshotResponse({
                 profileKey = profileKey,
                 reason = reason or "restore_apply_failed",
@@ -534,7 +541,7 @@ local function onClientCommand(module, command, player, args)
             if persistSnapshot(profileKey, pendingMerged.snapshot) then
                 QuickRestartLog.info("mp server persisted merged randomized snapshot profileKey=" .. tostring(profileKey))
             else
-                QuickRestartLog.warn("mp server failed to persist merged randomized snapshot profileKey=" .. tostring(profileKey))
+                QuickRestartLog.error("mp server failed to persist merged randomized snapshot profileKey=" .. tostring(profileKey))
             end
             QuickRestartServerState.pendingMergedSnapshots[profileKey] = nil
         end

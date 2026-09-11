@@ -162,7 +162,7 @@ function QuickRestartClientNetwork.retryPendingSnapshot(player, state, captureCh
     state.waitingForSnapshotAck = true
     state.pendingSnapshot = freshSnapshot
 
-    QuickRestartLog.warn("mp client retrySnapshot requestId=" .. tostring(state.pendingRequestId)
+    QuickRestartLog.info("mp client retrySnapshot requestId=" .. tostring(state.pendingRequestId)
         .. " attempt=" .. tostring(state.snapshotAttempts)
         .. " allowReplace=" .. tostring(state.allowSnapshotReplace)
         .. " profileKey=" .. tostring(state.pendingProfileKey)
@@ -232,7 +232,7 @@ function QuickRestartClientNetwork.onServerCommand(module, command, args, option
             return
         end
 
-        QuickRestartLog.warn("mp client SNAPSHOT_RETRY requestId=" .. tostring(args.requestId)
+        QuickRestartLog.info("mp client SNAPSHOT_RETRY requestId=" .. tostring(args.requestId)
             .. " attempt=" .. tostring(args.attempt))
         local player = getPlayer()
         if player and options.retryPendingSnapshot then
@@ -259,7 +259,7 @@ function QuickRestartClientNetwork.onServerCommand(module, command, args, option
     end
 
     if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_RETRY then
-        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_RETRY grantId=" .. tostring(args.grantId)
+        QuickRestartLog.info("mp client APPLY_AUTHORITATIVE_SNAPSHOT_RETRY grantId=" .. tostring(args.grantId)
             .. " reason=" .. tostring(args.reason))
         if args.grantId and args.grantId ~= "" then
             state.pendingRestartGrantId = tostring(args.grantId)
@@ -271,7 +271,7 @@ function QuickRestartClientNetwork.onServerCommand(module, command, args, option
     end
 
     if command == QuickRestartConstants.COMMANDS.APPLY_AUTHORITATIVE_SNAPSHOT_DENIED then
-        QuickRestartLog.warn("mp client APPLY_AUTHORITATIVE_SNAPSHOT_DENIED reason=" .. tostring(args.reason))
+        QuickRestartLog.error("mp client APPLY_AUTHORITATIVE_SNAPSHOT_DENIED reason=" .. tostring(args.reason))
         state.pendingRestartGrantId = nil
         if options.onApplySkillsDenied then
             options.onApplySkillsDenied(args.reason)
@@ -366,7 +366,7 @@ function QuickRestartClientNetwork.onServerCommand(module, command, args, option
             options.startSameWorldRestartFromSnapshot(state.serverSnapshot)
             state.pendingRestartMode = nil
         elseif state.pendingRestartApproved and state.pendingRestartMode == QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD and not state.serverSnapshot then
-            QuickRestartLog.warn("mp client same-world restart canceled: invalid server snapshot")
+            QuickRestartLog.error("mp client same-world restart canceled: invalid server snapshot")
             state.pendingRestartRequestId = nil
             state.pendingRestartApproved = false
             state.pendingRestartGrantId = nil

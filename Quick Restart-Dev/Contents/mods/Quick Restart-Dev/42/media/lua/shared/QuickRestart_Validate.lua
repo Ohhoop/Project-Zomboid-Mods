@@ -170,15 +170,15 @@ function QuickRestartValidate.validateSnapshotData(data)
         return false, "snapshot_not_table"
     end
 
-    if not isNonEmptyString(data.name) then
+    if type(data.name) ~= "string" then
         return false, "missing_name"
     end
 
-    if not isNonEmptyString(data.forename) then
+    if type(data.forename) ~= "string" then
         return false, "missing_forename"
     end
 
-    if not isNonEmptyString(data.surname) then
+    if type(data.surname) ~= "string" then
         return false, "missing_surname"
     end
 
@@ -302,6 +302,24 @@ function QuickRestartValidate.validateSnapshotData(data)
         end
         if not isNumberOrNil(data.voice.pitch) then
             return false, "invalid_voice_pitch"
+        end
+    end
+
+    return true, nil
+end
+
+QuickRestartValidate.RESTART_MODE_FRESH_WORLD = "freshWorld"
+QuickRestartValidate.RESTART_MODE_SAME_WORLD = "sameWorld"
+
+function QuickRestartValidate.validateRestartSnapshot(data, mode)
+    local valid, reason = QuickRestartValidate.validateSnapshotData(data)
+    if not valid then
+        return false, reason
+    end
+
+    if mode == QuickRestartValidate.RESTART_MODE_FRESH_WORLD then
+        if not isNonEmptyString(data.region) and not isNonEmptyString(data.worldMap) then
+            return false, "missing_target_map"
         end
     end
 

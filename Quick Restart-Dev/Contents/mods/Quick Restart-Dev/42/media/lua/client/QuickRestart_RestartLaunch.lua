@@ -111,7 +111,7 @@ local function abandonPendingRestart(saveDataTable, reason)
         saveDataTable.saveData = nil
     end
     QuickRestartModListGuard.restoreDefaultIfNeeded({requestReset = true})
-    QuickRestartLog.warn("checkPendingRestart abandoned pending restart reason=" .. tostring(reason))
+    QuickRestartLog.error("checkPendingRestart abandoned pending restart reason=" .. tostring(reason))
 end
 
 function QuickRestartRestartLaunch.doRestartNewWorld(data, playerIdentifier, sandboxVars)

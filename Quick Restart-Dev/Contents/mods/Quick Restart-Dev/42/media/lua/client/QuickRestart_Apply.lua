@@ -12,6 +12,14 @@ local function logClothing(message)
     end
 end
 
+local function guardedCall(step, fn)
+    local ok, result = pcall(fn)
+    if not ok then
+        QuickRestartLog.warn("restore step failed step=" .. tostring(step) .. " error=" .. tostring(result))
+    end
+    return ok, result
+end
+
 local function describeItem(item)
     if not item then
         return "<nil>"
@@ -184,7 +192,9 @@ local function applyVanillaBodyVisuals(player, data, visualItemTypes)
         return false
     end
 
-    local call = pcall
+    local call = function(fn)
+        return guardedCall("body stubble", fn)
+    end
     local isFemale = desc:isFemale()
     local applied = false
 
@@ -238,7 +248,9 @@ local function applyBaseVisualToPlayer(player, data, options)
         return false
     end
 
-    local call = pcall
+    local call = function(fn)
+        return guardedCall("appearance", fn)
+    end
     local applied = false
 
     if data.visual.hairModel then
@@ -455,7 +467,9 @@ local function applyVoiceToPlayer(player, data)
         return
     end
 
-    local call = pcall
+    local call = function(fn)
+        return guardedCall("voice", fn)
+    end
     if data.voice.prefix then
         call(function() desc:setVoicePrefix(data.voice.prefix) end)
     end
@@ -516,7 +530,9 @@ local function applyRecipesToPlayer(player, data)
         return
     end
 
-    local call = pcall
+    local call = function(fn)
+        return guardedCall("recipes", fn)
+    end
     for _, recipe in ipairs(data.recipes) do
         if type(recipe) == "string" and recipe ~= "" then
             local alreadyKnown = false
@@ -604,6 +620,9 @@ local function equipClothingItem(player, item)
     local success = pcall(function()
         player:setWornItem(bodyLoc, item)
     end)
+    if not success then
+        QuickRestartLog.warn("restore clothing equip failed " .. describeItem(item))
+    end
 
     return success
 end
@@ -641,9 +660,7 @@ local function restoreClothingItem(player, inventory, clothingData, options)
         return inventory:AddItem(clothingData.type)
     end)
     if not success or not item then
-        if isMultiplayer() then
-            logClothing("restoreClothingItem add failed type=" .. tostring(clothingData.type))
-        end
+        QuickRestartLog.warn("restore clothing add failed type=" .. tostring(clothingData.type))
         return false
     end
 

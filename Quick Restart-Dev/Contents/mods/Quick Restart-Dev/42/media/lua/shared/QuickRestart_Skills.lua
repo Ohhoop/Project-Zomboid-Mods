@@ -1,3 +1,5 @@
+require("QuickRestart_Log")
+
 QuickRestartSkills = QuickRestartSkills or {}
 
 local function buildLevelTraitBands()
@@ -32,19 +34,11 @@ local function buildLevelTraitBands()
 end
 
 local function logInfo(message)
-    if QuickRestartLog and QuickRestartLog.info then
-        QuickRestartLog.info(message)
-    elseif QRDebugLogging == true then
-        print("[QuickRestart] INFO " .. message)
-    end
+    QuickRestartLog.info(message)
 end
 
 local function logWarn(message)
-    if QuickRestartLog and QuickRestartLog.warn then
-        QuickRestartLog.warn(message)
-    elseif QRDebugLogging == true then
-        print("[QuickRestart] WARN " .. message)
-    end
+    QuickRestartLog.warn(message)
 end
 
 local function canAddFitnessXp(player)

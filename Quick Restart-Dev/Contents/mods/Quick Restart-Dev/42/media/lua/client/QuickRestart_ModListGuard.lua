@@ -135,7 +135,7 @@ function QuickRestartModListGuard.prepareForFreshWorld()
     if not writeBackup(backup) then
         fillArrayList(defaultMods:getMods(), originalMods)
         fillArrayList(defaultMods:getMapOrder(), originalMaps)
-        QuickRestartLog.warn("modListGuard prepare aborted: backup write failed, default left untouched")
+        QuickRestartLog.error("modListGuard prepare aborted: backup write failed, default left untouched")
         return false
     end
 
