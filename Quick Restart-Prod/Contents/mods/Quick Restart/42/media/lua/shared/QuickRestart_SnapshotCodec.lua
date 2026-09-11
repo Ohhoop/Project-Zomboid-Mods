@@ -1,3 +1,5 @@
+require("QuickRestart_Log")
+
 QuickRestartSnapshotCodec = QuickRestartSnapshotCodec or {}
 
 local ENCODE_KEY = "QuickRestart_B42_SecretKey_2026"
@@ -625,6 +627,7 @@ function QuickRestartSnapshotCodec.readDataFromFile(customFileName)
         return QuickRestartSnapshotCodec.decodeString(encodedString)
     end)
     if not success then
+        QuickRestartLog.warn("snapshot file could not be decoded file=" .. tostring(fileName))
         return nil
     end
 

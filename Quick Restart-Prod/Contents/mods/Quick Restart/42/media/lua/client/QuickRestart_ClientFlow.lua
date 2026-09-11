@@ -38,14 +38,15 @@ local function summarizeSnapshot(snapshot)
         .. " recipes=" .. tostring(recipesCount)
 end
 
-function QuickRestartClientFlow.isRestartSnapshotAvailable(data)
+function QuickRestartClientFlow.isRestartSnapshotAvailable(data, mode)
     if type(data) ~= "table" then
         return false
     end
 
-    local valid, reason = QuickRestartValidate.validateSnapshotData(data)
+    local valid, reason = QuickRestartValidate.validateRestartSnapshot(data, mode)
     if not valid then
-        QuickRestartLog.warn("restart snapshot rejected reason=" .. tostring(reason)
+        QuickRestartLog.warn("restart snapshot rejected mode=" .. tostring(mode or "any")
+            .. " reason=" .. tostring(reason)
             .. " name=" .. tostring(data.name)
             .. " profession=" .. tostring(data.profession))
     end
@@ -57,13 +58,17 @@ function QuickRestartClientFlow.isDeathUiReady(player)
         return false
     end
 
+    if CoopCharacterCreation and CoopCharacterCreation.instance then
+        return false
+    end
+
     local playerNum = player:getPlayerNum()
     return ISPostDeathUI and ISPostDeathUI.instance and ISPostDeathUI.instance[playerNum] ~= nil
 end
 
 function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
     if not data or not data.name then
-        QuickRestartLog.warn("mp client startSameWorldRestartFromSnapshot aborted: missing snapshot data")
+        QuickRestartLog.error("mp client startSameWorldRestartFromSnapshot aborted: missing snapshot data")
         return false
     end
 
@@ -75,6 +80,7 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
     local visualItemTypes = options.visualItemTypes or {}
     local showTransitionOverlay = options.showTransitionOverlay
     local hideTransitionOverlay = options.hideTransitionOverlay
+    local restoreRestartPanel = options.restoreRestartPanel
 
     if closePanel then
         closePanel()
@@ -97,12 +103,15 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
     scheduler.scheduleAfterTicks("same_world_auto_complete", 2, function()
         local coop = CoopCharacterCreation.instance
         if not coop then
-            QuickRestartLog.warn("mp client sameWorld auto-complete aborted: CoopCharacterCreation.instance missing")
+            QuickRestartLog.error("mp client sameWorld auto-complete aborted: CoopCharacterCreation.instance missing")
             if clearPending then
                 clearPending()
             end
             if hideTransitionOverlay then
                 hideTransitionOverlay()
+            end
+            if restoreRestartPanel then
+                restoreRestartPanel()
             end
             return
         end
@@ -197,9 +206,14 @@ function QuickRestartClientFlow.startSameWorldRestartFromSnapshot(data, options)
                 ISPostDeathUI.instance[0] = nil
             end
             setPlayerMouse(nil)
-        elseif hideTransitionOverlay then
-            QuickRestartLog.warn("mp client sameWorld auto-complete accept1 failed")
-            hideTransitionOverlay()
+        else
+            QuickRestartLog.error("mp client sameWorld auto-complete accept1 failed")
+            if hideTransitionOverlay then
+                hideTransitionOverlay()
+            end
+            if restoreRestartPanel then
+                restoreRestartPanel()
+            end
         end
     end)
     return true
@@ -230,7 +244,7 @@ function QuickRestartClientFlow.restartNewWorld(options)
     end
 
     local data = options.loadDataFromSaveFolder and options.loadDataFromSaveFolder(playerIdentifier) or nil
-    if not data or not data.region then
+    if not QuickRestartClientFlow.isRestartSnapshotAvailable(data, QuickRestartValidate.RESTART_MODE_FRESH_WORLD) then
         return false
     end
 
@@ -263,7 +277,7 @@ function QuickRestartClientFlow.restartSameWorld(options)
     local player = getPlayer()
     if not player then
         if isMultiplayer() then
-            QuickRestartLog.warn("mp client restartSameWorld aborted: player missing")
+            QuickRestartLog.error("mp client restartSameWorld aborted: player missing")
         end
         return false
     end
@@ -275,7 +289,7 @@ function QuickRestartClientFlow.restartSameWorld(options)
                 .. " hasServerSnapshot=" .. tostring(options.loadDataFromSaveFolder and options.loadDataFromSaveFolder("player") ~= nil))
             return options.sendRestartIntent(player, QuickRestartConstants.COMMANDS.REQUEST_RESTART_SAME_WORLD)
         end
-        QuickRestartLog.warn("mp client restartSameWorld aborted: sendRestartIntent missing")
+        QuickRestartLog.error("mp client restartSameWorld aborted: sendRestartIntent missing")
         return false
     end
 
@@ -285,7 +299,7 @@ function QuickRestartClientFlow.restartSameWorld(options)
     end
 
     local data = options.loadDataFromSaveFolder and options.loadDataFromSaveFolder(playerIdentifier) or nil
-    if not data or not data.name then
+    if not QuickRestartClientFlow.isRestartSnapshotAvailable(data, QuickRestartValidate.RESTART_MODE_SAME_WORLD) then
         return false
     end
 
@@ -313,15 +327,17 @@ function QuickRestartClientFlow.addRestartPanel(options)
         end
     end
 
-    local charDataAvail = false
+    local freshDataAvail = false
+    local sameDataAvail = false
     local player = getPlayer()
     if player and options.getPlayerIdentifier and options.loadDataFromSaveFolder then
         local playerIdentifier = options.getPlayerIdentifier(player)
         if playerIdentifier then
             local data = options.loadDataFromSaveFolder(playerIdentifier)
-            if QuickRestartClientFlow.isRestartSnapshotAvailable(data) then
-                charDataAvail = true
-            end
+            freshDataAvail = QuickRestartClientFlow.isRestartSnapshotAvailable(data,
+                QuickRestartValidate.RESTART_MODE_FRESH_WORLD)
+            sameDataAvail = QuickRestartClientFlow.isRestartSnapshotAvailable(data,
+                QuickRestartValidate.RESTART_MODE_SAME_WORLD)
         end
     end
 
@@ -334,7 +350,8 @@ function QuickRestartClientFlow.addRestartPanel(options)
     local snapshotUnavailable = isMultiplayer() and state ~= nil and state.activeSnapshotTimedOut == true
 
     local panel = options.createRestartPanel({
-        charDataAvail = charDataAvail,
+        freshDataAvail = freshDataAvail,
+        sameDataAvail = sameDataAvail,
         snapshotPending = snapshotPending,
         snapshotUnavailable = snapshotUnavailable,
         canUseFreshWorld = options.canUseFreshWorld,

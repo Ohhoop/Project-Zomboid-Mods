@@ -6,6 +6,7 @@ QuickRestartTransitionOverlay = ISPanel:derive("QuickRestartTransitionOverlay")
 local DICE_KEEP_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Keep.png"
 local DICE_RANDOM_TEXTURE_PATH = "media/textures/QuickRestart_Dice_Random.png"
 local DICE_PULSE_PERIOD_MS = 1600
+local DICE_DISABLED_ALPHA = 0.35
 local TRANSITION_PULSE_PERIOD_MS = 1600
 local FADE_IN_DURATION_MS = 450
 local LOCK_THROB_DURATION_MS = 1400
@@ -51,17 +52,15 @@ local function isDeathScreenDismissed()
         return false
     end
 
-    local found = false
     for _, deathUi in pairs(ISPostDeathUI.instance) do
         if deathUi then
-            found = true
             if not deathUi.isRemoved or not deathUi:isRemoved() then
                 return false
             end
         end
     end
 
-    return found
+    return true
 end
 
 local OPTION_ROWS = {
@@ -283,10 +282,9 @@ function QuickRestartPanel:createChildren()
     local yStart = layout.marginY + layout.hgtMedium + layout.spacing
 
     self.freshWorldEnabled = self.canUseFreshWorld and self.canUseFreshWorld() or false
-    local charDataAvail = self.charDataAvail
 
-    local freshEnabled = self.freshWorldEnabled and charDataAvail
-    local sameEnabled = charDataAvail and not self.snapshotPending
+    local freshEnabled = self.freshWorldEnabled and self.freshDataAvail
+    local sameEnabled = self.sameDataAvail and not self.snapshotPending
 
     local freshLabel = getText("UI_QuickRestart_FreshWorld")
     local sameLabel = getText("UI_QuickRestart_ThisWorld")
@@ -333,11 +331,12 @@ function QuickRestartPanel:createChildren()
     end)
     self.optionsButton:initialise()
     self.optionsButton:instantiate()
-    self.optionsButton.backgroundColor = {r=0, g=0, b=0, a=0.9}
+    local optionsEnabled = self.freshDataAvail or self.sameDataAvail
+    self.optionsButton.backgroundColor = optionsEnabled and {r=0, g=0, b=0, a=0.9} or {r=0.3, g=0.3, b=0.3, a=0.9}
     self.optionsButton.borderColor = {r=0.7, g=0.7, b=0.7, a=0.3}
     self.diceIconSize = optionsButtonSize - layout.gapTiny * 2
     self:refreshOptionsButtonIcon()
-    if not charDataAvail then
+    if not optionsEnabled then
         self.optionsButton.enable = false
     end
     self:addChild(self.optionsButton)
@@ -407,6 +406,11 @@ function QuickRestartPanel:updateDicePulse()
 
     local fade = self.fadeAlpha or 1
 
+    if self.optionsButton.enable == false then
+        self.optionsButton.textureColor.a = DICE_DISABLED_ALPHA * fade
+        return
+    end
+
     if not self.diceIsRandom then
         self.optionsButton.textureColor.a = fade
         return
@@ -460,7 +464,9 @@ end
 QuickRestartOptionsWindow = ISPanel:derive("QuickRestartOptionsWindow")
 
 function QuickRestartOptionsWindow:new(x, y, width, height)
-    return QuickRestartUIKit.newWindowPanel(self, x, y, width, height)
+    local o = QuickRestartUIKit.newWindowPanel(self, x, y, width, height)
+    o.moveWithMouse = true
+    return o
 end
 
 function QuickRestartOptionsWindow:createChildren()
@@ -931,7 +937,7 @@ function QuickRestartPanel:render()
         if self.freshButton:isMouseOver() then
             if not self.freshWorldEnabled then
                 tooltipText = getText("UI_QuickRestart_MP_Tooltip")
-            elseif not self.charDataAvail then
+            elseif not self.freshDataAvail then
                 tooltipText = getText("UI_QuickRestart_NoData_Tooltip")
             elseif self:hasAnyRandomOption() then
                 tooltipText = getText("UI_QuickRestart_FreshWorld_Tooltip_Random")
@@ -943,7 +949,7 @@ function QuickRestartPanel:render()
                 tooltipText = getText("UI_QuickRestart_SnapshotPending_Tooltip")
             elseif self.snapshotUnavailable then
                 tooltipText = getText("UI_QuickRestart_SnapshotUnavailable_Tooltip")
-            elseif not self.charDataAvail then
+            elseif not self.sameDataAvail then
                 tooltipText = getText("UI_QuickRestart_NoData_Tooltip")
             elseif self:hasSameWorldRandomOption() then
                 tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip_Random")
@@ -951,7 +957,15 @@ function QuickRestartPanel:render()
                 tooltipText = getText("UI_QuickRestart_ThisWorld_Tooltip")
             end
         elseif self.optionsButton and self.optionsButton:isVisible() and self.optionsButton:isMouseOver() then
-            tooltipText = getText("UI_QuickRestart_Options_Tooltip")
+            if self.optionsButton.enable ~= false then
+                tooltipText = getText("UI_QuickRestart_Options_Tooltip")
+            elseif self.snapshotPending then
+                tooltipText = getText("UI_QuickRestart_SnapshotPending_Tooltip")
+            elseif self.snapshotUnavailable then
+                tooltipText = getText("UI_QuickRestart_SnapshotUnavailable_Tooltip")
+            else
+                tooltipText = getText("UI_QuickRestart_NoData_Tooltip")
+            end
         end
 
         if tooltipText then
@@ -995,7 +1009,8 @@ function QuickRestartUI.createRestartPanel(options)
     local panel = QuickRestartPanel:new(x, y, panelWidth, panelHeight)
     panel.layout = layout
     panel.buttonWidth = buttonWidth
-    panel.charDataAvail = options.charDataAvail == true
+    panel.freshDataAvail = options.freshDataAvail == true
+    panel.sameDataAvail = options.sameDataAvail == true
     panel.snapshotPending = options.snapshotPending == true
     panel.snapshotUnavailable = options.snapshotUnavailable == true
     panel.canUseFreshWorld = options.canUseFreshWorld

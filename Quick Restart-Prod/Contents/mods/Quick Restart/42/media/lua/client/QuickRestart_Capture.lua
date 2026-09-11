@@ -179,7 +179,7 @@ local function logCapturedWornItems(player)
         return player:getWornItems()
     end)
     if not ok or not wornItems then
-        QuickRestartLog.info("capture wornItems unavailable")
+        QuickRestartLog.warn("capture wornItems unavailable")
         return
     end
 
@@ -210,7 +210,7 @@ local function logCapturedClothingEntry(clothingData)
     end
 
     if type(clothingData) ~= "table" then
-        QuickRestartLog.info("capture clothing entry=<invalid>")
+        QuickRestartLog.warn("capture clothing entry=<invalid>")
         return
     end
 

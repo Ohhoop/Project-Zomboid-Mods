@@ -1,3 +1,5 @@
+require("QuickRestart_Log")
+
 QuickRestartSandbox = QuickRestartSandbox or {}
 
 local function isSupportedSandboxScalar(key, value)
@@ -8,11 +10,7 @@ local function isSupportedSandboxScalar(key, value)
 end
 
 local function logInfo(message)
-    if QuickRestartLog and QuickRestartLog.info then
-        QuickRestartLog.info(message)
-    elseif QRDebugLogging == true then
-        print("[QuickRestart] INFO " .. tostring(message))
-    end
+    QuickRestartLog.info(message)
 end
 
 local function sortKeysShallow(tbl)

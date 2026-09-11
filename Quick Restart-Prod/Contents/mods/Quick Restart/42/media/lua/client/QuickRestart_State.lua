@@ -94,7 +94,7 @@ function QuickRestartState.set(key, value)
 
     local ok, saved = pcall(save)
     if not ok or not saved then
-        QuickRestartLog.warn("state failed to persist key=" .. tostring(key))
+        QuickRestartLog.error("state failed to persist key=" .. tostring(key))
         return false
     end
     return true
@@ -140,7 +140,7 @@ function QuickRestartState.remove(key)
 
     local ok, saved = pcall(save)
     if not ok or not saved then
-        QuickRestartLog.warn("state failed to persist removal key=" .. tostring(key))
+        QuickRestartLog.error("state failed to persist removal key=" .. tostring(key))
         return false
     end
     return true

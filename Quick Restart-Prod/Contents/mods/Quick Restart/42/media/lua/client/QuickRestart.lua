@@ -175,7 +175,7 @@ local function saveCharacterData(player, saveFilePath)
     local data = captureCharacterData(player)
     if not data then
         if isMultiplayer() then
-            QuickRestartLog.warn("mp client saveCharacterData aborted: capture returned nil")
+            QuickRestartLog.error("mp client saveCharacterData aborted: capture returned nil")
         end
         return
     end
@@ -322,6 +322,9 @@ startSameWorldRestartFromSnapshot = function(data)
         end,
         hideTransitionOverlay = function()
             QuickRestartUI.hideTransitionOverlay()
+        end,
+        restoreRestartPanel = function()
+            QuickRestartClientState.awaitingRestartPanel = true
         end,
         scheduler = QuickRestartScheduler,
         visualItemTypes = {

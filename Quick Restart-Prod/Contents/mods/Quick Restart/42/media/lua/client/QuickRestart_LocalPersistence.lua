@@ -17,7 +17,11 @@ function QuickRestartLocalPersistence.writeDataToFile(data, customFileName, sand
         .. " name=" .. tostring(data and data.name)
         .. " region=" .. tostring(data and data.region)
         .. " worldMap=" .. tostring(data and data.worldMap))
-    return QuickRestartSnapshotCodec.writeDataToFile(data, customFileName, sandboxVars)
+    local stored = QuickRestartSnapshotCodec.writeDataToFile(data, customFileName, sandboxVars)
+    if not stored then
+        QuickRestartLog.error("writeDataToFile failed file=" .. tostring(customFileName or QuickRestartLocalPersistence.getSaveFileName()))
+    end
+    return stored
 end
 
 function QuickRestartLocalPersistence.readDataFromFile(customFileName)

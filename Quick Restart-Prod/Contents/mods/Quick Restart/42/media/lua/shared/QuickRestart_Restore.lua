@@ -1,3 +1,5 @@
+require("QuickRestart_Log")
+
 QuickRestartRestore = QuickRestartRestore or {}
 QuickRestartRestore._serverClothingTasks = QuickRestartRestore._serverClothingTasks or {}
 QuickRestartRestore._serverClothingTickRegistered = QuickRestartRestore._serverClothingTickRegistered == true
@@ -123,17 +125,13 @@ end
 
 local function restoreBaseClothingServer(player, snapshot)
     if not player or type(snapshot) ~= "table" or type(snapshot.clothing) ~= "table" then
-        if QuickRestartLog and QuickRestartLog.info then
-            QuickRestartLog.info("server restore base clothing skipped invalid input")
-        end
+        QuickRestartLog.warn("server restore base clothing skipped invalid input")
         return false
     end
 
     local inventory = player:getInventory()
     if not inventory then
-        if QuickRestartLog and QuickRestartLog.info then
-            QuickRestartLog.info("server restore base clothing skipped missing inventory")
-        end
+        QuickRestartLog.warn("server restore base clothing skipped missing inventory")
         return false
     end
 
@@ -174,7 +172,7 @@ local function restoreBaseClothingServer(player, snapshot)
                 pendingEquip[#pendingEquip + 1] = item
                 restoredCount = restoredCount + 1
             elseif QuickRestartLog and QuickRestartLog.info then
-                QuickRestartLog.info("server restore base clothing add failed type=" .. tostring(clothingData.type))
+                QuickRestartLog.warn("server restore base clothing add failed type=" .. tostring(clothingData.type))
             end
         end
     end
@@ -202,9 +200,11 @@ local function restoreBaseClothingServer(player, snapshot)
         end
     end
 
-    if restoredCount > 0 and QuickRestartLog and QuickRestartLog.info then
+    if restoredCount > 0 then
         QuickRestartLog.info("server restore applied base clothing count=" .. tostring(restoredCount))
-    elseif QuickRestartLog and QuickRestartLog.info then
+    elseif #snapshot.clothing > 0 then
+        QuickRestartLog.warn("server restore base clothing restored nothing snapshotCount=" .. tostring(#snapshot.clothing))
+    else
         QuickRestartLog.info("server restore base clothing restored nothing")
     end
 
@@ -561,7 +561,9 @@ function QuickRestartRestore.applyAuthoritativeSnapshot(player, snapshot)
             elseif weight > 130 then
                 weight = 130
             end
-            pcall(function() nutrition:setWeight(weight) end)
+            if not pcall(function() nutrition:setWeight(weight) end) then
+                QuickRestartLog.warn("mp server weight restore failed weight=" .. tostring(weight))
+            end
         end
     end
 

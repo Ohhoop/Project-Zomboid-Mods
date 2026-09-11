@@ -15,10 +15,6 @@ function QuickRestartLog.setEnabled(enabled)
 end
 
 local function write(level, message)
-    if not QuickRestartLog.isEnabled() then
-        return
-    end
-
     print(PREFIX .. level .. " " .. tostring(message))
 end
 
@@ -29,7 +25,9 @@ function QuickRestartLog.debug(message)
 end
 
 function QuickRestartLog.info(message)
-    write("INFO", message)
+    if QuickRestartLog.isEnabled() then
+        write("INFO", message)
+    end
 end
 
 function QuickRestartLog.warn(message)
