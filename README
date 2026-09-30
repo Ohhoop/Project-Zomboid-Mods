@@ -1,16 +1,8 @@
-Project Zomboid Mods Repository
+Project Zomboid Mods
 
-This branch holds my Project Zomboid mod projects, one folder per mod.
+Showcase of my Project Zomboid mods. Each mod lives in its own repository.
 
-Projects:
-- Quick-Restart/: Quick Restart
-- Tile-Doctor/: Tile Doctor
-- Competitive Play Framework (still on its own branches, see below)
-
-Each mod folder holds a Dev tree and a Prod tree. Both carry the same code;
-only the mod id, the mod name, the build constants and workshop.txt differ.
-
-Branch layout:
-- PZ-Hub: main branch, one folder per mod
-- CompetitivePlayFramework: Competitive Play Framework stable branch
-- CPF-Dev: Competitive Play Framework development branch
+Mods:
+- Quick Restart: https://steamcommunity.com/sharedfiles/filedetails/?id=3699503439
+- Tile Doctor
+- Competitive Play Framework

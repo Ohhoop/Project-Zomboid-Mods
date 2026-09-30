@@ -1,5 +1,0 @@
-version=1
-title=Tile Doctor-DEV
-description=Don't know how you got here. Use at your own risk.
-tags=
-visibility=unlisted
