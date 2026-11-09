@@ -12,9 +12,8 @@ Showcase of my Project Zomboid mods for Build 42. Each mod lives in its own repo
 
 ## SpiffBoy games
 
-Cartridges for SpiffBoy that ship as their own mods and need SpiffBoy to play. They are gathered in the [SpiffBoy Games Collection](https://steamcommunity.com/sharedfiles/filedetails/?id=3834522856).
+Cartridges for SpiffBoy that ship as their own mods and need SpiffBoy to play.
 
 | Game | Description | GitHub | Steam |
 |---|---|---|---|
 | Before the Bell | Gear up a hero, roam a cursed land by day, survive the hunt at night and face what comes when the bell tolls. | Coming soon | Coming soon |
-| Critter Link, by mikerprtr | A critter catching game made with the SpiffBoy SDK. | | [Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3834510424) |
