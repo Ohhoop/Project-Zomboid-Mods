@@ -16,4 +16,4 @@ Cartridges for SpiffBoy that ship as their own mods and need SpiffBoy to play.
 
 | Game | Description | GitHub | Steam |
 |---|---|---|---|
-| Before the Bell | Gear up a hero, roam a cursed land by day, survive the hunt at night and face what comes when the bell tolls. | Coming soon | Coming soon |
+| Before the Bell | Gear up a hero, roam a cursed land by day, survive the hunt at night and face what comes when the bell tolls. | [Repository](https://github.com/Ohhoop/Before-the-Bell) | [Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3838972108) |
